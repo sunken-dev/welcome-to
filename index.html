@@ -1,0 +1,2126 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome To ...</title>
+<style>
+  /* Every value here is set by the active theme. See THEMES in the script:
+     adding a theme means adding one object, nothing else. */
+  :root{
+    --paper:#E6EBE2;--paper-2:#DCE3D7;--card:#F2F5EF;
+    --ink:#1E2A31;--ink-soft:#56666F;--rule:#AFBBAC;--rule-soft:#C7D0C3;
+    --stamp:#A93A2C;--pool:#3D7F98;--park:#4F7237;--flag:#C9A227;--plum:#7A5C86;--temp:#C97B2C;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    --slot:40px;
+    --r:0px;          /* panel and card rounding */
+    --rs:0px;         /* small element rounding */
+    --gsw:1.7;        /* glyph stroke weight */
+    --bodybg:none; --bodybgsize:auto; --bodybgpos:0 0;
+    /* the sticky control bar is its own surface, so dark themes can invert it */
+    --bar:#1E2A31; --barfg:#F2F5EF; --barline:rgba(242,245,239,.5);
+    --stampon:#F0A99E; --warn:#F0C05A;
+    --scrim:rgba(30,42,49,.6); --drop:rgba(30,42,49,.13);
+    --markbg:var(--ink); --markfg:var(--card); --locked:#CDD6C8;
+    --onaccent:var(--card);   /* text laid on a saturated accent fill */
+    --legal:rgba(201,162,39,.22); --legal-h:rgba(201,162,39,.45);
+    --legalpool:rgba(61,127,152,.24); --legalpool-h:rgba(61,127,152,.46);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background-color:var(--paper);background-image:var(--bodybg);
+    background-size:var(--bodybgsize);background-position:var(--bodybgpos);
+    color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;
+    -webkit-text-size-adjust:100%;transition:background-color .35s ease,color .35s ease}
+  #bgart{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+  .wrap{max-width:1160px;margin:0 auto;padding:18px 14px 70px}
+  .mast{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 22px;
+    border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:16px}
+  .mast h1{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:.16em;
+    text-transform:uppercase;margin:0;line-height:1.1}
+  .mast .sub{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-soft);margin-top:3px}
+  .mast-spacer{flex:1 1 40px}
+  .readout{display:flex;gap:18px;flex-wrap:wrap}
+  .readout div{text-align:right}
+  .readout .k{font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
+  .readout .v{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1.1}
+  .readout .v.bad{color:var(--stamp)}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 286px;gap:20px;align-items:start}
+  @media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
+  .panel{background:var(--card);border:1px solid var(--rule);padding:12px 13px 14px;margin-bottom:16px}
+  .panel>h2{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-soft);margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule-soft)}
+
+  /* construction cards: on the table these are two separate objects, a
+     discard showing its effect and a stack showing the next number */
+  .hand{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media (max-width:640px){.hand{grid-template-columns:1fr;gap:10px}}
+  .combo{border:1px solid var(--rule-soft);background:var(--paper-2);padding:9px 9px 0;
+    display:flex;flex-direction:column}
+  /* selection must not change the box geometry, or the card shifts by a pixel */
+  .combo.chosen{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+  .combo.dim{opacity:.32}
+  .combo-head{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
+  .combo-body{display:flex;align-items:center;justify-content:center;gap:7px}
+  .face{position:relative;background:var(--card);border:1px solid var(--rule);
+    width:56px;height:82px;flex:0 0 auto;display:flex;flex-direction:column;
+    align-items:center;justify-content:center}
+  /* a stack has thickness */
+  .face.stack{box-shadow:2px 2px 0 var(--card),2px 2px 0 1px var(--rule),
+    4px 4px 0 var(--card),4px 4px 0 1px var(--rule)}
+  /* a discarded card lies slightly askew */
+  .face.discard{transform:rotate(-2.5deg);box-shadow:1px 2px 0 var(--drop)}
+  .face.big{width:86px;height:118px}
+  .bignum{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1}
+  .face.big .bignum{font-size:40px}
+  .face .corner{position:absolute;width:12px;height:12px}
+  .face .corner.tl{top:3px;left:3px}
+  .face .corner.br{bottom:3px;right:3px;transform:rotate(180deg)}
+  .face .gl{width:30px;height:30px}
+  .face .cap2{font-family:var(--mono);font-size:7.5px;letter-spacing:.05em;
+    text-transform:uppercase;text-align:center;line-height:1.2;margin-top:5px;padding:0 3px}
+  .face.big .cap2{font-size:8px;margin-top:7px}
+  .link{font-family:var(--mono);font-size:14px;color:var(--ink-soft)}
+  .legend{display:flex;align-items:flex-start;justify-content:center;gap:7px;margin-top:6px}
+  .legend span{font-family:var(--mono);font-size:7px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--ink-soft);width:56px;text-align:center;line-height:1.25;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .legend span.mid{width:14px}
+  .legend span.solo{width:86px}
+  .cornernote{font-family:var(--mono);font-size:7px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--plum);text-align:center;margin-top:4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pgap{flex:1 1 auto;min-height:13px}
+  .picks{display:flex;margin:0 -9px;border-top:1px dashed var(--rule)}
+  .picks button{flex:1;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+    text-transform:uppercase;background:var(--card);color:var(--ink);border:0;
+    padding:8px 2px;cursor:pointer}
+  .picks button+button{border-left:1px dashed var(--rule)}
+  .picks button:hover:not(:disabled){background:var(--ink);color:var(--card)}
+  .picks button:disabled{opacity:.3;cursor:default}
+  .picks button.on{background:var(--ink);color:var(--card)}
+  .picks button.oneff.on{background:var(--plum)}
+
+  /* streets */
+  .street{margin-bottom:15px}
+  .sh{display:flex;align-items:center;gap:9px;margin-bottom:4px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase}
+  .sh .nm{font-weight:700}
+  .track{display:flex;gap:3px;align-items:center}
+  .track b{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--ink-soft);font-weight:400}
+  .bx{font-family:var(--mono);font-size:10px;min-width:19px;height:17px;line-height:15px;text-align:center;
+    border:1px solid var(--rule);background:var(--card);padding:0 2px}
+  .bx.out{background:var(--markbg);color:var(--markfg);border-color:var(--markbg);text-decoration:line-through}
+  .bx.live{border-color:var(--park);color:var(--park);font-weight:700}
+  .road{overflow-x:auto;padding-bottom:5px}
+  .lots{display:flex;align-items:stretch;min-width:max-content}
+  .lot{width:var(--slot);height:54px;flex:0 0 auto;border:1px solid var(--rule);background:transparent;
+    font:inherit;color:inherit;padding:0;position:relative;display:flex;align-items:center;
+    justify-content:center;cursor:default}
+  .lot .val{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1}
+  .lot .val sub{font-size:9px;color:var(--stamp);vertical-align:baseline}
+  .lot.built{background:var(--paper-2);border-color:var(--ink)}
+  .lot.locked{background:repeating-linear-gradient(135deg,var(--paper-2) 0 5px,var(--locked) 5px 10px)}
+  .lot.locked::before{content:"";position:absolute;left:1px;right:1px;top:3px;height:2px;background:var(--ink)}
+  .lot.inked{animation:ink .22s ease-out}
+  @keyframes ink{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
+  .lot .pt{position:absolute;bottom:3px;right:3px;width:12px;height:8px;border:1px solid var(--pool);border-radius:2px}
+  .lot .pt.filled{background:var(--pool)}
+  .lot .pt.filled::after{content:"";position:absolute;inset:-3px;border:1.5px solid var(--pool);border-radius:4px}
+  .lot.legal{cursor:pointer;background:var(--legal);border-color:var(--flag);border-width:2px}
+  .lot.legal:hover{background:var(--legal-h)}
+  .lot.legal.pool{background:var(--legalpool);border-color:var(--pool)}
+  .lot.legal.pool:hover{background:var(--legalpool-h)}
+  .lot.src{cursor:pointer;box-shadow:inset 0 0 0 2px var(--stamp)}
+  .lot .ghost{font-family:var(--mono);font-size:18px;font-weight:700;opacity:.5}
+  .lot:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+  .gap{width:13px;flex:0 0 auto;background:none;border:0;padding:0;position:relative;cursor:default}
+  .gap .post{position:absolute;top:4px;bottom:4px;left:50%;width:3px;transform:translateX(-50%);background:transparent}
+  .gap.fenced .post{background:var(--ink)}
+  .gap.pick{cursor:pointer}
+  .gap.pick .post{background:repeating-linear-gradient(180deg,var(--flag) 0 4px,transparent 4px 8px)}
+  .gap.pick:hover .post{background:var(--flag)}
+  .edge{width:6px;flex:0 0 auto;position:relative}
+  .edge::before{content:"";position:absolute;top:4px;bottom:4px;left:50%;width:3px;
+    transform:translateX(-50%);background:var(--ink)}
+
+  .stair{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;align-items:end}
+  .col{display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+  .col .cap{font-family:var(--mono);font-size:9.5px;text-align:center;font-weight:700;
+    background:var(--paper-2);border:1px solid var(--rule-soft);padding:2px 0;margin-top:3px}
+  .col.pick{cursor:pointer}
+  .col.pick .cap{background:var(--plum);color:var(--onaccent);border-color:var(--plum)}
+  .col.pick:hover .cap{background:var(--ink)}
+  .col .bx{width:100%}
+
+  .plan{border-left:3px solid var(--rule);padding:0 0 0 9px;margin-bottom:12px}
+  .plan .tier{font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
+  .plan .txt{font-size:12.5px}
+  .plan .val{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft)}
+  .plan.done{border-left-color:var(--park)}
+  .plan.done .txt{text-decoration:line-through;color:var(--ink-soft)}
+  .plan.done .val{color:var(--park);font-weight:700}
+  .plan.approved .val{color:var(--stamp)}
+  .plan .vbtn{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+    background:var(--park);color:var(--onaccent);border:0;padding:4px 8px;margin-top:3px;cursor:pointer}
+  .plan .vbtn:hover{background:var(--ink);color:var(--card)}
+
+  .sheet{width:100%;border-collapse:collapse;font-size:12.5px}
+  .sheet td{padding:3px 0;border-bottom:1px dotted var(--rule-soft)}
+  .sheet td:last-child{text-align:right;font-family:var(--mono);font-weight:700}
+  .sheet tr.neg td:last-child{color:var(--stamp)}
+  .sheet tr.tot td{border-bottom:0;border-top:2px solid var(--ink);padding-top:6px;font-weight:700}
+  .sheet tr.tot td:last-child{font-size:17px}
+  .sheet td.sub{padding-left:10px;color:var(--ink-soft);font-size:11.5px}
+  .tracks{display:flex;flex-direction:column;gap:8px}
+  .trow{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  .trow .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-soft);width:100%}
+
+  .status{position:sticky;bottom:0;margin-top:4px;background:var(--bar);color:var(--barfg);
+    padding:10px 13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .status .msg{flex:1 1 220px;font-size:13px}
+  .status .msg b{font-family:var(--mono);letter-spacing:.06em}
+  .status .warn{color:var(--warn)}
+  .btn{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    background:transparent;color:var(--barfg);border:1px solid var(--barline);padding:6px 10px;cursor:pointer}
+  .btn:hover:not(:disabled){background:var(--barfg);color:var(--bar)}
+  .btn:disabled{opacity:.35;cursor:default}
+  .btn:focus-visible{outline:2px solid var(--flag);outline-offset:2px}
+  .btn.stampish{border-color:var(--stamp);color:var(--stampon)}
+  .btn.stampish:hover:not(:disabled){background:var(--stamp);color:var(--card);border-color:var(--stamp)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:11.5px;font-weight:700;background:var(--flag);color:var(--ink);
+    border:0;padding:5px 9px;cursor:pointer}
+  .chip:hover{background:var(--card)}
+  .chip.ghosty{background:transparent;color:var(--barfg);border:1px solid var(--barline);font-weight:400}
+  .chip.ghosty:hover{background:var(--barfg);color:var(--bar)}
+
+  .scrim{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;
+    justify-content:center;padding:16px;z-index:40}
+  .scrim[hidden]{display:none}
+  .modal{background:var(--card);border:2px solid var(--ink);max-width:640px;width:100%;
+    max-height:88vh;overflow-y:auto;padding:20px}
+  .modal.wide{max-width:960px}
+  .modal h3{font-family:var(--mono);font-size:13px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 4px}
+  .modal .lede{color:var(--ink-soft);font-size:12.5px;margin:0 0 14px}
+  .modal .btn{color:var(--ink);border-color:var(--ink)}
+  .modal .btn:hover{background:var(--ink);color:var(--card)}
+  .modal .btn.on{background:var(--ink);color:var(--card)}
+  .modal h4{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+    margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--rule-soft)}
+  .fieldgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:9px}
+  .fieldgrid.wide{grid-template-columns:1fr}
+  .fieldgrid label{font-size:11px;display:block}
+  .fieldgrid .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-soft);display:block}
+  .fieldgrid input{width:100%;font-family:var(--mono);font-size:12px;padding:4px 6px;
+    border:1px solid var(--rule);background:var(--paper);color:var(--ink)}
+  .verdict{font-family:var(--mono);font-size:30px;font-weight:700;margin:6px 0 2px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .note{font-size:11.5px;color:var(--ink-soft)}
+  .note code{font-family:var(--mono);font-size:11px}
+  /* theme-driven rounding */
+  .panel,.modal,.combo{border-radius:var(--r)}
+  .face,.lot{border-radius:var(--rs)}
+  .bx,.col .cap{border-radius:calc(var(--rs)*.45)}
+  .btn,.chip,.picks button,.vbtn{border-radius:calc(var(--rs)*.7)}
+  .status{border-radius:var(--r) var(--r) 0 0}
+  #mark{display:inline-block;vertical-align:-4px;margin-right:7px}
+  #mark svg{width:22px;height:22px}
+  /* live miniature of the theme: custom properties are set inline on .tprev,
+     so everything inside resolves to that theme without switching the app */
+  .tprev{margin-top:8px;padding:9px;border:1px solid var(--rule);
+    background-color:var(--paper);background-image:var(--bodybg);
+    background-size:var(--bodybgsize);background-position:var(--bodybgpos);
+    border-radius:var(--rs)}
+  .tprev-in{display:flex;align-items:center;gap:10px}
+  .tp-card{width:34px;height:47px;flex:0 0 auto;border:1px solid var(--rule);background:var(--card);
+    border-radius:var(--rs);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .tp-n{font-family:var(--mono);font-weight:700;font-size:16px;line-height:1;color:var(--ink)}
+  .tp-g{width:13px;height:13px}
+  .tp-street{display:flex;align-items:center;gap:2px}
+  .tp-street i{width:17px;height:23px;border:1px solid var(--rule);font-style:normal;
+    border-radius:calc(var(--rs)*.55);display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:9px;font-weight:700;color:var(--ink)}
+  .tp-street i.on{background:var(--paper-2);border-color:var(--ink)}
+  .tp-street b{width:3px;height:21px;background:var(--ink);border-radius:2px}
+  .tp-set{display:flex;gap:6px;margin-left:auto}
+  .tp-s{width:17px;height:17px}
+  .themegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  @media (max-width:560px){.themegrid{grid-template-columns:1fr}}
+  .themecard{text-align:left;display:block;width:100%;background:var(--paper-2);
+    border:1px solid var(--rule);padding:9px 11px 11px;cursor:pointer;
+    font:inherit;color:inherit;border-radius:var(--rs)}
+  .themecard:hover{border-color:var(--ink)}
+  .themecard.on{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+  .themecard b{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+  .themecard span{display:block;font-size:11.5px;color:var(--ink-soft)}
+
+  /* clock: three readings in one readout cell */
+  .readout .k2{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.08em;
+    color:var(--ink-soft);margin-top:2px;white-space:nowrap}
+
+  /* hint statistics */
+  .hint[hidden]{display:none}
+  .hrow{margin-bottom:11px}
+  .hrow:last-child{margin-bottom:0}
+  .hcap{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:5px}
+  .hcap em{font-style:normal;color:var(--ink);font-weight:700}
+  .hstrip{display:flex;gap:3px;align-items:flex-end}
+  .hcell{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .hbarwrap{width:100%;height:32px;display:flex;align-items:flex-end}
+  .hbar{width:100%;min-height:1px;background:var(--pool);
+    border-radius:calc(var(--rs)*.4) calc(var(--rs)*.4) 0 0;transition:height .25s ease}
+  .hcell.zero .hbar{background:var(--rule)}
+  .hlbl{font-family:var(--mono);font-size:10px;font-weight:700;line-height:1}
+  .hpct{font-family:var(--mono);font-size:8px;color:var(--ink-soft);line-height:1}
+  .hcell.zero .hlbl,.hcell.zero .hpct{opacity:.4}
+  .heff{display:flex;gap:7px;flex-wrap:wrap}
+  .heffcell{flex:1 1 96px;display:flex;align-items:center;gap:6px;
+    background:var(--paper-2);border:1px solid var(--rule-soft);padding:5px 7px;
+    border-radius:calc(var(--rs)*.6)}
+  .heffcell svg{width:17px;height:17px;flex:0 0 auto}
+  .heffcell .en{font-family:var(--mono);font-size:9px;letter-spacing:.06em;line-height:1.2}
+  .heffcell .ep{font-family:var(--mono);font-size:12px;font-weight:700;margin-left:auto}
+  .hfoot{font-size:11.5px;color:var(--ink-soft);margin-top:9px;
+    border-top:1px dotted var(--rule-soft);padding-top:7px}
+  .hfoot b{font-family:var(--mono);color:var(--ink)}
+
+  /* pre-game briefing */
+  .brief{width:100%;border-collapse:collapse;font-size:12.5px}
+  .brief td{padding:4px 0;border-bottom:1px dotted var(--rule-soft);vertical-align:top}
+  .brief tr:last-child td{border-bottom:0}
+  .brief td:first-child{font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--ink-soft);width:92px;padding-top:6px}
+  .brief.plans td:first-child{width:46px}
+  .brief.plans td:last-child{text-align:right;font-family:var(--mono);font-weight:700;
+    white-space:nowrap;width:1px;padding-left:12px}
+  .modal .btn.primary{background:var(--ink);color:var(--card)}
+  .modal .btn.primary:hover{background:var(--stamp);border-color:var(--stamp);color:var(--card)}
+
+  /* plan chooser */
+  /* the list follows a toolbar, which only carries a top margin */
+  .planlist{display:flex;flex-direction:column;gap:13px;margin-top:15px}
+  .pitems{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  @media (max-width:700px){.pitems{grid-template-columns:1fr}}
+  .pgroup{border-left:3px solid var(--rule);padding-left:9px}
+  .pgh{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-soft);display:block;margin-bottom:5px}
+  .ptog{position:relative;overflow:hidden;display:flex;width:100%;align-items:baseline;gap:8px;
+    text-align:left;font:inherit;color:inherit;background:transparent;
+    border:1px solid var(--rule-soft);padding:6px 17px 6px 9px;
+    cursor:pointer;font-size:12px;border-radius:calc(var(--rs)*.6)}
+  .ptog:hover{border-color:var(--ink)}
+  .ptog .tick{font-family:var(--mono);font-size:11px;width:12px;flex:0 0 auto;font-weight:700}
+  .ptog.on .tick::before{content:"\2713"}
+  .ptog.off .tick::before{content:"\00b7"}
+  .ptog.off{opacity:.44}
+  .ptog em{font-style:normal;font-family:var(--mono);font-size:10px;margin-left:auto;
+    white-space:nowrap;color:var(--ink-soft)}
+  .ptog .star{color:var(--flag)}
+  /* the three drawn for this sheet get a folded corner. The 50% line of a 225deg
+     gradient is the box's main diagonal, so this fills the top-right triangle. */
+  .ptog.drawn{background:var(--paper-2);border-color:var(--ink)}
+  .ptog.drawn::after{
+    content:"";position:absolute;top:0;right:0;width:15px;height:15px;pointer-events:none;
+    background:linear-gradient(225deg,var(--park) 0 47%,var(--card) 47% 53%,transparent 53%)}
+  /* the last plan left on in a category cannot be switched off, so it should
+     not invite a click. No label needed: it simply does not respond. */
+  .ptog.fixed{cursor:default}
+  .ptog.fixed:hover{border-color:var(--rule-soft)}
+  .ptog.fixed.drawn:hover{border-color:var(--ink)}
+
+  /* the sheet's city name, written into the title the way the printed sheet does */
+  #cityslot{display:inline-block}
+  .cityname{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink-soft);
+    background:transparent;border:0;border-bottom:2px dotted var(--rule);
+    padding:0 3px 1px;cursor:pointer;line-height:inherit}
+  .cityname:hover,.cityname:focus-visible{color:var(--ink);border-bottom-color:var(--ink)}
+  .cityname.empty{letter-spacing:.2em}
+  .cityinput{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink);
+    background:transparent;border:0;border-bottom:2px solid var(--ink);
+    padding:0 3px 1px;width:min(320px,44vw)}
+  .cityinput:focus{outline:none}
+  /* the game's title, overarching the dialog's own heading */
+  .modal .gametitle{font-family:var(--mono);font-size:22px;font-weight:700;
+    letter-spacing:.11em;text-transform:uppercase;line-height:1.15;
+    margin:0 0 13px;padding-bottom:11px;border-bottom:2px solid var(--ink)}
+  .modal .gametitle .cityinput{width:min(260px,50vw)}
+  @media (max-width:520px){
+    .modal .gametitle{font-size:16px;letter-spacing:.08em}
+  }
+
+  /* sheet seed */
+  .seedname{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.11em;
+    background:transparent;color:var(--ink);border:0;border-bottom:1px dotted var(--rule);
+    padding:0 2px 1px;cursor:pointer}
+  .seedname:hover,.seedname:focus-visible{border-bottom-color:var(--ink)}
+  .seedinput{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.11em;
+    background:transparent;color:var(--ink);border:0;border-bottom:1px solid var(--ink);
+    padding:0 2px 1px;width:16ch;text-transform:uppercase}
+  .seedinput:focus{outline:none}
+  .seedroll{font-family:var(--mono);font-size:13px;line-height:1;background:transparent;
+    color:var(--ink-soft);border:1px solid var(--rule);border-radius:calc(var(--rs)*.5);
+    padding:1px 5px 2px;margin-left:7px;cursor:pointer}
+  .seedroll:hover{background:var(--ink);color:var(--card);border-color:var(--ink)}
+  .seednote{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-soft);margin-left:8px}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  @media (max-width:520px){
+    :root{--slot:36px}
+    .ccard .n{font-size:30px;padding:11px 4px 4px}
+    .mast h1{font-size:16px}
+  }
+</style>
+<style id="themecss"></style>
+
+<div id="bgart" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="mast">
+    <div>
+      <h1><span id="mark"></span>Welcome To <span id="cityslot"></span></h1>
+      <div class="sub" id="modelabel">Official solo variant &middot; 2018 rules</div>
+    </div>
+    <div class="mast-spacer"></div>
+    <div class="readout">
+      <div><span class="k">Round</span><span class="v" id="rd-round">1</span></div>
+      <div><span class="k">Deck</span><span class="v" id="rd-deck">81</span></div>
+      <div><span class="k">Houses</span><span class="v" id="rd-built">0</span></div>
+      <div><span class="k">Score</span><span class="v" id="rd-score">0</span></div>
+      <div><span class="k">Best</span><span class="v" id="rd-best">&mdash;</span></div>
+      <div><span class="k">Time</span><span class="v" id="rd-time">0:00</span>
+   <span class="k2" id="rd-sub">round 0:00 &middot; avg &mdash;</span></div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <h2 id="handhead">Three construction cards &mdash; one for its number, another for its effect</h2>
+        <div class="hand" id="hand"></div>
+      </div>
+      <div class="panel"><h2>Your city</h2><div id="streets"></div></div>
+      <div class="panel"><h2>Real estate &mdash; housing estate values</h2><div class="stair" id="stair"></div></div>
+    </div>
+    <div>
+      <div class="panel"><h2>City plans</h2><div id="plans"></div></div>
+      <div class="panel"><h2>Sections</h2><div class="tracks" id="tracks"></div></div>
+      <div class="panel"><h2>Final scoring</h2><table class="sheet" id="sheet"></table></div>
+    </div>
+  </div>
+
+  <div class="panel hint" id="hint" hidden>
+    <h2 id="hinthead">Hints &mdash; what is likely to come next</h2>
+    <div id="hintbody"></div>
+  </div>
+
+  <div class="status">
+    <div class="msg" id="msg">Choose a card for its number.</div>
+    <div class="chips" id="chips"></div>
+    <button class="btn stampish" id="btn-refuse">Permit refusal</button>
+    <button class="btn" id="btn-undo">Undo round</button>
+    <button class="btn" id="btn-hints">Hints: off</button>
+    <button class="btn" id="btn-theme">Theme</button>
+    <button class="btn" id="btn-setup">Setup</button>
+    <button class="btn" id="btn-new">New sheet</button>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden><div class="modal" id="modal"></div></div>
+
+<script>
+"use strict";
+/* =========================================================================
+   Welcome To Your Perfect Home — solo practice sheet
+   Values from the Blue Cocker / Deep Water Games 2018 English rulebook v2.0.
+   Items marked INFERRED are flagged in the Setup panel.
+   ========================================================================= */
+
+const EFFECTS = {
+  surveyor:   {label:"Surveyor",          short:"Surveyor",    hint:"Fence, any street"},
+  agent:      {label:"Real Estate Agent", short:"Real Estate", hint:"Raise an estate value"},
+  landscaper: {label:"Landscaper",        short:"Landscaper",  hint:"Park, same street"},
+  pool:       {label:"Pool Manufacturer", short:"Pool",        hint:"Pool, if the house has one"},
+  temp:       {label:"Temp Agency",       short:"Temp",        hint:"Change the number by 1 or 2"},
+  bis:        {label:"Bis",               short:"Bis",         hint:"Duplicate a house number"}
+};
+
+/* Original glyphs for the six effects — plain geometry, not the published art. */
+const GCOLOR = { surveyor:"var(--ink)", agent:"var(--plum)", landscaper:"var(--park)",
+                 pool:"var(--pool)", temp:"var(--temp)", bis:"var(--stamp)" };
+const BASE_GPATH = {
+  surveyor:  '<path d="M3 21V10l2-2 2 2v11M10 21V10l2-2 2 2v11M17 21V10l2-2 2 2v11"/><path d="M2 13.5h20M2 17.5h20"/>',
+  agent:     '<path d="M4 14.5l8-7 8 7"/><path d="M4 20l8-7 8 7"/>',
+  landscaper:'<circle cx="12" cy="8.5" r="4.5"/><circle cx="6.6" cy="12.4" r="3"/><circle cx="17.4" cy="12.4" r="3"/><path d="M12 14v7"/>',
+  pool:      '<rect x="3.5" y="7.5" width="17" height="13" rx="3"/><path d="M6.2 12.6c1.9-1.6 3.4 1.6 5.4 0s3.5-1.6 5.4 0"/><path d="M6.2 16.6c1.9-1.6 3.4 1.6 5.4 0s3.5-1.6 5.4 0"/>',
+  temp:      '<path d="M12 3.5l6 15.5H6z"/><path d="M3 21.5h18"/><path d="M9.6 13.5h4.8"/>',
+  bis:       '<path d="M2.5 21v-6.5L7 10.2l4.5 4.3V21z"/><path d="M12.5 21v-6.5L17 10.2l4.5 4.3V21z"/>'
+};
+let GPATH = BASE_GPATH;   /* replaced per theme by applyTheme */
+function glyphSet(id){
+  return Object.assign({}, BASE_GPATH, (THEMES[id] && THEMES[id].glyphs) || {});
+}
+function glyphIn(set, e, cls){
+  return '<svg class="'+cls+'" viewBox="0 0 24 24" fill="none" stroke="'+GCOLOR[e]+
+    '" stroke-width="var(--gsw)" stroke-linecap="round" stroke-linejoin="round">'+set[e]+'</svg>';
+}
+
+/* a deterministic starfield, tiled so it never stretches */
+function starfield(){
+  let seed=7, stars="";
+  const rnd=()=>((seed=seed*16807%2147483647)/2147483647);
+  for(let i=0;i<95;i++)
+    stars+='<circle cx="'+(rnd()*300).toFixed(1)+'" cy="'+(rnd()*300).toFixed(1)+
+      '" r="'+(rnd()*1.05+0.3).toFixed(2)+'" fill="var(--ink)" opacity="'+
+      (rnd()*0.5+0.14).toFixed(2)+'"/>';
+  return '<svg width="100%" height="100%"><defs>'+
+    '<pattern id="stars" width="300" height="300" patternUnits="userSpaceOnUse">'+stars+
+    '</pattern></defs><rect width="100%" height="100%" fill="url(#stars)"/></svg>';
+}
+/* irregular blotching, for vellum */
+function mottle(){
+  let seed=23, blobs="";
+  const rnd=()=>((seed=seed*16807%2147483647)/2147483647);
+  for(let i=0;i<26;i++)
+    blobs+='<ellipse cx="'+(rnd()*260).toFixed(1)+'" cy="'+(rnd()*260).toFixed(1)+
+      '" rx="'+(rnd()*26+9).toFixed(1)+'" ry="'+(rnd()*20+7).toFixed(1)+
+      '" fill="var(--ink)" opacity="'+(rnd()*0.030+0.012).toFixed(3)+'"/>';
+  return '<svg width="100%" height="100%"><defs>'+
+    '<pattern id="vellum" width="260" height="260" patternUnits="userSpaceOnUse">'+blobs+
+    '</pattern></defs><rect width="100%" height="100%" fill="url(#vellum)"/></svg>';
+}
+
+/* =========================================================================
+   THEMES
+   A theme is one object: CSS custom properties, an optional background layer,
+   an optional masthead mark, and optional glyph overrides (missing effects
+   fall back to BASE_GPATH). Nothing else in the app knows about themes.
+   ========================================================================= */
+const THEMES = {
+  drafting: {
+    name: "Drafting office",
+    blurb: "Plan paper and stencil numerals. The technical one.",
+    swatch: ["#E6EBE2","#1E2A31","#A93A2C","#3D7F98","#4F7237"],
+    vars: {
+      "--paper":"#E6EBE2","--paper-2":"#DCE3D7","--card":"#F2F5EF",
+      "--ink":"#1E2A31","--ink-soft":"#56666F","--rule":"#AFBBAC","--rule-soft":"#C7D0C3",
+      "--stamp":"#A93A2C","--pool":"#3D7F98","--park":"#4F7237",
+      "--flag":"#C9A227","--plum":"#7A5C86","--temp":"#C97B2C",
+      "--mono":'ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace',
+      "--sans":'"Helvetica Neue",Helvetica,Arial,sans-serif',
+      "--r":"0px","--rs":"0px","--gsw":"1.7",
+      "--bodybg":"repeating-linear-gradient(0deg,transparent 0 23px,rgba(30,42,49,.045) 23px 24px),"+
+                 "repeating-linear-gradient(90deg,transparent 0 23px,rgba(30,42,49,.045) 23px 24px)"
+    },
+    mark: '<path d="M3 18h16M11 18V6M7 9l4-3 4 3"/>'
+  },
+
+  hillside: {
+    name: "Hillside",
+    blurb: "Soft painterly meadow. Sunlight, sky wash, rolling green.",
+    swatch: ["#DCE9E3","#2A3F35","#C4643F","#4E8FA8","#5C8A3E"],
+    vars: {
+      "--paper":"#DCE9E3","--paper-2":"#CBDDD6","--card":"#F5F8F1",
+      "--ink":"#2A3F35","--ink-soft":"#5F7A6B","--rule":"#A9C2B4","--rule-soft":"#C6D8CC",
+      "--stamp":"#C4643F","--pool":"#4E8FA8","--park":"#5C8A3E",
+      "--flag":"#E0B252","--plum":"#8A6E9E","--temp":"#D89A4A",
+      "--mono":'"Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif',
+      "--sans":'"Trebuchet MS","Segoe UI",Candara,sans-serif',
+      "--r":"11px","--rs":"7px","--gsw":"1.9",
+      "--bodybg":"radial-gradient(125% 85% at 16% -8%,rgba(255,255,255,.62),transparent 58%),"+
+                 "radial-gradient(85% 55% at 88% 6%,rgba(224,178,82,.20),transparent 62%),"+
+                 "radial-gradient(115% 78% at 50% 110%,rgba(92,138,62,.20),transparent 68%)"
+    },
+    css: ".panel>h2{text-transform:none;font-variant:small-caps;letter-spacing:.1em;font-size:12px}",
+    mark: '<path d="M2 17c4-4 7 2 10-2 2-2.6 4 .6 6 1.4"/><circle cx="14" cy="6.5" r="3.2"/><path d="M14 9.7V14"/>',
+    bgart:
+      '<svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">'+
+        '<path d="M0,80 C14,72 26,84 42,78 C58,72 74,84 100,76 L100,100 L0,100 Z" '+
+          'fill="var(--park)" opacity=".10"/>'+
+        '<path d="M0,89 C20,83 34,94 54,88 C72,83 86,93 100,87 L100,100 L0,100 Z" '+
+          'fill="var(--park)" opacity=".13"/>'+
+      '</svg>',
+    glyphs: {
+      /* a rustic crossed-rail fence rather than pickets */
+      surveyor:  '<path d="M4 20V7M20 20V7"/><path d="M2 10.5h20M2 16.5h20"/><path d="M4 10.5l16 6M20 10.5l-16 6"/>',
+      /* growth, as a sprouting shoot */
+      agent:     '<path d="M12 21V8"/><path d="M12 12c-3.4 0-5.6-2-5.6-5.2 3.4 0 5.6 2 5.6 5.2z"/>'+
+                 '<path d="M12 14.5c3.4 0 5.6-2 5.6-5.2-3.4 0-5.6 2-5.6 5.2z"/>',
+      /* a leafy round-canopy tree */
+      landscaper:'<path d="M12 21v-5.5"/><path d="M12 3.2c4.4 0 7.2 3 7.2 6.6 0 3.6-3.2 6.2-7.2 6.2S4.8 13.4 4.8 9.8C4.8 6.2 7.6 3.2 12 3.2z"/>',
+      /* a pond with a lily pad */
+      pool:      '<path d="M3.4 14c0-3.6 3.8-6.4 8.6-6.4S20.6 10.4 20.6 14 16.8 20.4 12 20.4 3.4 17.6 3.4 14z"/>'+
+                 '<path d="M6.6 14.6c1.7-1.4 3.1 1.4 4.9 0s3.2-1.4 4.9 0"/><circle cx="16.4" cy="9.4" r="2.1"/>',
+      /* a spade in the ground */
+      temp:      '<path d="M12 3v11"/><path d="M9 6.5h6"/>'+
+                 '<path d="M8.4 14h7.2v3.2c0 2-1.6 3.4-3.6 3.4s-3.6-1.4-3.6-3.4z"/>',
+      /* two cottages with rounded roofs */
+      bis:       '<path d="M2.4 21v-6.2C2.4 12.4 4.4 10 7 10s4.6 2.4 4.6 4.8V21z"/>'+
+                 '<path d="M12.4 21v-6.2c0-2.4 2-4.8 4.6-4.8s4.6 2.4 4.6 4.8V21z"/>'
+    }
+  },
+
+  cats: {
+    name: "Cat town",
+    blurb: "Peach paper, paw prints, yarn and milk. The very cute one.",
+    swatch: ["#FBEFE4","#4A3A33","#D96A7A","#6BAFC4","#7FAE62"],
+    vars: {
+      "--paper":"#FBEFE4","--paper-2":"#F5E1D2","--card":"#FFFAF5",
+      "--ink":"#4A3A33","--ink-soft":"#8A7266","--rule":"#DFC3AE","--rule-soft":"#EBD7C7",
+      "--stamp":"#D96A7A","--pool":"#6BAFC4","--park":"#7FAE62",
+      "--flag":"#EFC15C","--plum":"#A986C4","--temp":"#E39A5B",
+      "--mono":'"Century Gothic","Avenir Next",Futura,"Trebuchet MS",sans-serif',
+      "--sans":'"Trebuchet MS",Verdana,Geneva,sans-serif',
+      "--r":"15px","--rs":"10px","--gsw":"2",
+      "--bodybg":"radial-gradient(120% 80% at 50% -10%,rgba(255,255,255,.55),transparent 62%)"
+    },
+    css: ".lot.built{box-shadow:inset 0 -2px 0 rgba(74,58,51,.07)}"+
+         ".panel>h2{letter-spacing:.14em}",
+    mark: '<path d="M5.4 9.4L6.2 4l3.4 2.6"/><path d="M14.6 9.4L13.8 4l-3.4 2.6"/>'+
+          '<circle cx="10" cy="12.4" r="5.6"/><path d="M8.2 12h.01M11.8 12h.01"/>'+
+          '<path d="M9 14.6c.7.6 1.3.6 2 0"/>',
+    bgart:
+      '<svg width="100%" height="100%">'+
+        '<defs><pattern id="pawpat" width="78" height="78" patternUnits="userSpaceOnUse">'+
+          '<g fill="var(--ink)" opacity=".055">'+
+            '<ellipse cx="22" cy="32" rx="7.2" ry="5.7"/>'+
+            '<circle cx="13.2" cy="22.2" r="2.9"/><circle cx="20.4" cy="18.8" r="2.9"/>'+
+            '<circle cx="27.8" cy="20.4" r="2.9"/><circle cx="33.6" cy="25.6" r="2.4"/>'+
+          '</g>'+
+          '<g fill="var(--ink)" opacity=".045" transform="translate(54,60) rotate(22)">'+
+            '<ellipse cx="0" cy="6" rx="6.2" ry="4.9"/>'+
+            '<circle cx="-7.2" cy="-2" r="2.5"/><circle cx="-1" cy="-5.2" r="2.5"/>'+
+            '<circle cx="5.6" cy="-3.2" r="2.5"/>'+
+          '</g>'+
+        '</pattern></defs>'+
+        '<rect width="100%" height="100%" fill="url(#pawpat)"/>'+
+      '</svg>',
+    glyphs: {
+      /* a fence with a tail flicking over it */
+      surveyor:  '<path d="M4 21v-9.5a2 2 0 014 0V21M12.5 21v-9.5a2 2 0 014 0V21"/>'+
+                 '<path d="M2.5 14.5h16M2.5 18h16"/>'+
+                 '<path d="M19 14c2.2-.6 3-2.4 2-4-.7-1.2-2.4-1-2.6.5"/>',
+      /* value going up, with a paw at the top */
+      agent:     '<path d="M5 21l7-6.4 7 6.4"/>'+
+                 '<ellipse cx="12" cy="8.6" rx="3.1" ry="2.4"/>'+
+                 '<circle cx="7.6" cy="4.7" r="1.5"/><circle cx="11.4" cy="3.1" r="1.5"/>'+
+                 '<circle cx="15.4" cy="4.4" r="1.5"/>',
+      /* a cat tree: the park of Cat town */
+      landscaper:'<path d="M12 21v-6"/><path d="M6.5 15h11"/>'+
+                 '<path d="M7.6 8.4L8.2 4.6l2.6 2"/><path d="M16.4 8.4L15.8 4.6l-2.6 2"/>'+
+                 '<circle cx="12" cy="10.4" r="4.2"/>',
+      /* a bowl of milk */
+      pool:      '<path d="M3.2 11.5h17.6c0 5-3.9 8.4-8.8 8.4S3.2 16.5 3.2 11.5z"/>'+
+                 '<path d="M6.4 11.5c1.7-1.5 3.2 1.3 4.9-.1 1.7-1.4 3.3 1.4 5-.1"/>',
+      /* a ball of yarn */
+      temp:      '<circle cx="12" cy="12.4" r="7.4"/>'+
+                 '<path d="M6.4 7.6c3.6 1.2 7.8 5.4 9 9M8.8 5.4c2.6 2.6 7 7 8.4 9.6"/>'+
+                 '<path d="M19.4 8.6c-3 3.2-7.6 6.2-11 7.4"/>',
+      /* two cats, side by side */
+      bis:       '<path d="M2.6 12.2L3 8.8l2.3 1.7"/><path d="M9 12.2l-.4-3.4-2.3 1.7"/>'+
+                 '<circle cx="5.8" cy="14.6" r="4"/>'+
+                 '<path d="M14.6 12.2L15 8.8l2.3 1.7"/><path d="M21 12.2l-.4-3.4-2.3 1.7"/>'+
+                 '<circle cx="17.8" cy="14.6" r="4"/>'
+    }
+  },
+
+  orbit: {
+    name: "Orbit",
+    blurb: "Night side of the planet. Starfield and instrument glow.",
+    swatch: ["#0E1424","#DCE6F5","#FF6B6B","#4FD1E0","#5FE3A1"],
+    vars: {
+      "--paper":"#0E1424","--paper-2":"#1A2338","--card":"#1B2540",
+      "--ink":"#DCE6F5","--ink-soft":"#8A9BBD","--rule":"#37456A","--rule-soft":"#2A3454",
+      "--stamp":"#FF6B6B","--pool":"#4FD1E0","--park":"#5FE3A1",
+      "--flag":"#FFD166","--plum":"#B39DFF","--temp":"#FF9F5A",
+      "--mono":'ui-monospace,"SF Mono",Menlo,Consolas,monospace',
+      "--sans":'"Helvetica Neue",Helvetica,Arial,sans-serif',
+      "--r":"7px","--rs":"5px","--gsw":"1.6",
+      "--bodybg":"radial-gradient(90% 60% at 78% -10%,rgba(79,209,224,.16),transparent 62%),"+
+                 "radial-gradient(80% 55% at 12% 104%,rgba(179,157,255,.16),transparent 64%)",
+      "--bar":"#080D19","--barfg":"#DCE6F5","--barline":"rgba(220,230,245,.32)",
+      "--stampon":"#FF9B9B","--warn":"#FFD166",
+      "--scrim":"rgba(3,7,16,.74)","--drop":"rgba(0,0,0,.45)",
+      "--markbg":"#DCE6F5","--markfg":"#0E1424","--locked":"#2C3654",
+      "--onaccent":"#0E1424",   /* accents are bright here, so lay dark text on them */
+      "--legal":"rgba(255,209,102,.20)","--legal-h":"rgba(255,209,102,.40)",
+      "--legalpool":"rgba(79,209,224,.20)","--legalpool-h":"rgba(79,209,224,.40)"
+    },
+    mark: '<circle cx="12" cy="12" r="4.6"/><ellipse cx="12" cy="12" rx="10.4" ry="4.1" transform="rotate(-24 12 12)"/>',
+    bgart: starfield(),
+    css: ".panel{box-shadow:0 10px 30px rgba(0,0,0,.34)}"+
+         ".bignum{text-shadow:0 0 15px rgba(220,230,245,.32)}"+
+         ".mast h1{text-shadow:0 0 18px rgba(79,209,224,.34)}"+
+         ".face.stack{box-shadow:2px 2px 0 var(--card),2px 2px 0 1px var(--rule),4px 4px 0 var(--card),4px 4px 0 1px var(--rule)}",
+    glyphs: {
+      surveyor:  '<path d="M5 21V6M19 21V6"/><path d="M5 10h3M11 10h2M16 10h3M5 15h2M10 15h3M17 15h2"/>',
+      agent:     '<path d="M4 20c5-1.5 10-7 12-16"/><path d="M11 3.6l5-.6-1.2 5"/>'+
+                 '<path d="M6.5 9.5l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z"/>',
+      landscaper:'<path d="M3.2 19h17.6"/><path d="M20 19a8 8 0 10-16 0"/><path d="M12 19v-6"/>'+
+                 '<path d="M12 15c-2.6 0-4-1.4-4-3.6 2.6 0 4 1.4 4 3.6z"/>',
+      pool:      '<path d="M12 5.5c2.6 3.2 4.2 5.6 4.2 7.8A4.2 4.2 0 0112 17.5a4.2 4.2 0 01-4.2-4.2c0-2.2 1.6-4.6 4.2-7.8z"/>'+
+                 '<ellipse cx="12" cy="13.5" rx="10.5" ry="3.6" transform="rotate(-18 12 13.5)"/>',
+      temp:      '<circle cx="12" cy="12" r="8"/><path d="M6.4 11.4a5.8 5.8 0 015.6-4.2 5.8 5.8 0 015.6 4.2 6 6 0 01-11.2 0z"/>',
+      bis:       '<rect x="2.2" y="8" width="8.6" height="10" rx="3"/><circle cx="6.5" cy="13" r="1.9"/>'+
+                 '<rect x="13.2" y="8" width="8.6" height="10" rx="3"/><circle cx="17.5" cy="13" r="1.9"/>'
+    }
+  },
+
+  scriptorium: {
+    name: "Scriptorium",
+    blurb: "Vellum, oak-gall ink and vermilion rubrication.",
+    swatch: ["#E8DCC0","#3A2A18","#A02A20","#2F6B7A","#B58A2B"],
+    vars: {
+      "--paper":"#E8DCC0","--paper-2":"#DCCCA6","--card":"#F3EAD3",
+      "--ink":"#3A2A18","--ink-soft":"#7A6544","--rule":"#BFA97C","--rule-soft":"#D5C49C",
+      "--stamp":"#A02A20","--pool":"#2F6B7A","--park":"#4A6B2A",
+      "--flag":"#B58A2B","--plum":"#6B3A6E","--temp":"#B5651D",
+      "--mono":'Georgia,"Times New Roman",Times,serif',
+      "--sans":'Georgia,"Times New Roman",Times,serif',
+      "--r":"3px","--rs":"2px","--gsw":"1.9",
+      "--bodybg":"radial-gradient(120% 90% at 50% -10%,rgba(255,250,235,.5),transparent 60%)",
+      "--bar":"#33240F","--barfg":"#F3EAD3","--barline":"rgba(243,234,211,.42)",
+      "--stampon":"#E9A79C","--warn":"#E3C069",
+      "--drop":"rgba(58,42,24,.18)","--locked":"#C9B78D",
+      "--legal":"rgba(181,138,43,.24)","--legal-h":"rgba(181,138,43,.46)",
+      "--legalpool":"rgba(47,107,122,.22)","--legalpool-h":"rgba(47,107,122,.44)"
+    },
+    mark: '<path d="M5 20V5h9l5 5v10z"/><path d="M14 5v5h5"/><path d="M8 13h7M8 16.5h5"/>',
+    bgart: mottle(),
+    css: ".panel{box-shadow:inset 0 0 26px rgba(58,42,24,.07)}"+
+         ".panel>h2{text-transform:none;font-variant:small-caps;letter-spacing:.1em;font-size:12px}"+
+         ".mast h1{text-transform:none;letter-spacing:.04em;font-size:23px}"+
+         ".mast .sub{text-transform:none;font-variant:small-caps;letter-spacing:.08em;font-size:11px}"+
+         ".combo-head,.legend span,.cornernote{text-transform:none;font-variant:small-caps;letter-spacing:.05em}",
+    glyphs: {
+      surveyor:  '<path d="M4.5 21V9l2-3.6L8.5 9v12M15.5 21V9l2-3.6L19.5 9v12"/>'+
+                 '<path d="M2.5 12.5h19M2.5 17h19"/>',
+      agent:     '<path d="M12 21c-4.6-1.8-6.6-5-6.6-9.4V5.4L12 3l6.6 2.4v6.2c0 4.4-2 7.6-6.6 9.4z"/>'+
+                 '<path d="M8.4 13l3.6-3.4 3.6 3.4"/>',
+      landscaper:'<path d="M12 21v-5"/><path d="M6.6 16h10.8"/>'+
+                 '<path d="M12 3.4c3.4 0 5.6 2.4 5.6 5.4S15.4 14.2 12 14.2 6.4 11.8 6.4 8.8 8.6 3.4 12 3.4z"/>',
+      pool:      '<path d="M4.4 12h15.2v4.2c0 2.4-3.4 4.2-7.6 4.2s-7.6-1.8-7.6-4.2z"/>'+
+                 '<path d="M3.4 12h17.2"/><path d="M7.4 12V8.6a4.6 4.6 0 019.2 0V12"/>',
+      temp:      '<path d="M6 21l9-9"/><path d="M13.2 7.6l3.2-3.2 4 4-3.2 3.2z"/>'+
+                 '<path d="M11.6 9.2l3.2 3.2"/>',
+      bis:       '<path d="M2.4 21v-8.4L6.6 7l4.2 5.6V21z"/><path d="M13.2 21v-8.4L17.4 7l4.2 5.6V21z"/>'
+    }
+  },
+
+  riso: {
+    name: "Risograph",
+    blurb: "Two-ink duplicator print. Halftone dots, a hair of misregistration.",
+    swatch: ["#E9E7DE","#173B4A","#FF4E8B","#FFD400","#1F8FB0"],
+    vars: {
+      "--paper":"#E9E7DE","--paper-2":"#DCDAD0","--card":"#F6F4ED",
+      "--ink":"#173B4A","--ink-soft":"#4F6C77","--rule":"#A4B4BA","--rule-soft":"#C6D0D3",
+      "--stamp":"#FF4E8B","--pool":"#1F8FB0","--park":"#2F8F5B",
+      "--flag":"#FFD400","--plum":"#7B4BE0","--temp":"#FF7A00",
+      "--mono":'"Helvetica Neue Condensed Bold","Arial Narrow",Impact,Haettenschweiler,sans-serif',
+      "--sans":'"Helvetica Neue",Helvetica,Arial,sans-serif',
+      "--r":"0px","--rs":"0px","--gsw":"2.3",
+      "--bodybg":"radial-gradient(rgba(255,78,139,.11) 1px,transparent 1.6px),"+
+                 "radial-gradient(rgba(23,59,74,.13) 1px,transparent 1.6px)",
+      "--bodybgsize":"8px 8px, 8px 8px","--bodybgpos":"0 0, 4px 4px",
+      "--bar":"#173B4A","--barfg":"#F6F4ED","--barline":"rgba(246,244,237,.55)",
+      "--stampon":"#FF89B4","--warn":"#FFD400",
+      "--drop":"rgba(255,78,139,.35)","--locked":"#C3CFD3",
+      "--legal":"rgba(255,212,0,.34)","--legal-h":"rgba(255,212,0,.62)",
+      "--legalpool":"rgba(31,143,176,.26)","--legalpool-h":"rgba(31,143,176,.5)"
+    },
+    mark: '<circle cx="9" cy="9" r="6.4"/><circle cx="15.4" cy="15" r="6.4" stroke="var(--stamp)"/>',
+    css: ".combo{box-shadow:4px 4px 0 rgba(255,78,139,.28)}"+
+         ".mast h1{text-shadow:2px 2px 0 rgba(255,78,139,.45);letter-spacing:.06em}"+
+         ".panel>h2{color:var(--stamp)}"+
+         ".bignum{letter-spacing:-.03em}"+
+         ".modal{box-shadow:6px 6px 0 rgba(255,78,139,.28)}",
+    glyphs: {
+      surveyor:  '<path d="M4 21V7M12 21V7M20 21V7"/><path d="M2 11.5h20M2 16.5h20"/>',
+      agent:     '<path d="M4 20h4v-6H4zM10 20h4V9h-4zM16 20h4V4h-4z"/>',
+      landscaper:'<path d="M12 21v-5"/><path d="M12 3l6.4 7.4H5.6z"/><path d="M12 8.6l4.6 7.4H7.4z"/>',
+      pool:      '<rect x="3" y="7" width="18" height="13"/><path d="M3 11.5h18M3 15.5h18"/><path d="M9 7v13M15 7v13"/>',
+      temp:      '<path d="M12 3l9 18H3z"/><path d="M7.6 15.5h8.8"/>',
+      bis:       '<path d="M2 21V11l4.6-4.6L11.2 11v10z"/><path d="M12.8 21V11l4.6-4.6L22 11v10z"/>'
+    }
+  }
+};
+const THEME_ORDER = ["drafting","hillside","cats","orbit","scriptorium","riso"];
+
+function applyTheme(id){
+  const t = THEMES[id] || THEMES.drafting;
+  const root = document.documentElement;
+  /* clear anything a previous theme set, then apply */
+  THEME_ORDER.forEach(k=>Object.keys(THEMES[k].vars).forEach(v=>root.style.removeProperty(v)));
+  Object.keys(t.vars).forEach(v=>root.style.setProperty(v, t.vars[v]));
+  GPATH = Object.assign({}, BASE_GPATH, t.glyphs||{});
+  const css=document.getElementById("themecss"); if(css) css.textContent = t.css || "";
+  const art=document.getElementById("bgart"); if(art) art.innerHTML = t.bgart || "";
+  const mk=document.getElementById("mark");
+  if(mk) mk.innerHTML = t.mark
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.7" '+
+      'stroke-linecap="round" stroke-linejoin="round">'+t.mark+'</svg>' : "";
+}
+
+/* A miniature of the real interface. Custom properties are set inline on the
+   wrapper, so the whole subtree renders in that theme without activating it. */
+function themePreview(id){
+  const t=THEMES[id], set=glyphSet(id);
+  const vars = "--bodybgsize:auto;--bodybgpos:0 0;--gsw:1.7;" +
+    Object.keys(t.vars).map(k=>k+":"+t.vars[k]).join(";");
+  return '<div class="tprev" style="'+vars.replace(/"/g,"&quot;")+'">'+
+    '<div class="tprev-in">'+
+      '<div class="tp-card"><span class="tp-n">8</span>'+glyphIn(set,"landscaper","tp-g")+'</div>'+
+      '<div class="tp-street"><i class="on">3</i><i></i><b></b><i class="on">7</i><i></i></div>'+
+      '<div class="tp-set">'+glyphIn(set,"pool","tp-s")+glyphIn(set,"temp","tp-s")+
+        glyphIn(set,"bis","tp-s")+'</div>'+
+    '</div></div>';
+}
+
+function themePicker(){
+  let h='<h3>Theme</h3><p class="lede">Visual only \u2014 the rules, values and deck never change.</p>'+
+        '<div class="themegrid">';
+  THEME_ORDER.forEach(id=>{
+    const t=THEMES[id];
+    h+='<button class="themecard'+(CFG.theme===id?" on":"")+'" data-theme="'+id+'">'+
+       '<b>'+t.name+'</b><span>'+t.blurb+'</span>'+themePreview(id)+'</button>';
+  });
+  h+='</div><div class="toolbar"><button class="btn" onclick="backOut()">Close</button></div>';
+  openBox(h);
+  document.getElementById("modal").querySelectorAll("button[data-theme]").forEach(b=>{
+    b.onclick=()=>{ CFG.theme=b.dataset.theme; applyTheme(CFG.theme); save(); themePicker(); render(); };
+  });
+}
+function glyph(e, cls){
+  return '<svg class="'+cls+'" viewBox="0 0 24 24" fill="none" stroke="'+GCOLOR[e]+
+    '" stroke-width="var(--gsw)" stroke-linecap="round" stroke-linejoin="round">'+
+    GPATH[e]+'</svg>';
+}
+
+/* p2: effect side 18 Surveyor / 18 Real Estate / 18 Landscaper / 9 Pool /
+   9 Temp Agency / 9 Bis. Number side 3x 1,2,14,15  4x 3,13  5x 4,12
+   6x 5,11  7x 6,10  8x 7,9  9x 8. The pairings below were read off a real
+   deck and reproduce that distribution exactly. */
+const DECK_2018 = {
+  pool:       [3,4,6,7,8,9,10,12,13],
+  temp:       [3,4,6,7,8,9,10,12,13],
+  bis:        [3,4,6,7,8,9,10,12,13],
+  surveyor:   [1,2,3,5,5,6,6,7,8,8,9,10,10,11,11,13,14,15],
+  landscaper: [1,2,4,5,5,6,7,7,8,8,9,9,10,11,11,12,14,15],
+  agent:      [1,2,4,5,5,6,7,7,8,8,9,9,10,11,11,12,14,15]
+};
+
+const BASE = {
+  theme: "drafting",
+  seed: "",      // blank means a fresh random seed per sheet
+  city: "",      // written into the masthead, like the printed sheet
+  hints: false,
+  planOff: {},   // plan ids kept out of the draw
+  mode: "solo",            // "solo" = official variant, "standard" = 3-stack turn
+  streets: [
+    { lots:10, pools:[1,4,7],     parks:[0,2,4,10] },
+    { lots:11, pools:[0,3,6,9],   parks:[0,2,4,6,14] },
+    { lots:12, pools:[2,5,8,11],  parks:[0,2,4,6,8,18] }
+  ],
+  estate: {1:[1,3], 2:[2,3,4], 3:[3,4,5,6], 4:[4,5,6,7,8], 5:[5,6,7,8,10], 6:[6,7,8,10,12]},
+  pool:    [0,3,6,9,13,17,21,26,31,36],
+  bis:     [0,1,3,6,9,12,16,20,24,28],
+  refusal: [0,0,3,5],
+  soloTempMin: 6, soloTempPts: 7,   // p9: 7 points only if at least six temps hired
+  deck: DECK_2018,
+  numMin: 0, numMax: 17,            // p7: Temp Agency allows 0 to 17
+  targets: {Apprentice:60, Architect:80, "Best Architect":100}
+};
+
+/* Basic City Plans are all housing-estate plans (p8). The rulebook does not
+   print the 18 combinations, so these twelve are INFERRED, using point pairs
+   read off the card photographs (n1 ~ 8/4, n2 ~ 9/5-11/6, n3 ~ 13/7). */
+const BASIC_PLANS = [
+  {n:1, hi:8,  lo:4, text:"Two complete estates of size 4",            req:[4,4]},
+  {n:1, hi:8,  lo:4, text:"Two complete estates of size 3",            req:[3,3]},
+  {n:1, hi:7,  lo:4, text:"Three complete estates of size 2",          req:[2,2,2]},
+  {n:1, hi:8,  lo:4, text:"Two estates of size 1 and one of size 5",   req:[1,1,5]},
+  {n:2, hi:9,  lo:5, text:"Three estates of size 1 and one of size 4", req:[1,1,1,4]},
+  {n:2, hi:10, lo:5, text:"One estate of size 2 and one of size 5",    req:[2,5]},
+  {n:2, hi:11, lo:6, text:"Two complete estates of size 5",            req:[5,5]},
+  {n:2, hi:11, lo:6, text:"One estate of size 2 and one of size 6",    req:[2,6]},
+  {n:3, hi:13, lo:7, text:"One estate each of size 2, 3 and 4",        req:[2,3,4]},
+  {n:3, hi:13, lo:7, text:"One estate of size 3 and one of size 6",    req:[3,6]},
+  {n:3, hi:13, lo:7, text:"Two complete estates of size 6",            req:[6,6]},
+  {n:3, hi:12, lo:6, text:"One estate each of size 1, 3 and 5",        req:[1,3,5]}
+];
+
+/* Advanced City Plans, wording and values taken verbatim from p10. The one
+   requiring a roundabout is omitted because roundabouts are not implemented. */
+const ADV_PLANS = [
+  {n:1, hi:6, lo:3, text:"All houses built on Street 1",                       sp:"fill", street:0},
+  {n:1, hi:6, lo:3, text:"All houses built on Street 2",                       sp:"fill", street:1},
+  {n:1, hi:6, lo:3, text:"All houses built on Street 3",                       sp:"fill", street:2},
+  {n:1, hi:7, lo:4, text:"The first and last house of each street built",      sp:"ends"},
+  {n:1, hi:6, lo:3, text:"Seven temps hired",                                  sp:"temps"},
+  {n:1, hi:8, lo:3, text:"Five bis houses built on the same street",           sp:"bis5"},
+  {n:2, hi:8, lo:3, text:"All parks and all pools built on Street 2",          sp:"parkpool", street:1},
+  {n:2, hi:8, lo:3, text:"All parks and all pools built on Street 3",          sp:"parkpool", street:2},
+  {n:2, hi:7, lo:4, text:"Two streets with all parks or all pools built",      sp:"twostreets"}
+];
+
+/* Ids are derived from the plan's own requirement, not its position, so that a
+   saved on/off preference survives the list being reordered or extended. */
+function planId(p, set){
+  return set+p.n+"-"+(p.req ? p.req.join("") : p.sp+(p.street===undefined?"":p.street));
+}
+BASIC_PLANS.forEach(p=>{ p.id=planId(p,"b"); });
+ADV_PLANS.forEach(p=>{ p.id=planId(p,"a"); });
+/* Out of the box that means the standard game: advanced plans start switched off. */
+ADV_PLANS.forEach(p=>{ BASE.planOff[p.id]=true; });
+
+/* Which plans may be drawn: the chosen plan set, minus anything switched off. */
+/* Every plan takes part in the enable/disable rule. Whether the sheet counts as
+   "advanced" is derived from the pool, not held as a second, conflicting flag. */
+function activePlans(){ return BASIC_PLANS.concat(ADV_PLANS); }
+function advancedOn(){
+  const off=CFG.planOff||{};
+  return ADV_PLANS.some(p=>!off[p.id]);
+}
+/* Any bulk change must leave every category with something to draw. */
+function ensureCategories(){
+  const off=CFG.planOff||{};
+  [1,2,3].forEach(n=>{
+    if(activePlans().some(p=>p.n===n && !off[p.id])) return;
+    activePlans().filter(p=>p.n===n && !p.sp).forEach(p=>{ delete off[p.id]; });
+  });
+  CFG.planOff=off;
+}
+function setAdvanced(on){
+  const off=CFG.planOff||{};
+  ADV_PLANS.forEach(p=>{ if(on) delete off[p.id]; else off[p.id]=true; });
+  CFG.planOff=off;
+  ensureCategories();
+  reconcilePlans();
+  save();
+}
+function planPool(){
+  const off=CFG.planOff||{};
+  return activePlans().filter(p=>!off[p.id]);
+}
+function drawPlans(){
+  const pool=planPool();
+  return [1,2,3].map(n=>{
+    let cands=pool.filter(p=>p.n===n);
+    if(!cands.length) cands=BASIC_PLANS.filter(p=>p.n===n);   /* never leave a tier empty */
+    return Object.assign({},pick(cands),{done:false,scored:0});
+  });
+}
+function redrawPlans(){
+  if(!G||G.started) return false;
+  G.planRoll++;
+  seedPlans(G.seed,G.planRoll);
+  G.plans=drawPlans();
+  return true;
+}
+/* If a switched-off plan is currently on the table, replace just that one. */
+function reconcilePlans(){
+  if(!G||G.started) return;
+  const pool=planPool();
+  G.plans=G.plans.map(p=>{
+    if(pool.some(q=>q.id===p.id)) return p;
+    let cands=pool.filter(q=>q.n===p.n);
+    if(!cands.length) cands=BASIC_PLANS.filter(q=>q.n===p.n);
+    return Object.assign({},pick(cands),{done:false,scored:0});
+  });
+}
+function togglePlan(id){
+  const live=activePlans();
+  const p=live.find(x=>x.id===id);
+  if(!p) return false;          /* not in the current plan set, nothing to switch */
+  const off=CFG.planOff||{};
+  if(off[id]) delete off[id];
+  else {
+    const others=live.filter(x=>x.n===p.n && x.id!==id && !off[x.id]).length;
+    if(others===0) return false;      /* keep at least one in every category */
+    off[id]=true;
+  }
+  CFG.planOff=off;
+  reconcilePlans();
+  save();
+  return true;
+}
+
+const SPECIAL = {
+  fill:      (p)=> G.streets[p.street].slots.every(s=>s.v!==null),
+  ends:      ()=> G.streets.every(st=>st.slots[0].v!==null && st.slots[st.slots.length-1].v!==null),
+  temps:     ()=> G.temp>=7,
+  bis5:      ()=> G.streets.some(st=>st.slots.filter(s=>s.bis).length>=5),
+  parkpool:  (p)=> allParks(p.street) && allPools(p.street),
+  twostreets:()=> [0,1,2].filter(i=>allParks(i)||allPools(i)).length>=2
+};
+function allParks(i){ return G.streets[i].parks >= CFG.streets[i].parks.length-1; }
+function allPools(i){
+  const ps=G.streets[i].slots.filter(s=>s.isPool);
+  return ps.length>0 && ps.every(s=>s.pool);
+}
+
+let CFG=copy(BASE), G=null, sel=null, snap=null, best=null;
+
+/* ---------------------------------------------------------------- clock
+   Kept outside G on purpose: Undo rewinds the game, not the wall clock. */
+const T={start:0, roundStart:null, rounds:[], stopped:false, running:false, total:0};
+function resetClock(){ T.start=0; T.roundStart=null; T.rounds=[];
+  T.stopped=false; T.running=false; T.total=0; }
+function beginClock(){ T.start=Date.now(); T.running=true; T.stopped=false; }
+function markRound(){
+  const now=Date.now();
+  if(T.roundStart!==null) T.rounds.push(now-T.roundStart);
+  T.roundStart=now;
+}
+function stopClock(){
+  if(T.stopped) return;
+  const now=Date.now();
+  if(T.roundStart!==null){ T.rounds.push(now-T.roundStart); T.roundStart=null; }
+  T.total=now-T.start; T.stopped=true;
+}
+function avgRound(){
+  return T.rounds.length ? T.rounds.reduce((a,b)=>a+b,0)/T.rounds.length : null;
+}
+function fmt(ms){
+  if(ms===null||ms===undefined||!isFinite(ms)) return "\u2014";
+  const s=Math.floor(ms/1000), m=Math.floor(s/60), h=Math.floor(m/60);
+  const pad=v=>(v<10?"0":"")+v;
+  return h ? h+":"+pad(m%60)+":"+pad(s%60) : m+":"+pad(s%60);
+}
+function tickClock(){
+  if(!G) return;
+  const now=Date.now();
+  const gt = !T.running ? 0 : (T.stopped ? T.total : now-T.start);
+  const rt = (T.stopped||T.roundStart===null) ? null : now-T.roundStart;
+  const e=document.getElementById("rd-time"); if(e) e.textContent=fmt(gt);
+  const sub=document.getElementById("rd-sub");
+  if(sub) sub.textContent="round "+fmt(rt)+" \u00b7 avg "+fmt(avgRound());
+}
+
+function copy(o){ return JSON.parse(JSON.stringify(o)); }
+/* ------------------------------------------------------------------ seeding
+   Two independent streams from one seed: the deck and the plan draw. Keeping
+   them apart means fiddling with the plan pool can never disturb the cards. */
+function xmur3(str){
+  let h=1779033703 ^ str.length;
+  for(let i=0;i<str.length;i++){
+    h=Math.imul(h ^ str.charCodeAt(i),3432918353);
+    h=h<<13 | h>>>19;
+  }
+  return function(){
+    h=Math.imul(h ^ h>>>16,2246822507);
+    h=Math.imul(h ^ h>>>13,3266489909);
+    h^=h>>>16;
+    return h>>>0;
+  };
+}
+function mulberry32(a){
+  return function(){
+    a=a+0x6D2B79F5|0;
+    let t=Math.imul(a ^ a>>>15,1|a);
+    t=t+Math.imul(t ^ t>>>7,61|t)^t;
+    return ((t ^ t>>>14)>>>0)/4294967296;
+  };
+}
+const SEED_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   /* no O/0 or I/1 */
+function randomSeed(){
+  let out="";
+  for(let i=0;i<6;i++) out+=SEED_ALPHABET[Math.floor(Math.random()*SEED_ALPHABET.length)];
+  return out;
+}
+function normalizeSeed(v){
+  return String(v||"").trim().toUpperCase()
+    .replace(/[^A-Z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,24);
+}
+let RNG=Math.random;      /* deck */
+let RNGP=Math.random;     /* plan draw */
+function seedSheet(seed){
+  RNG =mulberry32(xmur3(seed+":deck")());
+  RNGP=mulberry32(xmur3(seed+":plans")());
+}
+function seedPlans(seed,roll){
+  RNGP=mulberry32(xmur3(seed+":plans"+(roll?":"+roll:""))());
+}
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(RNG()*(i+1));
+  const t=a[i];a[i]=a[j];a[j]=t;} return a; }
+function pick(a){ return a[Math.floor(RNGP()*a.length)]; }
+
+function makeCards(){
+  const out=[];
+  Object.keys(CFG.deck).forEach(e=>CFG.deck[e].forEach(n=>out.push({n:n,e:e})));
+  return shuffle(out);
+}
+function deckTotal(){ return Object.keys(CFG.deck).reduce((t,e)=>t+CFG.deck[e].length,0); }
+function numberHist(){
+  const h={}; Object.keys(CFG.deck).forEach(e=>CFG.deck[e].forEach(n=>h[n]=(h[n]||0)+1));
+  const ks=Object.keys(h).map(Number), lo=Math.min.apply(null,ks), hi=Math.max.apply(null,ks);
+  const out=[]; for(let n=lo;n<=hi;n++) out.push(h[n]||0);
+  return {lo:lo,hi:hi,counts:out};
+}
+
+/* --------------------------------------------------------- setup */
+function newGame(){
+  const seed=(CFG.seed||"").trim() || randomSeed();
+  seedSheet(seed);
+  const plans=drawPlans();
+
+  G={
+    streets: CFG.streets.map(s=>({
+      slots: Array.from({length:s.lots},(_,i)=>({v:null,bis:false,pool:false,
+        isPool:s.pools.indexOf(i)!==-1, locked:false})),
+      fences: Array(Math.max(0,s.lots-1)).fill(false),
+      parks:0
+    })),
+    improve:{1:0,2:0,3:0,4:0,5:0,6:0},
+    pools:0, temp:0, bisCount:0, refusals:0,
+    plans:plans, approved:false, soloSeen:false,
+    seed:seed, planRoll:0,
+    round:0, over:false, started:false, inked:null, why:""
+  };
+
+  if(CFG.mode==="solo"){
+    // p9: deal two equal stacks, shuffle the Solo card into one, put it underneath.
+    const cards=makeCards();
+    const half=Math.ceil(cards.length/2);
+    const top=cards.slice(0,half), bottom=cards.slice(half);
+    bottom.push({solo:true});
+    shuffle(bottom);
+    G.deck=top.concat(bottom);
+    G.hand=[];
+  } else {
+    // p4/p5: three equal stacks, house number face up; flipped card shows its effect.
+    const cards=makeCards(), per=Math.floor(cards.length/3);
+    G.stacks=[cards.slice(0,per),cards.slice(per,2*per),cards.slice(2*per)];
+    G.discards=[[],[],[]]; G.shown=[null,null,null];
+  }
+  resetClock();
+  sel=null; snap=null;
+  render();
+  briefing();
+}
+
+/* Nothing is dealt and the clock does not move until this is called. */
+function startGame(){
+  if(!G || G.started) return;
+  G.started=true;
+  beginClock();
+  nextRound();
+  forceCloseBox();
+  render();
+}
+
+function nextRound(){
+  G.round++;
+  if(CFG.mode==="solo"){
+    G.hand=[];
+    while(G.hand.length<3 && G.deck.length){
+      const c=G.deck.shift();
+      if(c.solo){ G.approved=true; G.soloSeen=true; continue; }
+      G.hand.push(c);
+    }
+    if(G.hand.length<3){ endGame("The construction deck is empty."); return; }
+  } else {
+    for(let i=0;i<3;i++){
+      if(!G.stacks[i].length && G.discards[i].length){ G.stacks[i]=shuffle(G.discards[i]); G.discards[i]=[]; }
+      if(!G.stacks[i].length){ G.shown[i]=null; continue; }
+      const c=G.stacks[i].shift(); G.discards[i].push(c);
+      if(!G.stacks[i].length && G.discards[i].length){ G.stacks[i]=shuffle(G.discards[i]); G.discards[i]=[]; }
+      G.shown[i]=G.stacks[i].length
+        ? {n:G.stacks[i][0].n, e:c.e, nextE:G.stacks[i][0].e} : null;
+    }
+    if(G.shown.every(x=>x===null)){ endGame("The construction stacks ran out."); return; }
+  }
+  markRound();
+}
+
+/* --------------------------------------------------------- geometry */
+function groups(st){
+  const out=[]; let cur=[];
+  for(let i=0;i<st.slots.length;i++){ cur.push(i);
+    if(i<st.fences.length && st.fences[i]){ out.push(cur); cur=[]; } }
+  if(cur.length) out.push(cur);
+  return out;
+}
+function estates(){
+  const out=[];
+  G.streets.forEach((st,si)=>groups(st).forEach(g=>{
+    if(g.every(i=>st.slots[i].v!==null))
+      out.push({si:si, idx:g, size:g.length, locked:g.some(i=>st.slots[i].locked)});
+  }));
+  return out;
+}
+function houses(){ return G.streets.reduce((t,st)=>t+st.slots.filter(s=>s.v!==null).length,0); }
+function allLots(){ return G.streets.reduce((t,st)=>t+st.slots.length,0); }
+
+/* p5: empty house, ascending left to right, never the same number twice in a street */
+function ascOK(si,idx,n){
+  const s=G.streets[si].slots;
+  for(let j=0;j<idx;j++) if(s[j].v!==null && s[j].v>=n) return false;
+  for(let j=idx+1;j<s.length;j++) if(s[j].v!==null && s[j].v<=n) return false;
+  return true;
+}
+function canPlace(si,idx,n){ return G.streets[si].slots[idx].v===null && ascOK(si,idx,n); }
+function anyPlace(n){
+  for(let si=0;si<3;si++) for(let i=0;i<G.streets[si].slots.length;i++) if(canPlace(si,i,n)) return true;
+  return false;
+}
+/* A refusal is only taken when no available number can be written. In the solo
+   variant every card in hand offers its number. Temp Agency is optional, so it
+   does not count towards avoiding a refusal. */
+function availableNumbers(){
+  return CFG.mode==="solo" ? G.hand.map(c=>c.n) : G.shown.filter(x=>x).map(x=>x.n);
+}
+function mustBuild(){ return availableNumbers().some(n=>anyPlace(n)); }
+
+/* p7 Bis: adjacent, same number, and duplicates can never be separated by a fence */
+function bisTargets(){
+  const out=[];
+  G.streets.forEach((st,si)=>st.slots.forEach((slot,i)=>{
+    if(slot.v!==null) return;
+    const vals=[];
+    if(i-1>=0 && st.slots[i-1].v!==null && !st.fences[i-1]) vals.push(st.slots[i-1].v);
+    if(i+1<st.slots.length && st.slots[i+1].v!==null && !st.fences[i]) vals.push(st.slots[i+1].v);
+    const uniq=vals.filter((v,k)=>vals.indexOf(v)===k);
+    if(uniq.length) out.push({si:si,i:i,vals:uniq});
+  }));
+  return out;
+}
+function bisAt(si,i){ return bisTargets().find(t=>t.si===si&&t.i===i); }
+
+/* Fences: any free dotted space, but not splitting a duplicate pair (p7) and
+   not splitting an estate already used for a City Plan (p8). */
+function fenceOK(si,gi){
+  const st=G.streets[si];
+  if(st.fences[gi]) return false;
+  const a=st.slots[gi], b=st.slots[gi+1];
+  if(a.v!==null && b.v!==null && a.v===b.v) return false;
+  if(a.locked && b.locked) return false;
+  return true;
+}
+
+/* --------------------------------------------------------- scoring (p8) */
+function tempPoints(){ return G.temp>=CFG.soloTempMin ? CFG.soloTempPts : 0; }
+function score(){
+  const rows=[]; let total=0;
+  let pl=0; G.plans.forEach(p=>{ if(p.done) pl+=p.scored; });
+  rows.push(["City plans",pl,false]); total+=pl;
+
+  let pk=0; G.streets.forEach((st,i)=>{ pk+=CFG.streets[i].parks[st.parks]; });
+  rows.push(["Parks",pk,false]); total+=pk;
+
+  const po=CFG.pool[Math.min(G.pools,CFG.pool.length-1)];
+  rows.push(["Pools",po,false]); total+=po;
+
+  const tw=tempPoints();
+  rows.push(["Temp agency",tw,false]); total+=tw;
+
+  const es=estates(); let et=0;
+  for(let n=1;n<=6;n++){
+    const col=CFG.estate[n];
+    const v=col[Math.min(G.improve[n],col.length-1)];
+    const c=es.filter(e=>e.size===n).length;
+    et+=v*c;
+    if(c) rows.push(["Estates of "+n+" ("+c+" \u00d7 "+v+")",v*c,true]);
+  }
+  rows.push(["Completed housing estates",et,false]); total+=et;
+
+  const bi=-CFG.bis[Math.min(G.bisCount,CFG.bis.length-1)];
+  rows.push(["Bis",bi,false]); total+=bi;
+
+  const rf=-CFG.refusal[Math.min(G.refusals,CFG.refusal.length-1)];
+  rows.push(["Building permit refusal",rf,false]); total+=rf;
+  return {rows:rows,total:total};
+}
+
+/* --------------------------------------------------------- city plans */
+function matchPlan(p){
+  if(p.sp) return SPECIAL[p.sp](p) ? [] : null;
+  const free=estates().filter(e=>!e.locked), used=[];
+  for(const need of p.req){
+    const k=free.findIndex(e=>e.size===need);
+    if(k===-1) return null;
+    used.push(free[k]); free.splice(k,1);
+  }
+  return used;
+}
+function validatePlan(pi){
+  if(locked()) return;
+  const p=G.plans[pi];
+  if(p.done) return;
+  const m=matchPlan(p);
+  if(!m) return;
+  keep();
+  m.forEach(e=>e.idx.forEach(i=>{ G.streets[e.si].slots[i].locked=true; }));
+  p.done=true;
+  p.scored = G.approved ? p.lo : p.hi;
+  if(checkEnd()) return;
+  render();
+}
+
+/* --------------------------------------------------------- the round */
+function keep(){ snap={G:copy(G)}; }
+
+/* No move is legal before the sheet begins or after it closes. The buttons are
+   disabled too, but the guard belongs here rather than only in the view. */
+function locked(){ return !G || !G.started || G.over; }
+
+function chooseNumber(i){
+  if(locked()) return;
+  if(!sel) sel={numCard:null, effCard:null, phase:"choose", n:null, usedEffect:false};
+  if(sel.phase!=="choose") return;
+  sel.numCard = (sel.numCard===i) ? null : i;
+  if(sel.effCard===sel.numCard) sel.effCard=null;
+  render();
+}
+/* p9: the effect must come from a different card than the number. Taking one
+   commits the turn — there is nothing left to decide at that point. */
+function chooseEffect(i){
+  if(locked()||!sel||sel.phase!=="choose") return;
+  if(sel.numCard===null || sel.numCard===i) return;
+  sel.effCard=i;
+  confirmChoice();
+}
+function takeNoEffect(){
+  if(locked()||!sel||sel.numCard===null) return;
+  sel.effCard=null;
+  confirmChoice();
+}
+function takeCombination(i){
+  if(locked()||(sel&&sel.phase!=="choose")) return;
+  sel={numCard:i, effCard:i, phase:"choose", n:null, usedEffect:false};
+  confirmChoice();
+}
+function cards(){ return CFG.mode==="solo" ? G.hand : G.shown.filter(x=>x!==null); }
+function cardAt(i){ return CFG.mode==="solo" ? G.hand[i] : G.shown[i]; }
+
+function confirmChoice(){
+  if(!sel || sel.numCard===null) return;
+  sel.n = cardAt(sel.numCard).n;
+  sel.eff = sel.effCard===null ? null : cardAt(sel.effCard).e;
+  sel.phase = (sel.eff==="temp") ? "temp" : "place";
+  render();
+}
+function setTemp(d){
+  const n=cardAt(sel.numCard).n+d;
+  if(n<CFG.numMin||n>CFG.numMax) return;
+  sel.n=n; sel.usedEffect=true; sel.phase="place"; render();
+}
+function declineTemp(){ sel.n=cardAt(sel.numCard).n; sel.eff=null; sel.usedEffect=false;
+  sel.phase="place"; render(); }
+
+function place(si,idx){
+  if(locked()||!sel||sel.phase!=="place"||!canPlace(si,idx,sel.n)) return;
+  keep();
+  const st=G.streets[si];
+  st.slots[idx].v=sel.n;
+  G.inked=si+":"+idx; sel.street=si; sel.idx=idx;
+
+  if(sel.eff==="temp" && sel.usedEffect) G.temp++;
+  if(sel.eff==="pool"){ sel.phase="pool"; render(); return; }
+  if(sel.eff==="landscaper"){ sel.phase="park"; render(); return; }
+  if(sel.eff==="surveyor"){ sel.phase="fence"; render(); return; }
+  if(sel.eff==="agent"){ sel.phase="agent"; render(); return; }
+  if(sel.eff==="bis"){ sel.phase="bis"; render(); return; }
+  endRound();
+}
+function doPool(yes){
+  if(yes){
+    const s=G.streets[sel.street].slots[sel.idx];
+    if(s.isPool && !s.pool && G.pools<CFG.pool.length-1){ s.pool=true; G.pools++; }
+  }
+  endRound();
+}
+function doPark(yes){
+  if(yes){ const st=G.streets[sel.street];
+    if(st.parks < CFG.streets[sel.street].parks.length-1) st.parks++; }
+  endRound();
+}
+function doFence(si,gi){ if(!sel||sel.phase!=="fence"||!fenceOK(si,gi)) return;
+  G.streets[si].fences[gi]=true; endRound(); }
+function doAgent(n){ if(!sel||sel.phase!=="agent") return;
+  if(G.improve[n]>=CFG.estate[n].length-1) return; G.improve[n]++; endRound(); }
+function doBis(si,i,v){
+  const s=G.streets[si].slots[i];
+  s.v=v; s.bis=true; G.bisCount++; G.inked=si+":"+i; endRound();
+}
+
+function refuse(){
+  if(locked()||mustBuild()) return;
+  keep();
+  sel=null;
+  G.refusals++;
+  if(G.refusals>=CFG.refusal.length-1){ endGame("Third building permit refusal."); return; }
+  endRound();
+}
+function endRound(){
+  sel=null;
+  if(checkEnd()) return;
+  nextRound();
+  if(G.over) return;
+  render();
+}
+function checkEnd(){
+  if(G.plans.every(p=>p.done)){ endGame("All three City Plans achieved."); return true; }
+  if(houses()>=allLots()){ endGame("Every house on all three streets is built."); return true; }
+  return false;
+}
+function undo(){ if(locked()||!snap) return; G=copy(snap.G); snap=null; sel=null; render(); }
+function endGame(why){
+  G.over=true; sel=null; G.why=why;
+  stopClock();
+  const s=score();
+  if(best===null||s.total>best){ best=s.total; save(); }
+  render(); result(why,s);
+}
+
+/* --------------------------------------------------------- storage
+   Inside a Claude artifact persistence goes through window.storage; hosted on
+   an ordinary web server that object does not exist, so fall back to
+   localStorage. Without this the settings would silently never save. */
+const STORE=(function(){
+  try{
+    if(typeof window!=="undefined" && window.storage &&
+       typeof window.storage.get==="function"){
+      return { kind:"artifact",
+        get:k=>window.storage.get(k),
+        set:(k,v)=>window.storage.set(k,v) };
+    }
+  }catch(e){}
+  return { kind:"localStorage",
+    get:k=>new Promise((res,rej)=>{
+      try{ const v=localStorage.getItem(k); v===null?rej(new Error("empty")):res({value:v}); }
+      catch(e){ rej(e); }
+    }),
+    set:(k,v)=>new Promise((res,rej)=>{
+      try{ localStorage.setItem(k,v); res(); }catch(e){ rej(e); }
+    })
+  };
+})();
+
+async function load(){
+  try{ const r=await STORE.get("welcome-2018");
+    if(r&&r.value){ const d=JSON.parse(r.value);
+      if(d.cfg){
+        CFG=Object.assign(copy(BASE),d.cfg);
+        /* older saves carried a separate advanced flag; fold it into the pool */
+        if(d.cfg.advanced===false && !ADV_PLANS.some(q=>(CFG.planOff||{})[q.id]))
+          ADV_PLANS.forEach(q=>{ CFG.planOff[q.id]=true; });
+        delete CFG.advanced;
+        ensureCategories();
+      }
+      if(typeof d.best==="number") best=d.best;
+      applyTheme(CFG.theme);
+      renderCity();
+      $("btn-hints").textContent="Hints: "+(CFG.hints?"on":"off");
+      newGame(); } }catch(e){}
+}
+async function save(){
+  try{ await STORE.set("welcome-2018",JSON.stringify({cfg:CFG,best:best})); }catch(e){}
+}
+
+/* ------------------------------------------------------------ hint maths
+   In the solo variant the deck is dealt once and never reshuffled, so these
+   are exact probabilities over the cards that remain, not estimates. */
+function atLeastOneIn3(k, pool){
+  if(k<=0) return 0;
+  if(pool<=3) return 1;
+  let miss=1;
+  for(let i=0;i<3;i++) miss *= (pool-k-i)/(pool-i);
+  return 1-miss;
+}
+function soloStats(){
+  const cons=G.deck.filter(c=>!c.solo);
+  const pool=cons.length;
+  const nums={}, effs={};
+  cons.forEach(c=>{ nums[c.n]=(nums[c.n]||0)+1; effs[c.e]=(effs[c.e]||0)+1; });
+
+  /* The Solo card was shuffled into the bottom half, which was then placed
+     underneath, so it cannot appear until that half is reached. */
+  const total=deckTotal()+1, half=Math.ceil(deckTotal()/2);
+  const drawn=total-G.deck.length;
+  const eligible=total-Math.max(drawn,half);
+  /* near the end fewer than three cards may remain, so the look-ahead
+     window has to be capped by what is actually left */
+  const canDraw=Math.min(3, G.deck.length);
+  const window3=Math.max(0, Math.min(canDraw, drawn+canDraw-half));
+  const soloP = eligible>0 ? Math.min(1, window3/eligible) : 0;
+  const earliest=Math.ceil((half+1)/3);
+
+  return {pool:pool, nums:nums, effs:effs, soloP:soloP, earliest:earliest, drawn:drawn};
+}
+function standardStats(){
+  return G.stacks.map(st=>{
+    const below=st.slice(1);          /* the visible top card is already known */
+    const nums={};
+    below.forEach(c=>nums[c.n]=(nums[c.n]||0)+1);
+    return {pool:below.length, nums:nums};
+  });
+}
+
+/* ------------------------------------------------------- the city name
+   The printed sheet has a blank for this in its top corner. Clicking the
+   ellipsis in the masthead fills it in. */
+function esc(t){
+  return String(t).replace(/[&<>"']/g,c=>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+/* The name appears in the masthead and again on the briefing, so the widget is
+   rendered per slot. Only one slot is ever in edit mode; the rest mirror it. */
+const CITY_SLOTS=["cityslot","briefcity"];
+let cityEditing=null;          /* the id of the slot being edited, or null */
+function renderCity(){
+  const name=(CFG.city||"").trim();
+  CITY_SLOTS.forEach(sid=>{
+    const slot=document.getElementById(sid);
+    if(!slot) return;          /* the briefing slot only exists while it is open */
+    if(cityEditing===sid){
+      slot.innerHTML='<input class="cityinput" id="'+sid+'-in" maxlength="24" value="'+
+        esc(name)+'" aria-label="Name of your city" placeholder="\u2026">';
+      const inp=document.getElementById(sid+"-in");
+      inp.onkeydown=e=>{
+        if(e.key==="Enter"){ e.preventDefault(); commitCity(inp.value); }
+        else if(e.key==="Escape"){ e.preventDefault(); cityEditing=null; renderCity(); }
+      };
+      inp.onblur=()=>{ if(cityEditing===sid) commitCity(inp.value); };
+      inp.focus(); inp.select();
+    } else {
+      slot.innerHTML='<button class="cityname'+(name?"":" empty")+'" id="'+sid+'-btn" '+
+        'aria-label="Name of your city" title="'+
+        (name?"Rename your city":"Name your city")+'">'+
+        (name?esc(name):"\u2026")+'</button>';
+      document.getElementById(sid+"-btn").onclick=()=>{ cityEditing=sid; renderCity(); };
+    }
+  });
+  document.title="Welcome To "+(name||"\u2026");
+}
+let seedEditing=false;
+function renderSeed(){
+  const slot=document.getElementById("seedslot");
+  if(!slot||!G) return;
+  if(seedEditing){
+    slot.innerHTML='<input class="seedinput" id="seedinput" maxlength="24" spellcheck="false" '+
+      'value="'+esc(G.seed)+'" aria-label="Sheet seed">';
+    const inp=document.getElementById("seedinput");
+    inp.onkeydown=e=>{
+      if(e.key==="Enter"){ e.preventDefault(); commitSeed(inp.value); }
+      else if(e.key==="Escape"){ e.preventDefault(); seedEditing=false; renderSeed(); }
+    };
+    inp.onblur=()=>{ if(seedEditing) commitSeed(inp.value); };
+    inp.focus(); inp.select();
+  } else {
+    const fixed=!!normalizeSeed(CFG.seed);
+    slot.innerHTML='<button class="seedname" id="seedbtn" '+
+        'title="Type a seed here to rebuild this exact sheet">'+esc(G.seed)+'</button>'+
+      '<button class="seedroll" id="seedroll" title="New random seed" '+
+        'aria-label="New random seed">\u21bb</button>'+
+      '<span class="seednote">'+(fixed?"fixed":"new each sheet")+
+      (G.planRoll?" \u00b7 plans rerolled \u00d7"+G.planRoll:"")+'</span>';
+    document.getElementById("seedbtn").onclick=()=>{ seedEditing=true; renderSeed(); };
+    document.getElementById("seedroll").onclick=()=>{ CFG.seed=""; save(); newGame(); };
+  }
+}
+function commitSeed(v){
+  seedEditing=false;
+  CFG.seed=normalizeSeed(v);
+  save();
+  newGame();          /* rebuilds the sheet deterministically from the new seed */
+}
+
+function commitCity(v){
+  CFG.city=String(v||"").trim();
+  cityEditing=null;
+  save();
+  renderCity();
+}
+
+/* ========================================================== RENDER */
+const $=id=>document.getElementById(id);
+function render(){
+  $("modelabel").textContent = (CFG.mode==="solo"
+    ? "Official solo variant" : "Standard turn, played solo")+" \u00b7 2018 rules"
+    + (advancedOn()?" \u00b7 advanced plans":"");
+  $("handhead").textContent = CFG.mode==="solo"
+    ? "Three construction cards \u2014 one for its number, another for its effect"
+    : "Three combinations \u2014 effect from the discard, number from the stack";
+  $("rd-round").textContent=G.round;
+  $("rd-deck").textContent = CFG.mode==="solo" ? G.deck.length : "\u2014";
+  $("rd-built").textContent=houses()+"/"+allLots();
+  const s=score(), el=$("rd-score");
+  el.textContent=s.total; el.classList.toggle("bad",s.total<0);
+  $("rd-best").textContent=best===null?"\u2014":best;
+  hand(); streets(); stair(); plans(); tracks(); sheet(s); hints(); status();
+  tickClock();
+}
+
+function pct(p){ return (p*100).toFixed(p>=0.095?0:1)+"%"; }
+function bars(nums, pool, scoreFn){
+  const range=numberHist();
+  const items=[];
+  for(let n=range.lo;n<=range.hi;n++){
+    const k=nums[n]||0;
+    items.push({n:n, k:k, p:pool>0?scoreFn(k,pool):0});
+  }
+  const max=Math.max.apply(null, items.map(i=>i.p)) || 1;
+  return '<div class="hstrip">'+items.map(i=>
+    '<div class="hcell'+(i.k===0?" zero":"")+'" title="'+i.k+' left">'+
+      '<div class="hbarwrap"><span class="hbar" style="height:'+
+        (i.p<=0?2:Math.max(4,Math.round(100*i.p/max)))+'%"></span></div>'+
+      '<span class="hlbl">'+i.n+'</span>'+
+      '<span class="hpct">'+(i.k===0?"\u2013":pct(i.p))+'</span>'+
+    '</div>').join("")+'</div>';
+}
+
+function hints(){
+  const box=$("hint");
+  box.hidden=!CFG.hints;
+  if(!CFG.hints) return;
+  const body=$("hintbody");
+  $("hinthead").textContent = !G.started
+    ? "Hints \u2014 the opening deck"
+    : (CFG.mode==="solo"
+        ? "Hints \u2014 exact odds over the cards still in the deck"
+        : "Hints \u2014 what each stack still holds beneath its top card");
+
+  if(CFG.mode==="solo"){
+    const st=soloStats();
+    let h='<div class="hrow"><div class="hcap">House number \u2014 chance it appears '+
+          'among your next <em>three</em> cards</div>'+
+          bars(st.nums, st.pool, atLeastOneIn3)+'</div>';
+    h+='<div class="hrow"><div class="hcap">Effect \u2014 same, among your next three</div>'+
+       '<div class="heff">'+Object.keys(EFFECTS).map(e=>{
+         const k=st.effs[e]||0;
+         return '<div class="heffcell">'+glyph(e,"")+
+           '<span class="en">'+EFFECTS[e].short+'<br>'+k+' left</span>'+
+           '<span class="ep">'+(k?pct(atLeastOneIn3(k,st.pool)):"\u2013")+'</span></div>';
+       }).join("")+'</div></div>';
+    h+='<div class="hfoot"><b>'+st.pool+'</b> construction cards left. Solo card: '+
+       (G.soloSeen
+         ? 'already drawn, plans are approved.'
+         : (st.soloP>0
+             ? '<b>'+pct(st.soloP)+'</b> chance in your next draw.'
+             : 'cannot appear before round <b>'+st.earliest+'</b>.'))+
+       ' Average round <b>'+fmt(avgRound())+'</b>.</div>';
+    body.innerHTML=h;
+  } else {
+    const st=standardStats();
+    let h="";
+    st.forEach((s2,i)=>{
+      h+='<div class="hrow"><div class="hcap">Stack '+(i+1)+
+         ' \u2014 chance of each number <em>next</em> round &nbsp;('+s2.pool+
+         ' cards beneath the top)</div>'+
+         bars(s2.nums, s2.pool, (k,pool)=>k/pool)+'</div>';
+    });
+    h+='<div class="hfoot">The effect for next round is already visible in the corners of '+
+       'each stack, so only the number is uncertain. Average round <b>'+fmt(avgRound())+'</b>.</div>';
+    body.innerHTML=h;
+  }
+}
+
+function hand(){
+  const h=$("hand"); h.innerHTML="";
+  if(!G.started) return pendingCards(h);
+  if(CFG.mode==="solo") return soloCards(h);
+  return comboStacks(h);
+}
+
+/* Before the sheet begins nothing has been dealt, so show face-down cards
+   rather than three empty slots. */
+function pendingCards(h){
+  for(let i=0;i<3;i++){
+    const d=document.createElement("div");
+    d.className="combo dim";
+    d.innerHTML='<div class="combo-head">'+(CFG.mode==="solo"?"Card ":"Stack ")+(i+1)+'</div>'+
+      '<div class="combo-body"><div class="face'+(CFG.mode==="solo"?" big":" stack")+'">'+
+        '<span class="bignum">?</span></div></div>'+
+      '<div class="legend"><span'+(CFG.mode==="solo"?' class="solo"':'')+'>not dealt</span></div>'+
+      (CFG.mode==="solo"?"":'<div class="cornernote">&nbsp;</div>');
+    h.appendChild(d);
+  }
+}
+
+/* Solo: three cards, number side up. The corners of the number side show the
+   effect on the reverse, so each card's effect is legible without turning it. */
+function soloCards(h){
+  G.hand.forEach((c,i)=>{
+    const numOn = sel && sel.numCard===i, effOn = sel && sel.effCard===i;
+    const busy  = !!(sel && sel.phase!=="choose");
+    const d=document.createElement("div");
+    d.className="combo"+((numOn||effOn)?" chosen":"")+(busy&&!numOn&&!effOn?" dim":"");
+    const shownN=(numOn && sel.n!==null && busy)?sel.n:c.n;
+    d.innerHTML='<div class="combo-head">Card '+(i+1)+'</div>'+
+      '<div class="combo-body"><div class="face big">'+
+        glyph(c.e,"corner tl")+
+        '<span class="bignum">'+shownN+(shownN!==c.n?"*":"")+'</span>'+
+        '<span class="cap2">'+EFFECTS[c.e].short+'</span>'+
+        glyph(c.e,"corner br")+
+      '</div></div>'+
+      '<div class="legend"><span class="solo">'+
+        (numOn?"used as number":(effOn?"used as effect":"number \u00b7 effect"))+
+      '</span></div>';
+    const p=pickRow(d);
+    const bn=document.createElement("button"); bn.textContent="Number";
+    bn.className=numOn?"on":""; bn.disabled=busy; bn.onclick=()=>chooseNumber(i);
+    const be=document.createElement("button"); be.textContent="Effect";
+    be.className="oneff"+(effOn?" on":"");
+    be.disabled=busy || !sel || sel.numCard===null || sel.numCard===i;
+    be.onclick=()=>chooseEffect(i);
+    p.appendChild(bn); p.appendChild(be);
+    h.appendChild(d);
+  });
+}
+
+/* Standard turn: each stack is two objects on the table — the card just flipped,
+   lying in the discard with its effect showing, and the stack itself, whose top
+   card shows the next number (and, in its corners, next round's effect). */
+function comboStacks(h){
+  G.shown.forEach((c,i)=>{
+    const chosen = sel && sel.numCard===i;
+    const busy = !!(sel && sel.phase!=="choose");
+    const d=document.createElement("div");
+    d.className="combo"+(chosen?" chosen":"")+(busy&&!chosen?" dim":"");
+    if(!c){
+      d.innerHTML='<div class="combo-head">Stack '+(i+1)+'</div>'+
+        '<div class="combo-body"><div class="face"><span class="bignum">\u2014</span></div></div>'+
+        '<div class="legend"><span>stack empty</span></div>'+
+        '<div class="cornernote">&nbsp;</div>';
+      h.appendChild(d); return;
+    }
+    const shownN=(chosen && sel.n!==null && busy)?sel.n:c.n;
+    d.innerHTML='<div class="combo-head">Combination '+(i+1)+'</div>'+
+      '<div class="combo-body">'+
+        '<div class="face discard">'+glyph(c.e,"gl")+
+          '<span class="cap2">'+EFFECTS[c.e].short+'</span></div>'+
+        '<span class="link">+</span>'+
+        '<div class="face stack">'+
+          glyph(c.nextE,"corner tl")+
+          '<span class="bignum">'+shownN+(shownN!==c.n?"*":"")+'</span>'+
+          glyph(c.nextE,"corner br")+
+        '</div>'+
+      '</div>'+
+      '<div class="legend"><span>effect now</span>'+
+        '<span class="mid"></span>'+
+        '<span>'+G.stacks[i].length+' left</span></div>'+
+      '<div class="cornernote">corners: '+EFFECTS[c.nextE].short+' next</div>';
+    const p=pickRow(d);
+    const b=document.createElement("button"); b.textContent="Take this combination";
+    b.className=chosen?"on":""; b.disabled=busy;
+    b.onclick=()=>takeCombination(i);
+    p.appendChild(b);
+    h.appendChild(d);
+  });
+}
+
+/* the spacer keeps the caption clear of the dashed rule however tall the card is */
+function pickRow(d){
+  const gap=document.createElement("div"); gap.className="pgap"; d.appendChild(gap);
+  const p=document.createElement("div"); p.className="picks"; d.appendChild(p);
+  return p;
+}
+
+function boxes(vals,crossed){
+  return vals.map((v,k)=>'<span class="bx '+(k<crossed?'out':(k===crossed?'live':''))+'">'+v+'</span>').join("");
+}
+
+function streets(){
+  const h=$("streets"); h.innerHTML="";
+  G.streets.forEach((st,si)=>{
+    const w=document.createElement("div"); w.className="street";
+    const pv=CFG.streets[si].parks;
+    const head=document.createElement("div"); head.className="sh";
+    head.innerHTML='<span class="nm">Street '+(si+1)+'</span>'+
+      '<span class="track"><b>Parks</b>'+boxes(pv,st.parks)+'</span>';
+    w.appendChild(head);
+    const road=document.createElement("div"); road.className="road";
+    const lots=document.createElement("div"); lots.className="lots";
+    const e0=document.createElement("span"); e0.className="edge"; lots.appendChild(e0);
+    st.slots.forEach((slot,i)=>{
+      const legal = sel && sel.phase==="place" && canPlace(si,i,sel.n);
+      const bt = sel && sel.phase==="bis" ? bisAt(si,i) : null;
+      const b=document.createElement("button"); b.type="button";
+      b.className="lot"+(slot.v!==null?" built":"")+(slot.locked?" locked":"")+
+        (legal?" legal":"")+(legal&&sel.eff==="pool"&&slot.isPool?" pool":"")+
+        (bt?" src":"")+(G.inked===si+":"+i?" inked":"");
+      b.setAttribute("aria-label","Street "+(si+1)+" house "+(i+1)+
+        (slot.v!==null?", "+slot.v+(slot.bis?" bis":""):", empty")+(slot.isPool?", planned pool":""));
+      let inner="";
+      if(slot.v!==null) inner+='<span class="val">'+slot.v+(slot.bis?'<sub>bis</sub>':'')+'</span>';
+      else if(legal) inner+='<span class="ghost">'+sel.n+'</span>';
+      else if(bt) inner+='<span class="ghost">'+bt.vals.join("/")+'</span>';
+      if(slot.isPool) inner+='<span class="pt'+(slot.pool?" filled":"")+'"></span>';
+      b.innerHTML=inner;
+      if(legal) b.onclick=()=>place(si,i);
+      else if(bt) b.onclick=()=>{ if(bt.vals.length===1) doBis(si,i,bt.vals[0]);
+        else { sel.phase="bis-pick"; sel.t=[si,i]; sel.opts=bt.vals; render(); } };
+      lots.appendChild(b);
+      if(i<st.fences.length){
+        const pk = sel && sel.phase==="fence" && fenceOK(si,i);
+        const g=document.createElement("button"); g.type="button";
+        g.className="gap"+(st.fences[i]?" fenced":"")+(pk?" pick":"");
+        g.setAttribute("aria-label","Fence between house "+(i+1)+" and "+(i+2));
+        g.innerHTML='<span class="post"></span>';
+        if(pk) g.onclick=()=>doFence(si,i);
+        lots.appendChild(g);
+      }
+    });
+    const e1=document.createElement("span"); e1.className="edge"; lots.appendChild(e1);
+    road.appendChild(lots); w.appendChild(road); h.appendChild(w);
+  });
+  G.inked=null;
+}
+
+function stair(){
+  const h=$("stair"); h.innerHTML="";
+  const es=estates();
+  for(let n=1;n<=6;n++){
+    const col=CFG.estate[n];
+    const pk = sel && sel.phase==="agent" && G.improve[n]<col.length-1;
+    const d=document.createElement("div"); d.className="col"+(pk?" pick":"");
+    let inner="";
+    for(let k=col.length-1;k>=0;k--)
+      inner+='<span class="bx '+(k<G.improve[n]?'out':(k===G.improve[n]?'live':''))+'">'+col[k]+'</span>';
+    const c=es.filter(e=>e.size===n).length;
+    inner+='<div class="cap">'+n+(c?' \u00d7'+c:'')+'</div>';
+    d.innerHTML=inner;
+    if(pk) d.onclick=()=>doAgent(n);
+    h.appendChild(d);
+  }
+}
+
+function plans(){
+  const h=$("plans"); h.innerHTML="";
+  G.plans.forEach((p,pi)=>{
+    const d=document.createElement("div");
+    d.className="plan"+(p.done?" done":"")+(G.approved&&!p.done?" approved":"");
+    const ready=!p.done&&matchPlan(p);
+    d.innerHTML='<div class="tier">Plan n\u00b0'+p.n+(p.sp?' \u2605':'')+'</div>'+
+      '<div class="txt">'+p.text+'</div>'+
+      '<div class="val">'+(p.done ? '\u2713 scored '+p.scored+' pts'
+        : (G.approved ? 'approved \u2014 '+p.lo+' pts only' : p.hi+' / '+p.lo+' pts'))+'</div>';
+    if(ready){ const b=document.createElement("button"); b.className="vbtn";
+      b.textContent="Achieve"; b.onclick=()=>validatePlan(pi); d.appendChild(b); }
+    h.appendChild(d);
+  });
+}
+
+function tracks(){
+  const h=$("tracks"); h.innerHTML="";
+  const add=(l,html)=>{ const d=document.createElement("div"); d.className="trow";
+    d.innerHTML='<span class="lbl">'+l+'</span>'+html; h.appendChild(d); };
+  add("Pools ("+G.pools+")", boxes(CFG.pool,G.pools));
+  add("Temp agency ("+G.temp+") \u2014 "+CFG.soloTempMin+"+ scores "+CFG.soloTempPts,
+    '<span class="bx'+(G.temp>=CFG.soloTempMin?' out':'')+'">'+G.temp+" / "+CFG.soloTempMin+'</span>');
+  add("Bis ("+G.bisCount+")", boxes(CFG.bis,G.bisCount));
+  add("Permit refusal ("+G.refusals+" of 3)", boxes(CFG.refusal,G.refusals));
+}
+
+function sheet(s){
+  let h="";
+  s.rows.forEach(r=>{ h+='<tr'+(r[1]<0?' class="neg"':'')+'><td'+(r[2]?' class="sub"':'')+'>'+
+    r[0]+'</td><td>'+r[1]+'</td></tr>'; });
+  h+='<tr class="tot"><td>Total</td><td>'+s.total+'</td></tr>';
+  $("sheet").innerHTML=h;
+}
+
+function status(){
+  const m=$("msg"), c=$("chips"); c.innerHTML="";
+  $("btn-undo").disabled=!snap||G.over;
+  $("btn-refuse").disabled=G.over||!G.started||mustBuild();
+  const chip=(t,fn,g)=>{ const b=document.createElement("button");
+    b.className="chip"+(g?" ghosty":""); b.textContent=t; b.onclick=fn; c.appendChild(b); };
+
+  if(!G.started){
+    $("btn-refuse").disabled=true; $("btn-undo").disabled=true;
+    m.innerHTML="Sheet ready. Press <b>Start</b> to deal the first cards.";
+    return;
+  }
+  if(G.over){ m.innerHTML="Sheet closed. Final scoring <b>"+score().total+"</b>."; return; }
+
+  if(!sel || sel.phase==="choose"){
+    if(!mustBuild()){
+      m.innerHTML="<span class='warn'>No available number can be written \u2014 take a building permit refusal.</span>";
+      return;
+    }
+    if(CFG.mode==="solo"){
+      if(sel && sel.numCard!==null){
+        m.innerHTML="Number <b>"+cardAt(sel.numCard).n+
+          "</b> taken. Now take another card's <b>effect</b>, or go without one.";
+        chip("No effect", takeNoEffect);
+        chip("Change number", ()=>{ sel=null; render(); }, true);
+      } else {
+        m.innerHTML="Take a card for its <b>number</b>.";
+      }
+    } else {
+      m.innerHTML="Take one of the three combinations.";
+    }
+    return;
+  }
+
+  switch(sel.phase){
+    case "temp":{
+      const base=cardAt(sel.numCard).n;
+      m.innerHTML="<b>Temp Agency</b> \u2014 write <b>"+base+"</b> changed by 1 or 2. Using it crosses a box.";
+      [-2,-1,0,1,2].forEach(d=>{ const n=base+d;
+        if(n<CFG.numMin||n>CFG.numMax) return;
+        chip((d>0?"+":"")+d+" \u2192 "+n, ()=>setTemp(d)); });
+      chip("Do not use the effect", declineTemp, true);
+      break; }
+    case "place":
+      m.innerHTML="Write <b>"+sel.n+"</b> in an empty house."+
+        (sel.eff==="pool"?" <span class='warn'>Blue houses have a planned pool.</span>":"");
+      chip("Back", ()=>{ sel=null; render(); }, true);
+      break;
+    case "pool":{
+      const has=G.streets[sel.street].slots[sel.idx].isPool;
+      m.innerHTML = has ? "<b>Pool Manufacturer</b> \u2014 build this pool?"
+        : "<b>Pool Manufacturer</b> \u2014 no planned pool in that house, so none is built.";
+      if(has) chip("Build the pool", ()=>doPool(true));
+      chip(has?"Skip":"Continue", ()=>doPool(false), true);
+      break; }
+    case "park":{
+      const full=allParks(sel.street);
+      m.innerHTML="<b>Landscaper</b> \u2014 cross a park on Street "+(sel.street+1)+
+        (full?". <span class='warn'>All crossed already.</span>":".");
+      if(!full) chip("Build the park", ()=>doPark(true));
+      chip(full?"Continue":"Skip", ()=>doPark(false), true);
+      break; }
+    case "fence":
+      m.innerHTML="<b>Surveyor</b> \u2014 draw a fence on any dotted space, any street.";
+      chip("Skip the effect", endRound, true);
+      break;
+    case "agent":
+      m.innerHTML="<b>Real Estate Agent</b> \u2014 choose an estate size column.";
+      chip("Skip the effect", endRound, true);
+      break;
+    case "bis":
+      m.innerHTML="<b>Bis</b> \u2014 duplicate a house number into an empty house beside it.";
+      chip("Skip the effect", endRound, true);
+      break;
+    case "bis-pick":
+      m.innerHTML="Duplicate which number?";
+      sel.opts.forEach(v=>chip(v+" bis", ()=>doBis(sel.t[0],sel.t[1],v)));
+      break;
+  }
+}
+
+/* ========================================================== MODALS */
+let boxSticky=false;
+function openBox(h,sticky,wide){
+  const m=$("modal");
+  m.innerHTML=h;
+  m.className = wide ? "modal wide" : "modal";
+  $("scrim").hidden=false;
+  boxSticky=!!sticky;
+}
+function closeBox(){ if(boxSticky) return; $("scrim").hidden=true; }
+function forceCloseBox(){ boxSticky=false; $("scrim").hidden=true; }
+/* leaving a sub-panel while the sheet has not begun returns to the briefing */
+function backOut(){ if(G && !G.started) briefing(); else forceCloseBox(); }
+
+/* A panel of its own rather than a section of Setup, so that toggling a plan
+   cannot discard half-typed edits in the scoring fields. */
+function plansPanel(){
+  const off=CFG.planOff||{};
+  const live=activePlans();
+  let h='<h3>Available city plans</h3>'+
+    '<p class="lede">This is the pool a sheet draws from. Switch any plan off to keep it out; '+
+    'one has to stay on in each category. A folded corner marks the three on the table. '+
+    'Starred plans are the advanced ones.</p>';
+  h+='<div class="toolbar">'+
+     '<button class="btn" id="pr">Randomize the three drawn</button>'+
+     '<button class="btn" id="pa">All 21 on</button>'+
+     '<button class="btn" id="pb">Standard only</button></div>';
+  h+='<div class="planlist">';
+  [1,2,3].forEach(n=>{
+    h+='<div class="pgroup"><span class="pgh">Plan n\u00b0'+n+'</span><div class="pitems">';
+    BASIC_PLANS.concat(ADV_PLANS).filter(p=>p.n===n).forEach(p=>{
+      const dis=!!off[p.id];
+      const inPlay=live.some(x=>x.id===p.id);
+      const drawn=!!(G && G.plans.some(q=>q.id===p.id));
+      const isLast=inPlay && !dis &&
+        live.filter(x=>x.n===n && x.id!==p.id && !off[x.id]).length===0;
+      const tip = drawn ? "On the table for this sheet."
+        : (isLast ? "A sheet needs one plan from n\u00b0"+n+
+                    ", and this is the only one still on." : "");
+      h+='<button class="ptog '+(dis?"off":"on")+(isLast?" fixed":"")+(drawn?" drawn":"")+
+         '" data-plan="'+p.id+'"'+(tip?' title="'+tip+'"':'')+'>'+
+         '<span class="tick"></span><span>'+p.text+
+           (p.sp?' <span class="star">\u2605</span>':'')+
+         '</span><em>'+p.hi+' / '+p.lo+' pts</em></button>';
+    });
+    h+='</div></div>';
+  });
+  h+='</div><div class="toolbar"><button class="btn" onclick="backOut()">Done</button></div>';
+  openBox(h, false, true);
+  $("modal").querySelectorAll("button[data-plan]").forEach(b=>{
+    b.onclick=()=>{ togglePlan(b.dataset.plan); plansPanel(); render(); };
+  });
+  $("pr").onclick=()=>{ redrawPlans(); plansPanel(); render(); };
+  $("pa").onclick=()=>{ CFG.planOff={}; reconcilePlans(); save(); plansPanel(); render(); };
+  $("pb").onclick=()=>{ setAdvanced(false); plansPanel(); render(); };
+}
+
+function briefing(){
+  const rows=[
+    ["Mode", CFG.mode==="solo" ? "Official solo variant \u2014 draw three, one number, one effect"
+                               : "Standard turn \u2014 three number-effect combinations"],
+    ["City plans", planPool().length+" of "+activePlans().length+" in the pool"+
+                   (advancedOn()?", advanced included":", standard only")],
+    ["Deck", deckTotal()+" construction cards"+
+             (CFG.mode==="solo" ? " plus the Solo card" : ", in three stacks")],
+    ["Streets", CFG.streets.map(x=>x.lots).join(" \u00b7 ")+" houses"],
+    ["Theme", THEMES[CFG.theme].name],
+    ["Hints", CFG.hints ? "on" : "off"],
+    ["Targets", Object.keys(CFG.targets).map(k=>k+" "+CFG.targets[k]+" pts").join(" \u00b7 ")],
+    ["Seed", '<span id="seedslot"></span>']
+  ];
+  let h='<div class="gametitle">Welcome To <span id="briefcity"></span></div>'+
+    '<h3>New sheet</h3>'+
+    '<p class="lede">The clock starts when you begin. Nothing is dealt until then.</p>'+
+    '<table class="brief">'+rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join("")+
+    '</table>';
+  h+='<h4>City plans on the table</h4><table class="brief plans">'+
+     G.plans.map(p=>'<tr><td>n\u00b0'+p.n+(p.sp?' \u2605':'')+'</td><td>'+p.text+
+       '</td><td>'+p.hi+' / '+p.lo+' pts</td></tr>').join("")+'</table>';
+  if(best!==null) h+='<p class="note">Your best so far: <strong>'+best+'</strong> points.</p>';
+  h+='<div class="toolbar"><button class="btn primary" id="go">Start</button>'+
+     '<button class="btn" id="rnd">Randomize plans</button>'+
+     '<button class="btn" id="pls">Available plans</button>'+
+     '<button class="btn" id="chg">Change setup</button>'+
+     '<button class="btn" id="thm">Theme</button></div>';
+  openBox(h, true);
+  renderCity();
+  renderSeed();
+  $("go").onclick=startGame;
+  $("rnd").onclick=()=>{ redrawPlans(); briefing(); render(); };
+  $("pls").onclick=plansPanel;
+  $("chg").onclick=setup;
+  $("thm").onclick=themePicker;
+}
+$("scrim").addEventListener("click",e=>{ if(e.target===$("scrim")) closeBox(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeBox(); });
+
+function result(why,s){
+  let v="Keep practising";
+  const t=Object.keys(CFG.targets).map(k=>[k,CFG.targets[k]]).sort((a,b)=>a[1]-b[1]);
+  t.forEach(e=>{ if(s.total>=e[1]) v=e[0]; });
+  let rows=s.rows.map(r=>'<tr'+(r[1]<0?' class="neg"':'')+'><td'+(r[2]?' class="sub"':'')+'>'+
+    r[0]+'</td><td>'+r[1]+'</td></tr>').join("");
+  rows+='<tr class="tot"><td>Total</td><td>'+s.total+'</td></tr>';
+  const city=(CFG.city||"").trim();
+  openBox('<h3>Final scoring</h3><p class="lede">'+
+    (city?esc(city)+' \u2014 ':'')+why+'</p>'+
+    '<div class="verdict">'+s.total+' pts</div>'+
+    '<p class="lede">'+v+' &nbsp;\u00b7&nbsp; '+t.map(e=>e[0]+" "+e[1]).join(" / ")+
+    (G.soloSeen?'':' &nbsp;\u00b7&nbsp; the Solo card never came up')+'</p>'+
+    '<p class="lede">'+G.round+' rounds in '+fmt(T.total)+
+    ', averaging '+fmt(avgRound())+' a round.</p>'+
+    '<p class="note">Seed <strong>'+esc(G.seed)+'</strong>'+
+    (G.planRoll?' with plans rerolled \u00d7'+G.planRoll:'')+
+    ' \u2014 enter it on a new sheet to play this one again.</p>'+
+    '<table class="sheet">'+rows+'</table>'+
+    '<div class="toolbar"><button class="btn" onclick="closeBox();newGame()">New sheet</button>'+
+    '<button class="btn" onclick="closeBox()">Review the sheet</button></div>');
+}
+
+function setup(){
+  const f=(p,l,v)=>'<label><span class="lbl">'+l+'</span><input data-p="'+p+'" value="'+v+'"></label>';
+  const hist=numberHist();
+  let h='<h3>Setup and printed values</h3>'+
+    '<p class="lede">From the Blue Cocker / Deep Water Games 2018 English rulebook v2.0.</p>';
+
+  h+='<h4>Game mode</h4><div class="toolbar">'+
+     '<button class="btn'+(CFG.mode==="solo"?" on":"")+'" data-mode="solo">Official solo variant</button>'+
+     '<button class="btn'+(CFG.mode==="standard"?" on":"")+'" data-mode="standard">Standard turn, solo</button>'+
+     '<button class="btn'+(advancedOn()?" on":"")+'" id="adv">Advanced plans: '+(advancedOn()?"on":"off")+'</button>'+
+     '<button class="btn" id="pick">Available plans\u2026</button>'+
+     '</div>'+
+     '<p class="note">The solo variant draws three cards and uses one for its number and a '+
+     'different one for its effect. The standard turn flips one card per stack and pairs the '+
+     'effect shown with the number now on top \u2014 useful for practising the multiplayer game.</p>';
+
+  h+='<h4>Streets and parks</h4><div class="fieldgrid">';
+  CFG.streets.forEach((s,i)=>{
+    h+=f("streets."+i+".lots","Street "+(i+1)+" houses",s.lots);
+    h+=f("streets."+i+".parks","Street "+(i+1)+" park boxes",s.parks.join(","));
+    h+=f("streets."+i+".pools","Street "+(i+1)+" planned pools \u2014 INFERRED",s.pools.join(","));
+  });
+  h+='</div><h4>Real estate columns \u2014 INFERRED</h4><div class="fieldgrid">';
+  for(let n=1;n<=6;n++) h+=f("estate."+n,"Estate of "+n,CFG.estate[n].join(","));
+  h+='</div><h4>Other sections</h4><div class="fieldgrid">';
+  h+=f("pool","Pools",CFG.pool.join(","));
+  h+=f("bis","Bis",CFG.bis.join(","));
+  h+=f("refusal","Permit refusal",CFG.refusal.join(","));
+  h+=f("soloTempMin","Temps needed for 7 pts",CFG.soloTempMin);
+  h+='</div>';
+
+  h+='<h4>Construction deck &mdash; 81 cards</h4>'+
+     '<p class="note">The number printed on the back of each effect card. Distribution for '+
+     hist.lo+'\u2013'+hist.hi+': <code>'+hist.counts.join(",")+'</code> = '+deckTotal()+
+     ' cards, matching the rulebook exactly.</p><div class="fieldgrid wide">';
+  Object.keys(CFG.deck).forEach(e=>h+=f("deck."+e,EFFECTS[e].label+" ("+CFG.deck[e].length+")",CFG.deck[e].join(",")));
+  h+='</div>';
+
+  h+='<div class="toolbar"><button class="btn" id="ap">Save and start new sheet</button>'+
+     '<button class="btn" id="rs">Restore rulebook values</button>'+
+     '<button class="btn" onclick="backOut()">Cancel</button></div>';
+
+  h+='<h4>What is still inferred, and what is left out</h4><p class="note">'+
+     '<strong>Real estate columns:</strong> not printed in the rules text. Reconstructed from the '+
+     'p6 example (a size-2 estate goes from 2 to 3 points) and cross-checked against two full '+
+     'worked scoresheets, which they reproduce exactly.<br>'+
+     '<strong>Planned pool positions:</strong> printed on the sheet only, so the spread here is a guess. '+
+     'This also affects the two advanced plans about pools.<br>'+
+     '<strong>Basic City Plans:</strong> the rulebook does not list the 18 combinations, so these '+
+     'twelve are mine, with point pairs read off the card photographs. The starred advanced plans '+
+     'are quoted verbatim from p10.<br>'+
+     '<strong>Not implemented:</strong> roundabouts and the advanced plan that needs one, and the '+
+     'expert variant (card passing, which needs opponents).</p>';
+
+  openBox(h);
+  $("modal").querySelectorAll("button[data-mode]").forEach(b=>{
+    b.onclick=()=>{ CFG.mode=b.dataset.mode; save(); closeBox(); newGame(); };
+  });
+  $("adv").onclick=()=>{ setAdvanced(!advancedOn());
+    if(G && !G.started){ setup(); render(); } else { closeBox(); newGame(); } };
+  $("pick").onclick=plansPanel;
+  $("ap").onclick=()=>{
+    const next=copy(CFG);
+    $("modal").querySelectorAll("input[data-p]").forEach(inp=>{
+      const parts=inp.dataset.p.split("."), raw=inp.value.trim();
+      const val = raw.indexOf(",")!==-1
+        ? raw.split(",").map(x=>parseInt(x,10)).filter(x=>!isNaN(x))
+        : (isNaN(parseInt(raw,10))?raw:parseInt(raw,10));
+      let node=next;
+      for(let i=0;i<parts.length-1;i++) node=node[parts[i]];
+      const k=parts[parts.length-1];
+      node[k]=(Array.isArray(node[k])&&!Array.isArray(val))?[val]:val;
+    });
+    CFG=next; save(); closeBox(); newGame();
+  };
+  $("rs").onclick=()=>{ const keep={mode:CFG.mode, planOff:CFG.planOff, theme:CFG.theme,
+      hints:CFG.hints, city:CFG.city};
+    CFG=Object.assign(copy(BASE),keep);
+    save(); closeBox(); newGame(); };
+}
+
+$("btn-refuse").onclick=refuse;
+$("btn-undo").onclick=undo;
+$("btn-hints").onclick=()=>{
+  CFG.hints=!CFG.hints;
+  $("btn-hints").textContent="Hints: "+(CFG.hints?"on":"off");
+  save(); render();
+};
+$("btn-setup").onclick=setup;
+$("btn-theme").onclick=themePicker;
+$("btn-new").onclick=()=>{ if(!G.over&&houses()>0&&!confirm("Start a new sheet?")) return; newGame(); };
+
+applyTheme(CFG.theme);
+renderCity();
+newGame();
+setInterval(tickClock, 500);
+load();
+</script>

@@ -1200,7 +1200,9 @@ function numberHist(){
 
 /* --------------------------------------------------------- setup */
 function newGame(){
-  const seed=(CFG.seed||"").trim() || randomSeed();
+  /* an unpinned shared seed applies to this sheet and is then spent */
+  const shared=pendingSeed; pendingSeed="";
+  const seed=shared || (CFG.seed||"").trim() || randomSeed();
   seedSheet(seed);
   const plans=drawPlans();
 
@@ -2545,16 +2547,20 @@ function shareDiff(){
   SHARE_KEYS.forEach(k=>{
     if(JSON.stringify(CFG[k])!==JSON.stringify(def[k])) out[k]=CFG[k];
   });
-  /* The seed of the sheet actually on screen, whether or not it was pinned, so
-     the recipient opens the same sheet. Plus the number of plan rerolls, since
-     the three plans follow from seed + pool + reroll count. */
+  /* A pinned seed is a setting and travels as one, through the diff above. An
+     unpinned seed belongs to this sheet only, so it travels separately and does
+     not become a preference at the other end \u2014 the recipient opens the same
+     sheet, and their next one rolls fresh, exactly as it would here.
+     The reroll count goes with it, since the three plans follow from
+     seed + pool + reroll count. */
   if(G){
-    if(G.seed) out.seed=G.seed;
+    if(!normalizeSeed(CFG.seed) && G.seed) out.sd=G.seed;
     if(G.planRoll) out.r=G.planRoll;
   }
   return out;
 }
-const SHARE_LABEL={r:"plan rerolls", planOff:"plan pool", roundaboutValues:"roundabouts",
+const SHARE_LABEL={r:"plan rerolls", sd:"sheet seed", seed:"fixed seed",
+  planOff:"plan pool", roundaboutValues:"roundabouts",
   soloTempMin:"temp threshold", soloTempPts:"temp points", tempRanks:"temp ranking",
   numMin:"lowest number", numMax:"highest number"};
 function shareLink(){
@@ -2592,6 +2598,7 @@ function sanitizeShared(o){
 
   if(o.mode==="solo"||o.mode==="standard") out.mode=o.mode;
   if(typeof o.seed==="string"){ const sd=normalizeSeed(o.seed); if(sd) out.seed=sd; }
+  if(typeof o.sd==="string"){ const sd=normalizeSeed(o.sd); if(sd) out.sd=sd; }
   if(typeof o.advanced==="boolean") out.advanced=o.advanced;
   { const r=intIn(o.r,0,50); if(r) out.r=r; }
   if(typeof o.roundabouts==="boolean") out.roundabouts=o.roundabouts;
@@ -2668,6 +2675,7 @@ function sanitizeShared(o){
 
 let sharedIn=false;      /* shown on the briefing for this session */
 let pendingRoll=0;       /* plan rerolls to replay onto the first sheet */
+let pendingSeed="";      /* a shared but unpinned seed, for the opening sheet only */
 function applySharedSetup(){
   let raw="";
   try{ raw=String(location.hash||""); }catch(e){ return; }
@@ -2677,7 +2685,8 @@ function applySharedSetup(){
   try{ clean=sanitizeShared(JSON.parse(unb64u(m[1]))); }catch(e){ clean=null; }
   if(!clean) return;
   pendingRoll=clean.r||0;
-  delete clean.r;                    /* not a config key */
+  pendingSeed=clean.sd||"";
+  delete clean.r; delete clean.sd;   /* neither is a config key */
   /* a shared link is the shared setup, not a blend with whatever was stored */
   CFG=Object.assign(copy(BASE),clean);
   CFG.dataVersion=BASE.dataVersion;
@@ -2773,10 +2782,10 @@ function qrPaint(el,text){
     const look=qrLook();
     const code=new QRCodeStyling({
       width:QR_PX, height:QR_PX, type:"svg", data:text, margin:QR_MARGIN,
-      /* High: about 30% of the code can be damaged, dirty or obscured and still
-         read. It also offsets the tight quiet zone. The cost is capacity, so a
-         very long setup falls back to the link alone. */
-      qrOptions:{ errorCorrectionLevel:"H" },
+      /* Medium: about 15% of the code can be damaged and still read, which is
+         the usual default. It keeps the modules larger than High would at this
+         image size, and leaves room for even a heavily edited setup. */
+      qrOptions:{ errorCorrectionLevel:"M" },
       dotsOptions:{ color:look.dark, type:look.dots },
       backgroundOptions:{ color:look.light },
       cornersSquareOptions:{ color:look.dark, type:look.corners },

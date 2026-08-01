@@ -1,10 +1,12 @@
-# Welcome To ...
+# Welcome To
 
-An unofficial, fan-made browser implementation of the **solo variant** of
-*Welcome To Your Perfect Home*, built for practising alone and for playing the
-same deck as someone else without any network.
+An unofficial, fan-made browser implementation of *Welcome To Your Perfect Home*,
+built for practising alone and for playing the same deck as someone else without
+any network.
 
-**Live:** <https://welcome-to.sunken.dev>
+One HTML file. No build step, no dependencies, no server, no analytics, no
+network requests. Your settings and best score live in your own browser and go
+nowhere else.
 
 > This is not an official product and is not affiliated with or endorsed by
 > Blue Cocker Games or Deep Water Games. It contains none of the published
@@ -16,14 +18,14 @@ same deck as someone else without any network.
 
 **Two ways to play**
 
-- **Official solo variant** (2018 rulebook, p9) — draw three construction
-  cards, use one for its number and a *different* one for its effect, discard
-  the third. The Solo card is shuffled into the bottom half of the deck; when it
-  turns up, all City Plans flip to Approved and only their lower value is
-  available from then on.
-- **Standard turn, played solo** — the multiplayer round, for practising it:
-  one card is flipped from each of three stacks and its effect pairs with the
-  number now showing on top of that stack.
+- **Standard turn** *(the default)* — one card is flipped from each of three
+  stacks and its effect pairs with the number now showing on top of that stack.
+  This is the multiplayer round, played alone.
+- **Solo variant** (2018 rulebook, p9) — draw three construction cards, use one
+  for its number and a *different* one for its effect, discard the third. The
+  Solo card is shuffled into the bottom half of the deck; when it turns up, all
+  City Plans flip to Approved and only their lower value is available from then
+  on.
 
 **The sheet**
 
@@ -55,13 +57,23 @@ The deck and the plan draw run on **separate streams** from the one seed, so
 rerolling plans or switching one out of the pool cannot disturb the cards. Plan
 rerolls are reproducible too, keyed on the seed plus the reroll count.
 
+**The advanced variant**
+
+Two switches in Setup, both off by default. **Advanced plans** adds the nine
+starred City Plans. **Roundabouts** lets you replace an empty house with one, at
+any point in your turn: it is fenced on both sides, is not a house, and
+**numbering starts over on the far side of it** — so you can run 1–15 up to the
+roundabout and begin again beyond it. The first costs 3 points and the second 5
+more, and you may build two. Turning them on also brings in the tenth advanced
+plan, which needs all the parks, all the pools and a roundabout in one street.
+
 **Everything else**
 
 - Six themes: Drafting office, Hillside, Cat town, Orbit, Scriptorium,
   Risograph. Cosmetic only — the rules and values are identical under each.
 - Game clock, per-round clock and average round time.
 - Curate the pool of City Plans; one has to stay on in each category.
-- Name your city by clicking the ellipsis in the title.
+- Name your city by clicking the ellipsis in the title, up to 15 characters.
 - One-round undo, and every scoring table is editable.
 
 ---
@@ -82,35 +94,59 @@ tables in the app, which is the check that gives some confidence in the rest.
 | Bis | `0·1·3·6·9·12·16·20·24·28` |
 | Permit refusal | `0·0·3·5` |
 | Temp agency, solo | seven points only from six temps upward, otherwise nothing |
+| Planned pools | `2,6,7` / `0,3,7` / `1,6,10` &mdash; nine in all |
+| Real estate | `1,3` / `2,3,4` / `3,4,5,6` / `4,5,6,7,8` / `5,6,7,8,10` / `6,7,8,10,12` |
+| Roundabouts | `0·3·8`, two at most |
 | Deck | 81 cards — 18 Surveyor / 18 Real Estate / 18 Landscaper / 9 Pool / 9 Temp Agency / 9 Bis |
 | Numbers | `3× 1,2,14,15` · `4× 3,13` · `5× 4,12` · `6× 5,11` · `7× 6,10` · `8× 7,9` · `9× 8` |
 
 The number printed on the back of each effect card is encoded individually, read
 off a physical deck, and reproduces the rulebook's distribution exactly.
 
-### Inferred, and editable in **Setup**
+There is a useful internal check on the pool positions: there are nine of them,
+and the pool ladder has exactly nine crossable boxes.
 
-- **The real estate columns.** Not printed in the rules text. Reconstructed from
-  the p6 example — a size-2 estate going from 2 to 3 points — and solved against
-  both worked scoresheets, which they reproduce exactly. A longer column could
-  in principle do the same.
-- **Which houses have a planned pool.** Printed on the sheet, not in the rules,
-  so the spread here is a guess. This also affects the two advanced plans about
-  pools.
-- **The basic City Plans.** The rulebook lists only the advanced plans in full,
-  so the twelve standard combinations are invented, using the point pairs
-  visible on the card photographs. The nine advanced plans are quoted verbatim.
+### Inferred — one thing only
 
-If your printing differs, correct it in Setup — the values are saved.
+- **The basic City Plans.** The rulebook prints the ten advanced plans in full
+  but not the eighteen standard ones, so the twelve standard combinations here
+  are invented, using the point pairs visible on the card photographs.
 
-### Not implemented
+Everything else comes from the rulebook or from a deck read card by card,
+including the number printed on the back of each effect card. If your printing
+differs anywhere, correct it in **Game setup** — the values are saved, and a
+correction to a table in a later version replaces the stored one while keeping
+your own preferences.
 
-- Roundabouts, and the one advanced plan that needs one
-- The expert variant (passing cards round), which needs opponents
+### Not available yet
+
+- **Multiplayer.** Two to six players over a small relay is written and tested,
+  but the buttons are switched off and it is undocumented for now.
+- The expert variant on p11, where every card forms a single deck and each player
+  draws three, keeps two and passes the third to their right — that needs a hand
+  per player rather than one shared deal
 - The 2023 Collector Edition's AAA Solo Mode, a different game with its own
   opponent cards
-- Multiplayer scoring: who validated a City Plan first, the temp agency
-  1st/2nd/3rd ranking, and one player ending the game for everyone
+- Rejoining a sheet already under way — your board lives in the tab, so a reload
+  means dropping out of that game
+
+---
+
+## Running it locally
+
+There is nothing to install.
+
+```sh
+git clone https://github.com/<you>/<repo>.git
+cd <repo>
+open welcome-to.html     # or: xdg-open welcome-to.html
+```
+
+Opening the file directly over `file://` works. If you would rather serve it:
+
+```sh
+python3 -m http.server 8000   # then visit /welcome-to.html
+```
 
 ## Credits and legal
 

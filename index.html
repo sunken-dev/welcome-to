@@ -2709,6 +2709,9 @@ const QR_PX=224;          /* including the margin below */
    shares the code's background, so a little more surround comes from there, and
    the modules themselves grow as the margin shrinks. */
 const QR_MARGIN=10;
+/* One place the level lives, and it is shown in the panel so it can be read off
+   rather than guessed at from how dense the code looks. */
+const QR_EC="M";          /* about 15% damage tolerance, the usual default */
 let qrState="idle";       /* idle | loading | ready | unavailable */
 
 function qrReady(){ return qrState==="ready" && typeof QRCodeStyling!=="undefined"; }
@@ -2782,10 +2785,11 @@ function qrPaint(el,text){
     const look=qrLook();
     const code=new QRCodeStyling({
       width:QR_PX, height:QR_PX, type:"svg", data:text, margin:QR_MARGIN,
-      /* Medium: about 15% of the code can be damaged and still read, which is
-         the usual default. It keeps the modules larger than High would at this
-         image size, and leaves room for even a heavily edited setup. */
-      qrOptions:{ errorCorrectionLevel:"M" },
+      /* The whole object, not just the level. The library's own default for
+         qrOptions is Q, and passing a partial object leaves the outcome at the
+         mercy of whether it merges deeply or replaces. Byte mode is what a
+         base64url payload needs in any case. */
+      qrOptions:{ typeNumber:0, mode:"Byte", errorCorrectionLevel:QR_EC },
       dotsOptions:{ color:look.dark, type:look.dots },
       backgroundOptions:{ color:look.light },
       cornersSquareOptions:{ color:look.dark, type:look.corners },
@@ -2822,6 +2826,8 @@ function sharePanel(){
     '<div class="rstatus" id="sh-note">'+
       'Carrying '+n+' item'+(n===1?'':'s')+': <code>'+
       esc(Object.keys(plain).map(k=>SHARE_LABEL[k]||k).join(", "))+'</code>.'+
+      (qrReady()?' Code at '+({L:"low",M:"medium",Q:"quartile",H:"high"}[QR_EC]||QR_EC)+
+        ' error correction.':'')+
     '</div>';
   openBox(h);
   shareOpen=true;

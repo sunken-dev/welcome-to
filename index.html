@@ -417,6 +417,15 @@
   .seedroll:hover{background:var(--ink);color:var(--card);border-color:var(--ink)}
   .seednote{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
     color:var(--ink-soft);margin-left:8px}
+  /* the code carries its own white quiet zone, and the frame keeps it white on
+     the dark themes too */
+  .qrbox{display:flex;justify-content:center;margin:15px 0}
+  /* the quiet zone comes from the image's own margin; the frame just picks up
+     the code's own background so the two do not meet in a hard edge */
+  .qrwrap{padding:6px;border:1px solid var(--rule);
+    border-radius:calc(var(--rs)*.5);line-height:0}
+  .qrwrap canvas,.qrwrap img,.qrwrap table{display:block}
+  .qrnone{font-size:12.5px;color:var(--ink-soft);text-align:center;max-width:320px}
 
   /* multiplayer room */
   .rfield{margin-bottom:10px}
@@ -584,6 +593,7 @@ function mottle(){
 const THEMES = {
   drafting: {
     name: "Drafting office",
+    qr: {dots:"square", corners:"square", cornerDots:"square"},
     blurb: "Plan paper and stencil numerals. The technical one.",
     swatch: ["#E6EBE2","#1E2A31","#A93A2C","#3D7F98","#4F7237"],
     vars: {
@@ -602,6 +612,7 @@ const THEMES = {
 
   hillside: {
     name: "Hillside",
+    qr: {dots:"classy", corners:"extra-rounded", cornerDots:"dot"},
     blurb: "Soft painterly meadow. Sunlight, sky wash, rolling green.",
     swatch: ["#DCE9E3","#2A3F35","#C4643F","#4E8FA8","#5C8A3E"],
     vars: {
@@ -647,6 +658,7 @@ const THEMES = {
 
   cats: {
     name: "Cat town",
+    qr: {dots:"rounded", corners:"extra-rounded", cornerDots:"dot"},
     blurb: "Peach paper, paw prints, yarn and milk. The very cute one.",
     swatch: ["#FBEFE4","#4A3A33","#D96A7A","#6BAFC4","#7FAE62"],
     vars: {
@@ -711,6 +723,7 @@ const THEMES = {
 
   orbit: {
     name: "Orbit",
+    qr: {dots:"dots", corners:"dot", cornerDots:"dot"},
     blurb: "Night side of the planet. Starfield and instrument glow.",
     swatch: ["#0E1424","#DCE6F5","#FF6B6B","#4FD1E0","#5FE3A1"],
     vars: {
@@ -753,6 +766,7 @@ const THEMES = {
 
   scriptorium: {
     name: "Scriptorium",
+    qr: {dots:"classy", corners:"square", cornerDots:"square"},
     blurb: "Vellum, oak-gall ink and vermilion rubrication.",
     swatch: ["#E8DCC0","#3A2A18","#A02A20","#2F6B7A","#B58A2B"],
     vars: {
@@ -794,6 +808,7 @@ const THEMES = {
 
   riso: {
     name: "Risograph",
+    qr: {dots:"square", corners:"extra-rounded", cornerDots:"square"},
     blurb: "Two-ink duplicator print. Halftone dots, a hair of misregistration.",
     swatch: ["#E9E7DE","#173B4A","#FF4E8B","#FFD400","#1F8FB0"],
     vars: {
@@ -1218,6 +1233,9 @@ function newGame(){
     G.stacks=[cards.slice(0,per),cards.slice(per,2*per),cards.slice(2*per)];
     G.discards=[[],[],[]]; G.shown=[null,null,null];
   }
+  /* a shared link records how many times its plans were rerolled; reproduce
+     that once, on the sheet the link opens */
+  while(pendingRoll>0){ pendingRoll--; redrawPlans(); }
   resetClock();
   sel=null; snap=null;
   render();
@@ -1642,7 +1660,9 @@ const PREF_KEYS=["theme","hints","city","seed","mode","planOff","relay","room",
 async function load(){
   try{ const r=await STORE.get("welcome-2018");
     if(r&&r.value){ const d=JSON.parse(r.value);
-      if(d.cfg){
+      /* A shared link has already set everything; the stored copy must not
+         race it back out. The best score is still worth restoring. */
+      if(d.cfg && !sharedIn){
         if((d.cfg.dataVersion|0) < BASE.dataVersion){
           /* This save predates a table correction. Take the player's choices
              across and let the corrected values through, rather than leaving a
@@ -1746,6 +1766,7 @@ const MP={
 };
 let MP_SOCKET=(url)=>new WebSocket(url);      /* replaced in tests */
 let roomOpen=false;
+let shareOpen=false;
 
 function mpHostId(){ return MP.players.length?MP.players[0].id:null; }
 function mpIsHost(){ return MP.me!==null && MP.me===mpHostId(); }
@@ -2408,7 +2429,7 @@ function status(){
 /* ========================================================== MODALS */
 let boxSticky=false;
 function openBox(h,sticky,size){
-  roomOpen=false;
+  roomOpen=false; shareOpen=false;
   const m=$("modal");
   m.innerHTML=h;
   m.className = "modal" + (size===true ? " wide" : (size ? " "+size : ""));
@@ -2491,6 +2512,326 @@ function plansPanel(){
     CFG.roundabouts=!CFG.roundabouts;
     ensureCategories(); reconcilePlans(); save();
     if(G && !G.started){ plansPanel(); render(); } else { closeBox(); newGame(); }
+  };
+}
+
+/* ====================================================== SHARING A SETUP
+   A link carries only the settings that differ from the defaults, base64url
+   encoded in the fragment. The fragment is never sent to a server, so a link
+   works from a static host and from file:// alike.
+
+   Anything arriving this way is untrusted: every value is whitelisted, type
+   checked and clamped before it is allowed near the game. A malformed link
+   falls back to the defaults rather than producing a broken sheet.          */
+const SHARE_KEYS=["mode","seed","advanced","roundabouts","planOff","theme",
+  "streets","estate","pool","bis","refusal","roundaboutValues","tempRanks",
+  "soloTempMin","soloTempPts","deck","numMin","numMax","targets"];
+
+function b64u(str){
+  const bytes=new TextEncoder().encode(str);
+  let bin=""; for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function unb64u(t){
+  let x=String(t).replace(/-/g,"+").replace(/_/g,"/");
+  while(x.length%4) x+="=";
+  const bin=atob(x), bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function shareDiff(){
+  const def=copy(BASE), out={};
+  SHARE_KEYS.forEach(k=>{
+    if(JSON.stringify(CFG[k])!==JSON.stringify(def[k])) out[k]=CFG[k];
+  });
+  /* The seed of the sheet actually on screen, whether or not it was pinned, so
+     the recipient opens the same sheet. Plus the number of plan rerolls, since
+     the three plans follow from seed + pool + reroll count. */
+  if(G){
+    if(G.seed) out.seed=G.seed;
+    if(G.planRoll) out.r=G.planRoll;
+  }
+  return out;
+}
+const SHARE_LABEL={r:"plan rerolls", planOff:"plan pool", roundaboutValues:"roundabouts",
+  soloTempMin:"temp threshold", soloTempPts:"temp points", tempRanks:"temp ranking",
+  numMin:"lowest number", numMax:"highest number"};
+function shareLink(){
+  const base=String(location.href).split("#")[0];
+  const d=shareDiff();
+  return Object.keys(d).length ? base+"#set="+b64u(JSON.stringify(d)) : base;
+}
+
+/* ---- validation ---- */
+function intIn(x,lo,hi){
+  const numeric = typeof x==="number" ||
+                  (typeof x==="string" && x.trim()!=="" && isFinite(Number(x)));
+  if(!numeric) return null;
+  const n=Math.trunc(Number(x));
+  return (isFinite(n) && n>=lo && n<=hi) ? n : null;
+}
+function intsIn(v,lo,hi,maxLen){
+  if(!Array.isArray(v) || v.length===0 || v.length>maxLen) return null;
+  const out=[];
+  for(const x of v){
+    /* Number(null) is 0 and Number(true) is 1, so check the type first rather
+       than letting a list of nulls pass as a ladder of zeroes. */
+    const numeric = typeof x==="number" ||
+                    (typeof x==="string" && x.trim()!=="" && isFinite(Number(x)));
+    if(!numeric) return null;
+    const n=Math.trunc(Number(x));
+    if(!isFinite(n) || n<lo || n>hi) return null;
+    out.push(n);
+  }
+  return out;
+}
+function sanitizeShared(o){
+  if(!o || typeof o!=="object" || Array.isArray(o)) return null;
+  const out={}, planIds=BASIC_PLANS.concat(ADV_PLANS).map(p=>p.id);
+
+  if(o.mode==="solo"||o.mode==="standard") out.mode=o.mode;
+  if(typeof o.seed==="string"){ const sd=normalizeSeed(o.seed); if(sd) out.seed=sd; }
+  if(typeof o.advanced==="boolean") out.advanced=o.advanced;
+  { const r=intIn(o.r,0,50); if(r) out.r=r; }
+  if(typeof o.roundabouts==="boolean") out.roundabouts=o.roundabouts;
+  if(typeof o.theme==="string" && THEMES[o.theme]) out.theme=o.theme;
+
+  if(o.planOff && typeof o.planOff==="object" && !Array.isArray(o.planOff)){
+    const po={};
+    Object.keys(o.planOff).slice(0,64).forEach(k=>{
+      if(planIds.indexOf(k)>=0 && o.planOff[k]) po[k]=true;
+    });
+    out.planOff=po;
+  }
+
+  if(Array.isArray(o.streets) && o.streets.length===3){
+    const st=[];
+    for(const x of o.streets){
+      if(!x || typeof x!=="object") return finish(out);
+      const lots=intIn(x.lots,1,30);
+      if(lots===null) return finish(out);
+      const parks=intsIn(x.parks,-99,99,20);
+      const pools=Array.isArray(x.pools)&&x.pools.length===0 ? []
+                : intsIn(x.pools,0,lots-1,lots);
+      if(!parks || !pools) return finish(out);
+      st.push({lots:lots, parks:parks, pools:pools});
+    }
+    out.streets=st;
+  }
+
+  if(o.estate && typeof o.estate==="object" && !Array.isArray(o.estate)){
+    const es={}; let ok=true;
+    for(let n=1;n<=6;n++){
+      const col=intsIn(o.estate[n],-99,99,12);
+      if(!col){ ok=false; break; }
+      es[n]=col;
+    }
+    if(ok) out.estate=es;
+  }
+
+  [["pool",0,999,40],["bis",0,999,40],["refusal",0,999,20],
+   ["roundaboutValues",0,999,20],["tempRanks",0,999,6]].forEach(([k,lo,hi,len])=>{
+    const v=intsIn(o[k],lo,hi,len); if(v) out[k]=v;
+  });
+
+  [["soloTempMin",1,40],["soloTempPts",0,99],["numMin",0,50],["numMax",1,50]].forEach(([k,lo,hi])=>{
+    const n=intIn(o[k],lo,hi);
+    if(n!==null) out[k]=n;
+  });
+  if(out.numMin!==undefined && out.numMax!==undefined && out.numMin>=out.numMax){
+    delete out.numMin; delete out.numMax;
+  }
+
+  if(o.deck && typeof o.deck==="object" && !Array.isArray(o.deck)){
+    const dk={}; let ok=true, total=0;
+    for(const e of Object.keys(BASE.deck)){
+      const v=intsIn(o.deck[e],0,50,200);
+      if(!v){ ok=false; break; }
+      total+=v.length; dk[e]=v;
+    }
+    if(ok && total>0 && total<=400) out.deck=dk;
+  }
+
+  if(o.targets && typeof o.targets==="object" && !Array.isArray(o.targets)){
+    const tg={};
+    Object.keys(o.targets).slice(0,6).forEach(k=>{
+      const n=intIn(o.targets[k],0,999);
+      if(String(k).length<=24 && n!==null) tg[String(k)]=n;
+    });
+    if(Object.keys(tg).length) out.targets=tg;
+  }
+  return finish(out);
+
+  function finish(x){ return Object.keys(x).length?x:null; }
+}
+
+let sharedIn=false;      /* shown on the briefing for this session */
+let pendingRoll=0;       /* plan rerolls to replay onto the first sheet */
+function applySharedSetup(){
+  let raw="";
+  try{ raw=String(location.hash||""); }catch(e){ return; }
+  const m=raw.match(/[#&]set=([A-Za-z0-9\-_]+)/);
+  if(!m) return;
+  let clean=null;
+  try{ clean=sanitizeShared(JSON.parse(unb64u(m[1]))); }catch(e){ clean=null; }
+  if(!clean) return;
+  pendingRoll=clean.r||0;
+  delete clean.r;                    /* not a config key */
+  /* a shared link is the shared setup, not a blend with whatever was stored */
+  CFG=Object.assign(copy(BASE),clean);
+  CFG.dataVersion=BASE.dataVersion;
+  ensureCategories();
+  sharedIn=true;
+  save();
+  /* drop the fragment so a later reload uses what is now stored */
+  try{ history.replaceState(null,"",String(location.href).split("#")[0]); }catch(e){}
+}
+
+/* ------------------------------------------------------------------ QR
+   The encoder is fetched on demand from a CDN rather than carried in the page,
+   which keeps this file small. It is the only external dependency and the only
+   network request the app makes, so everything else still works offline and the
+   code is simply left out when the script cannot be reached.                */
+const QR_CDN="https://cdn.jsdelivr.net/npm/qr-code-styling@1/lib/qr-code-styling.js";
+const QR_PX=224;          /* including the margin below */
+/* The quiet zone, drawn inside the image. The spec asks for four modules; this is
+   nearer two, which is a deliberate trade for a tighter look. The frame around it
+   shares the code's background, so a little more surround comes from there, and
+   the modules themselves grow as the margin shrinks. */
+const QR_MARGIN=10;
+let qrState="idle";       /* idle | loading | ready | unavailable */
+
+function qrReady(){ return qrState==="ready" && typeof QRCodeStyling!=="undefined"; }
+function qrLoad(then){
+  /* The callback exists only to repaint once an asynchronous fetch settles. It
+     must never fire on a path that resolves synchronously, or the caller that
+     repaints on it re-enters itself without end. */
+  if(typeof QRCodeStyling!=="undefined"){ qrState="ready"; return; }
+  if(qrState==="loading" || qrState==="unavailable") return;
+  /* no point attempting a fetch the browser already knows will fail */
+  try{ if(navigator && navigator.onLine===false){ qrState="unavailable"; return; } }
+  catch(e){}
+  qrState="loading";
+  let settled=false;
+  const done=()=>{
+    if(settled) return; settled=true;
+    qrState=(typeof QRCodeStyling!=="undefined")?"ready":"unavailable";
+    then&&then();
+  };
+  try{
+    const sc=document.createElement("script");
+    sc.src=QR_CDN; sc.async=true;
+    sc.onload=done; sc.onerror=done;
+    document.head.appendChild(sc);
+    setTimeout(done,6000);            /* a stalled request must not hang the panel */
+  }catch(e){ qrState="unavailable"; then&&then(); }
+}
+function qrMessage(){
+  if(qrState==="loading") return "Fetching the QR code\u2026";
+  return "No QR code \u2014 it needs a connection the first time. The link works either way.";
+}
+/* The colours come from the palette rather than a hand-picked pair: whichever of
+   the theme's ink and card is darker draws the modules and the lighter one the
+   background, which inverts correctly on a dark theme without special-casing it.
+   A scanner needs contrast above all, so the pair is measured and falls back to
+   black on white if a palette ever fails to clear the floor. */
+function relLum(hex){
+  const h=String(hex).replace("#","");
+  if(h.length!==6) return null;
+  const ch=[0,2,4].map(i=>{
+    const c=parseInt(h.slice(i,i+2),16)/255;
+    return (c<=0.03928)?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+  });
+  return 0.2126*ch[0]+0.7152*ch[1]+0.0722*ch[2];
+}
+function contrast(a,b){
+  const la=relLum(a), lb=relLum(b);
+  if(la===null||lb===null) return 0;
+  return (Math.max(la,lb)+0.05)/(Math.min(la,lb)+0.05);
+}
+const QR_MIN_CONTRAST=7;
+function qrLook(){
+  const t=THEMES[CFG.theme]||THEMES.drafting;
+  const v=t.vars||{};
+  const ink=v["--ink"], card=v["--card"];
+  let dark="#000000", light="#ffffff";
+  if(relLum(ink)!==null && relLum(card)!==null && contrast(ink,card)>=QR_MIN_CONTRAST){
+    const inkDarker=relLum(ink)<relLum(card);
+    dark = inkDarker?ink:card;
+    light= inkDarker?card:ink;
+  }
+  const st=t.qr||{};
+  return {dark:dark, light:light,
+          dots:st.dots||"square", corners:st.corners||"square",
+          cornerDots:st.cornerDots||"square"};
+}
+function qrPaint(el,text){
+  if(!el || !qrReady()) return false;
+  try{
+    el.innerHTML="";
+    const look=qrLook();
+    const code=new QRCodeStyling({
+      width:QR_PX, height:QR_PX, type:"svg", data:text, margin:QR_MARGIN,
+      /* High: about 30% of the code can be damaged, dirty or obscured and still
+         read. It also offsets the tight quiet zone. The cost is capacity, so a
+         very long setup falls back to the link alone. */
+      qrOptions:{ errorCorrectionLevel:"H" },
+      dotsOptions:{ color:look.dark, type:look.dots },
+      backgroundOptions:{ color:look.light },
+      cornersSquareOptions:{ color:look.dark, type:look.corners },
+      cornersDotOptions:{ color:look.dark, type:look.cornerDots }
+    });
+    code.append(el);
+    /* the build may finish a tick later, and an over-long payload can fail
+       there rather than throwing here */
+    setTimeout(()=>{
+      if(el && !String(el.innerHTML||"").trim()){
+        el.className="qrnone";
+        el.textContent="That setup is too long for a QR code, so send the link.";
+      }
+    },0);
+    return true;
+  }catch(e){ return false; }        /* too long for a code, or the library changed */
+}
+
+function sharePanel(){
+  const link=shareLink();
+  const plain=shareDiff();
+  const n=Object.keys(plain).length;
+  qrLoad(()=>{ if(shareOpen) sharePanel(); });
+  let h='<h3>Share this setup</h3>'+
+    '<p class="lede">Share this link with a friend and they will get these exact same '+
+    'settings as you.</p>'+
+    '<div class="qrbox">'+(qrReady()
+      ? '<span class="qrwrap" id="sh-qr" style="background:'+qrLook().light+'"></span>'
+      : '<span class="qrnone">'+qrMessage()+'</span>')+'</div>'+
+    '<div class="rfield"><label>Link</label>'+
+    '<input id="sh-url" readonly value="'+esc(link)+'"></div>'+
+    '<div class="toolbar"><button class="btn primary" id="sh-copy">Copy link</button>'+
+    '<button class="btn" onclick="backOut()">Done</button></div>'+
+    '<div class="rstatus" id="sh-note">'+
+      'Carrying '+n+' item'+(n===1?'':'s')+': <code>'+
+      esc(Object.keys(plain).map(k=>SHARE_LABEL[k]||k).join(", "))+'</code>.'+
+    '</div>';
+  openBox(h);
+  shareOpen=true;
+  if(qrReady() && !qrPaint($("sh-qr"), link)){
+    const box=$("sh-qr");
+    if(box){ box.className="qrnone";
+      box.textContent="That setup is too long for a QR code, so send the link."; }
+  }
+  const f=$("sh-url");
+  f.onclick=()=>{ try{ f.select(); }catch(e){} };
+  $("sh-copy").onclick=()=>{
+    const note=$("sh-note");
+    const done=ok=>{ note.className="rstatus "+(ok?"live":"bad");
+      note.innerHTML=ok?"Copied.":"Could not copy \u2014 select the link and copy it by hand."; };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(link).then(()=>done(true),()=>done(false));
+      else done(false);
+    }catch(e){ done(false); }
   };
 }
 
@@ -2581,6 +2922,7 @@ function briefing(){
   let h='<div class="gametitle">Welcome To <span id="briefcity"></span></div>'+
     '<h3>New sheet</h3>'+
     '<p class="lede">The clock starts when you begin. Nothing is dealt until then.</p>'+
+    (sharedIn?'<div class="rstatus live">These settings came from a shared link.</div>':'')+
     '<table class="brief">'+rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join("")+
     '</table>';
   h+='<h4>City plans on the table</h4><table class="brief plans">'+
@@ -2593,6 +2935,7 @@ function briefing(){
        (guest?'The host starts':'Start')+'</button>'+
      '<button class="btn" id="rnd">Randomize plans</button>'+
      '<button class="btn" id="chg">Change setup</button>'+
+     '<button class="btn" id="shr">Share setup</button>'+
      '<button class="btn" id="mpb"'+(MP_ENABLED?''
        :' disabled title="Multiplayer is switched off for now"')+
        '>Multiplayer</button></div>';
@@ -2603,6 +2946,7 @@ function briefing(){
   $("go").onclick=startGame;
   $("rnd").onclick=()=>{ redrawPlans(); briefing(); render(); };
   $("chg").onclick=setup;
+  $("shr").onclick=()=>{ backTo=null; sharePanel(); };
   $("mpb").onclick=roomPanel;
 }
 $("scrim").addEventListener("click",e=>{ if(e.target===$("scrim")) closeBox(); });
@@ -2716,6 +3060,7 @@ function setup(){
 
   h+='<div class="toolbar"><button class="btn" id="ap">Save and start new sheet</button>'+
      '<button class="btn" id="rs">Restore rulebook values</button>'+
+     '<button class="btn" id="sh">Share setup</button>'+
      '<button class="btn" onclick="backOut()">Cancel</button></div>';
 
   openBox(h, false, "mid");
@@ -2733,6 +3078,7 @@ function setup(){
   $("rnd2").onclick=()=>{ CFG.roundabouts=!CFG.roundabouts; ensureCategories(); reconcilePlans();
     save(); if(G && !G.started){ setup(); render(); } else { closeBox(); newGame(); } };
   $("themebtn").onclick=()=>{ backTo=setup; themePicker(); };
+  $("sh").onclick=()=>{ backTo=setup; sharePanel(); };
   $("ap").onclick=()=>{
     const next=copy(CFG);
     $("modal").querySelectorAll("input[data-p]").forEach(inp=>{
@@ -2768,6 +3114,7 @@ $("btn-mp").onclick=()=>{ backTo=null; roomPanel(); };
 $("btn-theme").onclick=()=>{ backTo=null; themePicker(); };
 $("btn-new").onclick=()=>{ if(!G.over&&houses()>0&&!confirm("Start a new sheet?")) return; newGame(); };
 
+applySharedSetup();     /* a link overrides the defaults before anything is dealt */
 applyTheme(CFG.theme);
 renderCity();
 newGame();

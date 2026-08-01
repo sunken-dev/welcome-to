@@ -4,9 +4,11 @@ An unofficial, fan-made browser implementation of *Welcome To Your Perfect Home*
 built for practising alone and for playing the same deck as someone else without
 any network.
 
-One HTML file. No build step, no dependencies, no server, no analytics, no
-network requests. Your settings and best score live in your own browser and go
-nowhere else.
+One HTML file. No build step, no server, no analytics. Your settings and best
+score live in your own browser and go nowhere else. The only external request is
+[qr-code-styling](https://github.com/kozakdenys/qr-code-styling), fetched from
+jsDelivr the first time you open **Share setup**; everything else works offline,
+and the code is simply left out when that script cannot be reached.
 
 > This is not an official product and is not affiliated with or endorsed by
 > Blue Cocker Games or Deep Water Games. It contains none of the published
@@ -70,11 +72,20 @@ plan, which needs all the parks, all the pools and a roundabout in one street.
 **Everything else**
 
 - Six themes: Drafting office, Hillside, Cat town, Orbit, Scriptorium,
-  Risograph. Cosmetic only — the rules and values are identical under each.
+  Risograph. Cosmetic only — the rules and values are identical under each. Each
+  gives the share QR code its own colours and module shape, taken from the
+  palette and checked for contrast so it stays scannable.
 - Game clock, per-round clock and average round time.
 - Curate the pool of City Plans; one has to stay on in each category.
 - Name your city by clicking the ellipsis in the title, up to 15 characters.
 - One-round undo, and every scoring table is editable.
+- **Share setup**, on the briefing and in Game setup, produces a link carrying
+  the whole setup — mode, variants, plan pool, scoring tables, theme, the seed of
+  the sheet on screen and how many times its City Plans were rerolled. Whoever
+  opens it gets that exact sheet, not merely the same rules. Only what differs
+  from the defaults travels, in the part after the `#`, which never reaches a
+  server. Your city name and best score are not included. The panel also shows
+  the link as a QR code, which needs a connection the first time.
 
 ---
 
@@ -129,24 +140,6 @@ your own preferences.
   opponent cards
 - Rejoining a sheet already under way — your board lives in the tab, so a reload
   means dropping out of that game
-
----
-
-## Running it locally
-
-There is nothing to install.
-
-```sh
-git clone https://github.com/<you>/<repo>.git
-cd <repo>
-open welcome-to.html     # or: xdg-open welcome-to.html
-```
-
-Opening the file directly over `file://` works. If you would rather serve it:
-
-```sh
-python3 -m http.server 8000   # then visit /welcome-to.html
-```
 
 ## Credits and legal
 

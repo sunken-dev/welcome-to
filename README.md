@@ -8,12 +8,11 @@ An unofficial, fan-made browser implementation of *Welcome To Your Perfect Home*
 built for practising alone and for playing the same deck as someone else without
 any network.
 
-One HTML file. No build step, no server, no analytics. Your settings and best
-score live in your own browser and go nowhere else. The only external request is
-[qr-code-styling](https://github.com/kozakdenys/qr-code-styling), fetched from
-jsDelivr the first time you open **Share setup**; everything else works offline,
-and the code is simply left out when that script cannot be reached.
+## Start playing
 
+Visit https://welcome-to.sunken.dev/ to start playing.
+
+> [!NOTE]
 > This is not an official product and is not affiliated with or endorsed by
 > Blue Cocker Games or Deep Water Games. It contains none of the published
 > artwork. See [Credits and legal](#credits-and-legal).

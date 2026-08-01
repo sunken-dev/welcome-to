@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Welcome To ...</title>
+<title>Welcome To …</title>
 <style>
   /* Every value here is set by the active theme. See THEMES in the script:
      adding a theme means adding one object, nothing else. */
@@ -10,7 +10,7 @@
     --stamp:#A93A2C;--pool:#3D7F98;--park:#4F7237;--flag:#C9A227;--plum:#7A5C86;--temp:#C97B2C;
     --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
     --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
-    --slot:40px;
+    --face-w:56px;--face-h:82px;   /* card face, and the building lots */
     --r:0px;          /* panel and card rounding */
     --rs:0px;         /* small element rounding */
     --gsw:1.7;        /* glyph stroke weight */
@@ -30,7 +30,7 @@
     color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;
     -webkit-text-size-adjust:100%;transition:background-color .35s ease,color .35s ease}
   #bgart{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-  .wrap{max-width:1160px;margin:0 auto;padding:18px 14px 70px}
+  .wrap{max-width:1240px;margin:0 auto;padding:18px 14px 70px}
   .mast{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 22px;
     border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:16px}
   .mast h1{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:.16em;
@@ -58,11 +58,16 @@
   /* selection must not change the box geometry, or the card shifts by a pixel */
   .combo.chosen{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
   .combo.dim{opacity:.32}
+  /* a number with nowhere legal left to go */
+  .combo.numdead .bignum{color:var(--stamp);opacity:.6;text-decoration:line-through}
+  .combo.numdead .face.big,.combo.numdead .face.stack{border-color:var(--stamp);border-style:dashed}
+  .combo.numdead .legend span{color:var(--stamp)}
+  .combo.dead{opacity:.62}
   .combo-head{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;
     text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
   .combo-body{display:flex;align-items:center;justify-content:center;gap:7px}
   .face{position:relative;background:var(--card);border:1px solid var(--rule);
-    width:56px;height:82px;flex:0 0 auto;display:flex;flex-direction:column;
+    width:var(--face-w);height:var(--face-h);flex:0 0 auto;display:flex;flex-direction:column;
     align-items:center;justify-content:center}
   /* a stack has thickness */
   .face.stack{box-shadow:2px 2px 0 var(--card),2px 2px 0 1px var(--rule),
@@ -113,17 +118,23 @@
   .bx.live{border-color:var(--park);color:var(--park);font-weight:700}
   .road{overflow-x:auto;padding-bottom:5px}
   .lots{display:flex;align-items:stretch;min-width:max-content}
-  .lot{width:var(--slot);height:54px;flex:0 0 auto;border:1px solid var(--rule);background:transparent;
+  .lot{width:var(--face-w);height:var(--face-h);flex:0 0 auto;border:1px solid var(--rule);background:transparent;
     font:inherit;color:inherit;padding:0;position:relative;display:flex;align-items:center;
     justify-content:center;cursor:default}
-  .lot .val{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1}
-  .lot .val sub{font-size:9px;color:var(--stamp);vertical-align:baseline}
+  .lot .val{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1}
+  .lot .val sub{font-size:11px;color:var(--stamp);vertical-align:baseline}
   .lot.built{background:var(--paper-2);border-color:var(--ink)}
   .lot.locked{background:repeating-linear-gradient(135deg,var(--paper-2) 0 5px,var(--locked) 5px 10px)}
   .lot.locked::before{content:"";position:absolute;left:1px;right:1px;top:3px;height:2px;background:var(--ink)}
+  .lot.roundabout{background:var(--paper-2);border-color:var(--ink)}
+  .lot .rnd{width:24px;height:24px;border:2px solid var(--ink);border-radius:50%;
+    display:flex;align-items:center;justify-content:center}
+  .lot .rnd::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--ink)}
+  .lot.rndpick{cursor:pointer;background:rgba(122,92,134,.2);border-color:var(--plum);border-width:2px}
+  .lot.rndpick:hover{background:rgba(122,92,134,.4)}
   .lot.inked{animation:ink .22s ease-out}
   @keyframes ink{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
-  .lot .pt{position:absolute;bottom:3px;right:3px;width:12px;height:8px;border:1px solid var(--pool);border-radius:2px}
+  .lot .pt{position:absolute;bottom:3px;right:3px;width:15px;height:10px;border:1px solid var(--pool);border-radius:2px}
   .lot .pt.filled{background:var(--pool)}
   .lot .pt.filled::after{content:"";position:absolute;inset:-3px;border:1.5px solid var(--pool);border-radius:4px}
   .lot.legal{cursor:pointer;background:var(--legal);border-color:var(--flag);border-width:2px}
@@ -131,7 +142,7 @@
   .lot.legal.pool{background:var(--legalpool);border-color:var(--pool)}
   .lot.legal.pool:hover{background:var(--legalpool-h)}
   .lot.src{cursor:pointer;box-shadow:inset 0 0 0 2px var(--stamp)}
-  .lot .ghost{font-family:var(--mono);font-size:18px;font-weight:700;opacity:.5}
+  .lot .ghost{font-family:var(--mono);font-size:22px;font-weight:700;opacity:.5}
   .lot:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
   .gap{width:13px;flex:0 0 auto;background:none;border:0;padding:0;position:relative;cursor:default}
   .gap .post{position:absolute;top:4px;bottom:4px;left:50%;width:3px;transform:translateX(-50%);background:transparent}
@@ -144,6 +155,9 @@
     transform:translateX(-50%);background:var(--ink)}
 
   .stair{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;align-items:end}
+  /* 17px elsewhere; a fifth taller here, where the columns are the control */
+  .stair .bx{height:20px;line-height:18px}
+  .stair .col .cap{padding:3px 0}
   .col{display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
   .col .cap{font-family:var(--mono);font-size:9.5px;text-align:center;font-weight:700;
     background:var(--paper-2);border:1px solid var(--rule-soft);padding:2px 0;margin-top:3px}
@@ -170,7 +184,15 @@
   .sheet tr.neg td:last-child{color:var(--stamp)}
   .sheet tr.tot td{border-bottom:0;border-top:2px solid var(--ink);padding-top:6px;font-weight:700}
   .sheet tr.tot td:last-child{font-size:17px}
-  .sheet td.sub{padding-left:10px;color:var(--ink-soft);font-size:11.5px}
+  .sheet td.sub{padding-left:9px;color:var(--ink-soft);font-size:11.5px}
+  /* three weights: dotted between rows, this between bonuses and penalties,
+     and the ink rule above the total */
+  .sheet tr.sep td{border-top:2px solid var(--rule);padding-top:5px}
+  /* a section whose variant is switched off: shown, but plainly inactive */
+  .sheet tr.dim{opacity:.4}
+  .trow.dim{opacity:.4}
+  .sheet td.ic{width:20px;padding-right:5px;vertical-align:middle}
+  .sheet td.ic svg{width:15px;height:15px;display:block}
   .tracks{display:flex;flex-direction:column;gap:8px}
   .trow{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
   .trow .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;
@@ -188,6 +210,9 @@
   .btn:focus-visible{outline:2px solid var(--flag);outline-offset:2px}
   .btn.stampish{border-color:var(--stamp);color:var(--stampon)}
   .btn.stampish:hover:not(:disabled){background:var(--stamp);color:var(--card);border-color:var(--stamp)}
+  /* "off" is a character wider than "on", which shifted every button to its
+     right when a toggle flipped. Reserve the wider state's width for both. */
+  .tgl{display:inline-block;min-width:4.2ch;text-align:center}
   .chips{display:flex;gap:6px;flex-wrap:wrap}
   .chip{font-family:var(--mono);font-size:11.5px;font-weight:700;background:var(--flag);color:var(--ink);
     border:0;padding:5px 9px;cursor:pointer}
@@ -201,6 +226,7 @@
   .modal{background:var(--card);border:2px solid var(--ink);max-width:640px;width:100%;
     max-height:88vh;overflow-y:auto;padding:20px}
   .modal.wide{max-width:960px}
+  .modal.mid{max-width:750px}
   .modal h3{font-family:var(--mono);font-size:13px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 4px}
   .modal .lede{color:var(--ink-soft);font-size:12.5px;margin:0 0 14px}
   .modal .btn{color:var(--ink);border-color:var(--ink)}
@@ -208,8 +234,22 @@
   .modal .btn.on{background:var(--ink);color:var(--card)}
   .modal h4{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
     margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--rule-soft)}
-  .fieldgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:9px}
+  /* One fixed column width everywhere, so a box is the same size whichever
+     section it sits in. Fractional columns made them stretch to fill the row,
+     which left the six estate fields much wider than the rest. */
+  .fieldgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
   .fieldgrid.wide{grid-template-columns:1fr}
+  @media (max-width:620px){
+    .fieldgrid{grid-template-columns:1fr}
+  }
+  /* a subsection inside a settings group, styled like the plan categories */
+  /* Streets are separated rather than bracketed: a section heading uses a solid
+     rule, so a dotted one of the same colour reads a step lighter. No line above
+     the first, and no left bar or indent. */
+  .substack{margin-bottom:12px}
+  .substack + .substack{border-top:1px dotted var(--rule-soft);padding-top:12px}
+  .subh{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-soft);display:block;margin-bottom:5px}
   .fieldgrid label{font-size:11px;display:block}
   .fieldgrid .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;
     color:var(--ink-soft);display:block}
@@ -316,9 +356,20 @@
   .ptog.on .tick::before{content:"\2713"}
   .ptog.off .tick::before{content:"\00b7"}
   .ptog.off{opacity:.44}
+  /* needs a variant that is currently off: shown, but plainly not in the pool */
+  .ptog.unavail{opacity:.5;cursor:default;
+    background:repeating-linear-gradient(135deg,
+      transparent 0 6px,var(--rule-soft) 6px 7px,transparent 7px 13px)}
+  .ptog.unavail:hover{border-color:var(--rule-soft)}
+  .ptog.unavail .tick::before{content:"\2013"}
   .ptog em{font-style:normal;font-family:var(--mono);font-size:10px;margin-left:auto;
     white-space:nowrap;color:var(--ink-soft)}
   .ptog .star{color:var(--flag)}
+  /* the same circle-and-dot the board uses, at label size */
+  .rndmark{display:inline-block;width:10px;height:10px;margin-left:5px;position:relative;
+    border:1.5px solid var(--ink);border-radius:50%;vertical-align:-1px}
+  .rndmark::after{content:"";position:absolute;top:50%;left:50%;width:3px;height:3px;
+    margin:-1.5px 0 0 -1.5px;border-radius:50%;background:var(--ink)}
   /* the three drawn for this sheet get a folded corner. The 50% line of a 225deg
      gradient is the box's main diagonal, so this fills the top-right triangle. */
   .ptog.drawn{background:var(--paper-2);border-color:var(--ink)}
@@ -367,9 +418,32 @@
   .seednote{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
     color:var(--ink-soft);margin-left:8px}
 
+  /* multiplayer room */
+  .rfield{margin-bottom:10px}
+  .rfield label{font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:3px}
+  .rfield input{width:100%;font-family:var(--mono);font-size:12px;padding:5px 7px;
+    border:1px solid var(--rule);background:var(--paper);color:var(--ink);
+    border-radius:calc(var(--rs)*.5)}
+  .rstatus{font-size:12.5px;padding:7px 9px;border-left:3px solid var(--rule);
+    background:var(--paper-2);margin:12px 0;border-radius:0 calc(var(--rs)*.5) calc(var(--rs)*.5) 0}
+  .rstatus.live{border-left-color:var(--park)}
+  .rstatus.bad{border-left-color:var(--stamp);color:var(--stamp)}
+  .roster{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+  .pl{display:flex;align-items:baseline;gap:7px;border:1px solid var(--rule-soft);
+    padding:5px 9px;border-radius:calc(var(--rs)*.6);font-size:12.5px}
+  .pl.me{border-color:var(--ink)}
+  .pl .badge{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--onaccent);background:var(--ink-soft);padding:1px 5px;border-radius:3px}
+  .pl .badge.host{background:var(--plum)}
+  .pl .rdy{margin-left:auto;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink-soft)}
+  .pl .rdy.on{color:var(--park);font-weight:700}
+  .sheet .mini{font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);margin-left:7px}
+
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   @media (max-width:520px){
-    :root{--slot:36px}
+    :root{--face-w:44px;--face-h:64px}
     .ccard .n{font-size:30px;padding:11px 4px 4px}
     .mast h1{font-size:16px}
   }
@@ -399,11 +473,11 @@
   <div class="cols">
     <div>
       <div class="panel">
-        <h2 id="handhead">Three construction cards &mdash; one for its number, another for its effect</h2>
+        <h2 id="handhead">Card stacks</h2>
         <div class="hand" id="hand"></div>
       </div>
       <div class="panel"><h2>Your city</h2><div id="streets"></div></div>
-      <div class="panel"><h2>Real estate &mdash; housing estate values</h2><div class="stair" id="stair"></div></div>
+      <div class="panel"><h2>Housing estate values</h2><div class="stair" id="stair"></div></div>
     </div>
     <div>
       <div class="panel"><h2>City plans</h2><div id="plans"></div></div>
@@ -422,7 +496,8 @@
     <div class="chips" id="chips"></div>
     <button class="btn stampish" id="btn-refuse">Permit refusal</button>
     <button class="btn" id="btn-undo">Undo round</button>
-    <button class="btn" id="btn-hints">Hints: off</button>
+    <button class="btn" id="btn-hints">Hints: <span class="tgl">off</span></button>
+    <button class="btn" id="btn-mp">Multiplayer</button>
     <button class="btn" id="btn-theme">Theme</button>
     <button class="btn" id="btn-setup">Setup</button>
     <button class="btn" id="btn-new">New sheet</button>
@@ -436,7 +511,9 @@
 /* =========================================================================
    Welcome To Your Perfect Home — solo practice sheet
    Values from the Blue Cocker / Deep Water Games 2018 English rulebook v2.0.
-   Items marked INFERRED are flagged in the Setup panel.
+   The only invented values left are the twelve basic City Plan combinations,
+   which the rulebook does not list. Everything else is from the book or from a
+   deck read card by card.
    ========================================================================= */
 
 const EFFECTS = {
@@ -450,14 +527,19 @@ const EFFECTS = {
 
 /* Original glyphs for the six effects — plain geometry, not the published art. */
 const GCOLOR = { surveyor:"var(--ink)", agent:"var(--plum)", landscaper:"var(--park)",
-                 pool:"var(--pool)", temp:"var(--temp)", bis:"var(--stamp)" };
+                 pool:"var(--pool)", temp:"var(--temp)", bis:"var(--stamp)",
+                 plan:"var(--flag)", roundabout:"var(--ink)", refusal:"var(--stamp)" };
 const BASE_GPATH = {
   surveyor:  '<path d="M3 21V10l2-2 2 2v11M10 21V10l2-2 2 2v11M17 21V10l2-2 2 2v11"/><path d="M2 13.5h20M2 17.5h20"/>',
   agent:     '<path d="M4 14.5l8-7 8 7"/><path d="M4 20l8-7 8 7"/>',
   landscaper:'<circle cx="12" cy="8.5" r="4.5"/><circle cx="6.6" cy="12.4" r="3"/><circle cx="17.4" cy="12.4" r="3"/><path d="M12 14v7"/>',
   pool:      '<rect x="3.5" y="7.5" width="17" height="13" rx="3"/><path d="M6.2 12.6c1.9-1.6 3.4 1.6 5.4 0s3.5-1.6 5.4 0"/><path d="M6.2 16.6c1.9-1.6 3.4 1.6 5.4 0s3.5-1.6 5.4 0"/>',
   temp:      '<path d="M12 3.5l6 15.5H6z"/><path d="M3 21.5h18"/><path d="M9.6 13.5h4.8"/>',
-  bis:       '<path d="M2.5 21v-6.5L7 10.2l4.5 4.3V21z"/><path d="M12.5 21v-6.5L17 10.2l4.5 4.3V21z"/>'
+  bis:       '<path d="M2.5 21v-6.5L7 10.2l4.5 4.3V21z"/><path d="M12.5 21v-6.5L17 10.2l4.5 4.3V21z"/>',
+  /* scoring sections that are not effect cards */
+  plan:      '<rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M7.6 9h8.8M7.6 12.5h8.8M7.6 16h5"/>',
+  roundabout:'<circle cx="12" cy="12" r="7"/><path d="M12 12h.01"/>',
+  refusal:   '<circle cx="12" cy="12" r="7.6"/><path d="M6.8 17.2L17.2 6.8"/>'
 };
 let GPATH = BASE_GPATH;   /* replaced per theme by applyTheme */
 function glyphSet(id){
@@ -813,22 +895,31 @@ const DECK_2018 = {
 };
 
 const BASE = {
+  dataVersion: 3,   // bump when a rulebook table is corrected, see load()
+  advanced: false,  // gate for the starred plans, like roundabouts
   theme: "drafting",
+  relay: "",     // your Cloudflare Worker, e.g. https://welcome-to-relay.you.workers.dev
+  room: "",
   seed: "",      // blank means a fresh random seed per sheet
   city: "",      // written into the masthead, like the printed sheet
   hints: false,
   planOff: {},   // plan ids kept out of the draw
-  mode: "solo",            // "solo" = official variant, "standard" = 3-stack turn
+  mode: "standard",        // "standard" = the three-stack turn, "solo" = the official solo variant
+  /* Nine planned pools in total, which is exactly the number of crossable boxes
+     on the pool ladder. */
   streets: [
-    { lots:10, pools:[1,4,7],     parks:[0,2,4,10] },
-    { lots:11, pools:[0,3,6,9],   parks:[0,2,4,6,14] },
-    { lots:12, pools:[2,5,8,11],  parks:[0,2,4,6,8,18] }
+    { lots:10, pools:[2,6,7],   parks:[0,2,4,10] },
+    { lots:11, pools:[0,3,7],   parks:[0,2,4,6,14] },
+    { lots:12, pools:[1,6,10],  parks:[0,2,4,6,8,18] }
   ],
   estate: {1:[1,3], 2:[2,3,4], 3:[3,4,5,6], 4:[4,5,6,7,8], 5:[5,6,7,8,10], 6:[6,7,8,10,12]},
   pool:    [0,3,6,9,13,17,21,26,31,36],
   bis:     [0,1,3,6,9,12,16,20,24,28],
   refusal: [0,0,3,5],
+  roundabouts: false,                  /* the advanced variant, off by default */
+  roundaboutValues: [0,3,8],           /* p11: the first costs 3, the second 5 more */
   soloTempMin: 6, soloTempPts: 7,   // p9: 7 points only if at least six temps hired
+  tempRanks: [7,4,1],               // p7: most boxes, next, third
   deck: DECK_2018,
   numMin: 0, numMax: 17,            // p7: Temp Agency allows 0 to 17
   targets: {Apprentice:60, Architect:80, "Best Architect":100}
@@ -863,7 +954,8 @@ const ADV_PLANS = [
   {n:1, hi:8, lo:3, text:"Five bis houses built on the same street",           sp:"bis5"},
   {n:2, hi:8, lo:3, text:"All parks and all pools built on Street 2",          sp:"parkpool", street:1},
   {n:2, hi:8, lo:3, text:"All parks and all pools built on Street 3",          sp:"parkpool", street:2},
-  {n:2, hi:7, lo:4, text:"Two streets with all parks or all pools built",      sp:"twostreets"}
+  {n:2, hi:7, lo:4, text:"Two streets with all parks or all pools built",      sp:"twostreets"},
+  {n:2, hi:10,lo:5, text:"All parks, all pools and a roundabout in one street", sp:"parkpoolround"}
 ];
 
 /* Ids are derived from the plan's own requirement, not its position, so that a
@@ -873,16 +965,27 @@ function planId(p, set){
 }
 BASIC_PLANS.forEach(p=>{ p.id=planId(p,"b"); });
 ADV_PLANS.forEach(p=>{ p.id=planId(p,"a"); });
-/* Out of the box that means the standard game: advanced plans start switched off. */
-ADV_PLANS.forEach(p=>{ BASE.planOff[p.id]=true; });
+/* Nothing starts switched off: the standard game is expressed by the advanced
+   gate being closed, not by every starred plan being individually disabled. */
 
 /* Which plans may be drawn: the chosen plan set, minus anything switched off. */
 /* Every plan takes part in the enable/disable rule. Whether the sheet counts as
    "advanced" is derived from the pool, not held as a second, conflicting flag. */
-function activePlans(){ return BASIC_PLANS.concat(ADV_PLANS); }
-function advancedOn(){
-  const off=CFG.planOff||{};
-  return ADV_PLANS.some(p=>!off[p.id]);
+/* Two gates decide what may be drawn at all; planOff is the per-plan switch on
+   top of that. A plan outside activePlans is shown striped, never as switched on,
+   so the panel and the rule never disagree. */
+function activePlans(){
+  return BASIC_PLANS.concat(ADV_PLANS).filter(p=>{
+    if(p.sp && !CFG.advanced) return false;
+    if(p.sp==="parkpoolround" && !CFG.roundabouts) return false;
+    return true;
+  });
+}
+function advancedOn(){ return !!CFG.advanced; }
+function planGate(p){
+  if(p.sp && !CFG.advanced) return "Advanced plans are switched off.";
+  if(p.sp==="parkpoolround" && !CFG.roundabouts) return "Needs roundabouts, which are switched off.";
+  return "";
 }
 /* Any bulk change must leave every category with something to draw. */
 function ensureCategories(){
@@ -894,9 +997,7 @@ function ensureCategories(){
   CFG.planOff=off;
 }
 function setAdvanced(on){
-  const off=CFG.planOff||{};
-  ADV_PLANS.forEach(p=>{ if(on) delete off[p.id]; else off[p.id]=true; });
-  CFG.planOff=off;
+  CFG.advanced=!!on;
   ensureCategories();
   reconcilePlans();
   save();
@@ -954,8 +1055,10 @@ const SPECIAL = {
   temps:     ()=> G.temp>=7,
   bis5:      ()=> G.streets.some(st=>st.slots.filter(s=>s.bis).length>=5),
   parkpool:  (p)=> allParks(p.street) && allPools(p.street),
-  twostreets:()=> [0,1,2].filter(i=>allParks(i)||allPools(i)).length>=2
+  twostreets:()=> [0,1,2].filter(i=>allParks(i)||allPools(i)).length>=2,
+  parkpoolround:()=> [0,1,2].some(i=>allParks(i)&&allPools(i)&&hasRoundabout(i))
 };
+function hasRoundabout(i){ return G.streets[i].slots.some(s=>s.round); }
 function allParks(i){ return G.streets[i].parks >= CFG.streets[i].parks.length-1; }
 function allPools(i){
   const ps=G.streets[i].slots.filter(s=>s.isPool);
@@ -1055,6 +1158,24 @@ function makeCards(){
   return shuffle(out);
 }
 function deckTotal(){ return Object.keys(CFG.deck).reduce((t,e)=>t+CFG.deck[e].length,0); }
+/* The counts in the deck section are derived from what is typed, not from the
+   saved config, so they have to be recomputed on every keystroke. */
+function refreshDeckCounts(){
+  const hist={}, eff={};
+  let total=0;
+  Object.keys(CFG.deck).forEach(e=>{
+    const inp=document.getElementById("di-"+e);
+    const raw=inp?inp.value:CFG.deck[e].join(",");
+    const nums=String(raw).split(",").map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
+    eff[e]=nums.length; total+=nums.length;
+    nums.forEach(n=>{ hist[n]=(hist[n]||0)+1; });
+    const lbl=document.getElementById("dl-"+e);
+    if(lbl) lbl.textContent=EFFECTS[e].label+" ("+nums.length+" card"+(nums.length===1?"":"s")+")";
+  });
+  const head=document.getElementById("deckhead");
+  if(head) head.textContent="Construction deck ("+total+" card"+(total===1?"":"s")+")";
+}
+
 function numberHist(){
   const h={}; Object.keys(CFG.deck).forEach(e=>CFG.deck[e].forEach(n=>h[n]=(h[n]||0)+1));
   const ks=Object.keys(h).map(Number), lo=Math.min.apply(null,ks), hi=Math.max.apply(null,ks);
@@ -1070,13 +1191,13 @@ function newGame(){
 
   G={
     streets: CFG.streets.map(s=>({
-      slots: Array.from({length:s.lots},(_,i)=>({v:null,bis:false,pool:false,
+      slots: Array.from({length:s.lots},(_,i)=>({v:null,bis:false,pool:false,round:false,
         isPool:s.pools.indexOf(i)!==-1, locked:false})),
       fences: Array(Math.max(0,s.lots-1)).fill(false),
       parks:0
     })),
     improve:{1:0,2:0,3:0,4:0,5:0,6:0},
-    pools:0, temp:0, bisCount:0, refusals:0,
+    pools:0, temp:0, bisCount:0, refusals:0, rounds:0,
     plans:plans, approved:false, soloSeen:false,
     seed:seed, planRoll:0,
     round:0, over:false, started:false, inked:null, why:""
@@ -1104,8 +1225,14 @@ function newGame(){
 }
 
 /* Nothing is dealt and the clock does not move until this is called. */
-function startGame(){
+function startGame(force){
   if(!G || G.started) return;
+  if(MP.on && !force && !mpIsHost()) return;    /* guests start when the host does */
+  if(MP.on && !force){
+    mpSend({t:"setup", seed:G.seed, mode:"standard", roundabouts:!!CFG.roundabouts,
+            planIds:G.plans.map(p=>p.id), planRoll:G.planRoll});
+  }
+  if(MP.on) MP.participants=MP.players.map(p=>p.id);
   G.started=true;
   beginClock();
   nextRound();
@@ -1155,15 +1282,32 @@ function estates(){
 }
 function houses(){ return G.streets.reduce((t,st)=>t+st.slots.filter(s=>s.v!==null).length,0); }
 function allLots(){ return G.streets.reduce((t,st)=>t+st.slots.length,0); }
+function roundCount(){ return G.streets.reduce((t,st)=>t+st.slots.filter(s=>s.round).length,0); }
+/* a roundabout box can never be numbered, so it counts as done */
+function buildable(){ return allLots()-roundCount(); }
+function allBuilt(){ return G.streets.every(st=>st.slots.every(s=>s.v!==null||s.round)); }
 
 /* p5: empty house, ascending left to right, never the same number twice in a street */
+/* p11: a roundabout divides the street, and numbering starts over on the far
+   side of it. So the ordering rule applies within a segment, not the street. */
+function segment(si,idx){
+  const sl=G.streets[si].slots;
+  let lo=0, hi=sl.length-1;
+  for(let j=idx-1;j>=0;j--) if(sl[j].round){ lo=j+1; break; }
+  for(let j=idx+1;j<sl.length;j++) if(sl[j].round){ hi=j-1; break; }
+  return [lo,hi];
+}
 function ascOK(si,idx,n){
   const s=G.streets[si].slots;
-  for(let j=0;j<idx;j++) if(s[j].v!==null && s[j].v>=n) return false;
-  for(let j=idx+1;j<s.length;j++) if(s[j].v!==null && s[j].v<=n) return false;
+  const b=segment(si,idx);
+  for(let j=b[0];j<idx;j++) if(s[j].v!==null && s[j].v>=n) return false;
+  for(let j=idx+1;j<=b[1];j++) if(s[j].v!==null && s[j].v<=n) return false;
   return true;
 }
-function canPlace(si,idx,n){ return G.streets[si].slots[idx].v===null && ascOK(si,idx,n); }
+function canPlace(si,idx,n){
+  const s=G.streets[si].slots[idx];
+  return s.v===null && !s.round && ascOK(si,idx,n);
+}
 function anyPlace(n){
   for(let si=0;si<3;si++) for(let i=0;i<G.streets[si].slots.length;i++) if(canPlace(si,i,n)) return true;
   return false;
@@ -1176,11 +1320,30 @@ function availableNumbers(){
 }
 function mustBuild(){ return availableNumbers().some(n=>anyPlace(n)); }
 
+/* A number is usable if it fits somewhere as it stands, or if a Temp Agency
+   effect is within reach and one of n-2 .. n+2 fits. This errs towards
+   "usable" deliberately: a card is greyed out only when there is genuinely
+   nothing to be done with it. */
+function numberUsable(n, tempAvailable){
+  if(anyPlace(n)) return true;
+  if(!tempAvailable) return false;
+  for(const d of [-2,-1,1,2]){
+    const v=n+d;
+    if(v>=CFG.numMin && v<=CFG.numMax && anyPlace(v)) return true;
+  }
+  return false;
+}
+/* In the solo variant the effect comes from a different card, so the shift is
+   only reachable if one of the others carries it. */
+function tempElsewhere(exceptIdx){
+  return !!(G.hand && G.hand.some((c,i)=>i!==exceptIdx && c && c.e==="temp"));
+}
+
 /* p7 Bis: adjacent, same number, and duplicates can never be separated by a fence */
 function bisTargets(){
   const out=[];
   G.streets.forEach((st,si)=>st.slots.forEach((slot,i)=>{
-    if(slot.v!==null) return;
+    if(slot.v!==null || slot.round) return;
     const vals=[];
     if(i-1>=0 && st.slots[i-1].v!==null && !st.fences[i-1]) vals.push(st.slots[i-1].v);
     if(i+1<st.slots.length && st.slots[i+1].v!==null && !st.fences[i]) vals.push(st.slots[i+1].v);
@@ -1203,36 +1366,50 @@ function fenceOK(si,gi){
 }
 
 /* --------------------------------------------------------- scoring (p8) */
-function tempPoints(){ return G.temp>=CFG.soloTempMin ? CFG.soloTempPts : 0; }
+function tempPoints(){
+  if(!MP.on) return G.temp>=CFG.soloTempMin ? CFG.soloTempPts : 0;
+  if(!mpFinalsIn()) return 0;            /* cannot be ranked until everyone reports */
+  return positionalTemp(G.temp, mpTempCounts());
+}
 function score(){
   const rows=[]; let total=0;
   let pl=0; G.plans.forEach(p=>{ if(p.done) pl+=p.scored; });
-  rows.push(["City plans",pl,false]); total+=pl;
+  rows.push(["City plans",pl,false,"plan"]); total+=pl;
 
   let pk=0; G.streets.forEach((st,i)=>{ pk+=CFG.streets[i].parks[st.parks]; });
-  rows.push(["Parks",pk,false]); total+=pk;
+  rows.push(["Parks",pk,false,"landscaper"]); total+=pk;
 
   const po=CFG.pool[Math.min(G.pools,CFG.pool.length-1)];
-  rows.push(["Pools",po,false]); total+=po;
+  rows.push(["Pools",po,false,"pool"]); total+=po;
 
   const tw=tempPoints();
-  rows.push(["Temp agency",tw,false]); total+=tw;
+  rows.push([MP.on&&!mpFinalsIn()?"Temp agency (ranked at the end)":"Temp agency",tw,false,"temp"]);
+  total+=tw;
 
   const es=estates(); let et=0;
+  const perSize=[];
   for(let n=1;n<=6;n++){
     const col=CFG.estate[n];
     const v=col[Math.min(G.improve[n],col.length-1)];
     const c=es.filter(e=>e.size===n).length;
     et+=v*c;
-    if(c) rows.push(["Estates of "+n+" ("+c+" \u00d7 "+v+")",v*c,true]);
+    perSize.push(["Estates of "+n+" ("+c+" \u00d7 "+v+")",v*c,true,null]);
   }
-  rows.push(["Completed housing estates",et,false]); total+=et;
+  rows.push(["Completed housing estates",et,false,"agent"]); total+=et;
+  perSize.forEach(r=>rows.push(r));          /* nested under their own total */
 
   const bi=-CFG.bis[Math.min(G.bisCount,CFG.bis.length-1)];
-  rows.push(["Bis",bi,false]); total+=bi;
+  rows.push(["Bis",bi,false,"bis",true]);    /* first penalty: draws the divider */
+  total+=bi;
+
+  /* Kept in the list even when the variant is off, dimmed rather than removed,
+     so the sheet does not change shape. With none built it is worth nothing. */
+  const rd=-CFG.roundaboutValues[Math.min(G.rounds,CFG.roundaboutValues.length-1)];
+  rows.push(["Roundabouts",rd,false,"roundabout",false,!CFG.roundabouts]);
+  total+=rd;
 
   const rf=-CFG.refusal[Math.min(G.refusals,CFG.refusal.length-1)];
-  rows.push(["Building permit refusal",rf,false]); total+=rf;
+  rows.push(["Building permit refusal",rf,false,"refusal"]); total+=rf;
   return {rows:rows,total:total};
 }
 
@@ -1256,7 +1433,16 @@ function validatePlan(pi){
   keep();
   m.forEach(e=>e.idx.forEach(i=>{ G.streets[e.si].slots[i].locked=true; }));
   p.done=true;
-  p.scored = G.approved ? p.lo : p.hi;
+  if(MP.on){
+    /* p8: whoever gets there first in a round takes the higher amount, and so
+       does anyone matching them that same round. Later rounds take the lower. */
+    const beaten=MP.claims.some(c=>c.planId===p.id && c.round<G.round);
+    p.scored = beaten ? p.lo : p.hi;
+    MP.claims.push({planId:p.id, round:G.round, by:MP.me});
+    mpSend({t:"plan", planId:p.id, round:G.round});
+  } else {
+    p.scored = G.approved ? p.lo : p.hi;
+  }
   if(checkEnd()) return;
   render();
 }
@@ -1266,7 +1452,7 @@ function keep(){ snap={G:copy(G)}; }
 
 /* No move is legal before the sheet begins or after it closes. The buttons are
    disabled too, but the guard belongs here rather than only in the view. */
-function locked(){ return !G || !G.started || G.over; }
+function locked(){ return !G || !G.started || G.over || mpIAmWaiting(); }
 
 function chooseNumber(i){
   if(locked()) return;
@@ -1348,6 +1534,40 @@ function doBis(si,i,v){
   s.v=v; s.bis=true; G.bisCount++; G.inked=si+":"+i; endRound();
 }
 
+/* p11: at any point in the turn, before or after the card is used. It occupies
+   an empty box, is fenced on both sides, and is not a house. */
+function canRoundabout(){
+  return !!(CFG.roundabouts && G && G.started && !G.over && !mpIAmWaiting() &&
+            !sel && G.rounds < CFG.roundaboutValues.length-1 &&
+            roundaboutSpots().length);
+}
+function roundaboutSpots(){
+  const out=[];
+  G.streets.forEach((st,si)=>st.slots.forEach((s,i)=>{
+    if(s.v===null && !s.round) out.push(si+":"+i);
+  }));
+  return out;
+}
+function beginRoundabout(){
+  if(!canRoundabout()) return;
+  sel={phase:"roundabout"};
+  render();
+}
+function doRoundabout(si,i){
+  if(!sel||sel.phase!=="roundabout") return;
+  const st=G.streets[si], s=st.slots[i];
+  if(s.v!==null||s.round) return;
+  keep();
+  s.round=true;
+  if(i-1>=0) st.fences[i-1]=true;          /* fenced on both sides */
+  if(i<st.fences.length) st.fences[i]=true;
+  G.rounds++;
+  G.inked=si+":"+i;
+  sel=null;
+  if(checkEnd()) return;
+  render();
+}
+
 function refuse(){
   if(locked()||mustBuild()) return;
   keep();
@@ -1359,21 +1579,34 @@ function refuse(){
 function endRound(){
   sel=null;
   if(checkEnd()) return;
+  if(MP.on){
+    MP.ready[MP.me]=G.round;
+    mpSend({t:"ready", round:G.round});
+    render();
+    mpTryAdvance();
+    return;
+  }
   nextRound();
   if(G.over) return;
   render();
 }
 function checkEnd(){
   if(G.plans.every(p=>p.done)){ endGame("All three City Plans achieved."); return true; }
-  if(houses()>=allLots()){ endGame("Every house on all three streets is built."); return true; }
+  if(allBuilt()){ endGame("Every house on all three streets is built."); return true; }
   return false;
 }
 function undo(){ if(locked()||!snap) return; G=copy(snap.G); snap=null; sel=null; render(); }
-function endGame(why){
+function endGame(why,fromPeer){
   G.over=true; sel=null; G.why=why;
   stopClock();
   const s=score();
   if(best===null||s.total>best){ best=s.total; save(); }
+  if(MP.on){
+    if(!fromPeer) mpSend({t:"end", reason:why});
+    /* base is the score before temp is ranked, which needs everyone's counts */
+    mpSend({t:"final", name:mpMyName(), temp:G.temp, base:s.total});
+    MP.finals[MP.me]={name:mpMyName(), temp:G.temp, base:s.total};
+  }
   render(); result(why,s);
 }
 
@@ -1401,25 +1634,55 @@ const STORE=(function(){
   };
 })();
 
+/* Choices that belong to the player, as opposed to facts about the game. When a
+   rulebook table is corrected, these are kept and the tables are replaced. */
+const PREF_KEYS=["theme","hints","city","seed","mode","planOff","relay","room",
+                 "roundabouts","advanced"];
+
 async function load(){
   try{ const r=await STORE.get("welcome-2018");
     if(r&&r.value){ const d=JSON.parse(r.value);
       if(d.cfg){
-        CFG=Object.assign(copy(BASE),d.cfg);
-        /* older saves carried a separate advanced flag; fold it into the pool */
-        if(d.cfg.advanced===false && !ADV_PLANS.some(q=>(CFG.planOff||{})[q.id]))
-          ADV_PLANS.forEach(q=>{ CFG.planOff[q.id]=true; });
-        delete CFG.advanced;
+        if((d.cfg.dataVersion|0) < BASE.dataVersion){
+          /* This save predates a table correction. Take the player's choices
+             across and let the corrected values through, rather than leaving a
+             stale guess in place forever. */
+          CFG=copy(BASE);
+          PREF_KEYS.forEach(k=>{ if(d.cfg[k]!==undefined) CFG[k]=d.cfg[k]; });
+        } else {
+          CFG=Object.assign(copy(BASE),d.cfg);
+        }
+        CFG.dataVersion=BASE.dataVersion;
+        /* Before the gate existed, "advanced off" meant every starred plan was
+           individually switched off. Translate that, but keep a deliberate mix. */
+        if(d.cfg.advanced===undefined){
+          const savedOff=d.cfg.planOff||{};
+          const offCount=ADV_PLANS.filter(q=>savedOff[q.id]).length;
+          if(offCount===ADV_PLANS.length){
+            CFG.advanced=false;
+            ADV_PLANS.forEach(q=>{ delete CFG.planOff[q.id]; });
+          } else {
+            CFG.advanced=true;          /* a curated mix, or all of them on */
+          }
+        }
         ensureCategories();
+        CFG.city=String(CFG.city||"").trim().slice(0,CITY_MAX).trim();
       }
       if(typeof d.best==="number") best=d.best;
       applyTheme(CFG.theme);
       renderCity();
-      $("btn-hints").textContent="Hints: "+(CFG.hints?"on":"off");
+      $("btn-hints").innerHTML=tglLabel("Hints",CFG.hints);
       newGame(); } }catch(e){}
 }
 async function save(){
-  try{ await STORE.set("welcome-2018",JSON.stringify({cfg:CFG,best:best})); }catch(e){}
+  try{
+    /* the id list lets a later version tell a newly added plan apart from one
+       the player deliberately switched on */
+    await STORE.set("welcome-2018",JSON.stringify({
+      cfg:CFG, best:best,
+      known:BASIC_PLANS.concat(ADV_PLANS).map(p=>p.id)
+    }));
+  }catch(e){}
 }
 
 /* ------------------------------------------------------------ hint maths
@@ -1461,9 +1724,191 @@ function standardStats(){
   });
 }
 
+/* ====================================================== MULTIPLAYER
+   Welcome To is simultaneous: everyone plays the same three combinations at
+   once. Because both clients derive the deck from the same seed, no card data
+   is ever sent. The relay carries only coordination:
+
+     ready  - I have finished round N
+     plan   - I claimed City Plan X in round N   (first in a round scores high)
+     end    - I triggered an end condition
+     final  - my temp agency count and my score before temp is ranked
+
+   which is a few dozen bytes per round.                                     */
+/* Multiplayer is complete but switched off for now. Set this to true to bring
+   the buttons back; nothing else needs changing. */
+const MP_ENABLED=false;
+
+const MP={
+  on:false, ws:null, status:"offline",   /* offline connecting lobby lost */
+  room:"", me:null, players:[], participants:[], inProgress:false,
+  ready:{}, claims:[], finals:{}, endedBy:null, error:""
+};
+let MP_SOCKET=(url)=>new WebSocket(url);      /* replaced in tests */
+let roomOpen=false;
+
+function mpHostId(){ return MP.players.length?MP.players[0].id:null; }
+function mpIsHost(){ return MP.me!==null && MP.me===mpHostId(); }
+function mpWho(id){
+  const p=MP.players.find(x=>x.id===id);
+  return p?p.name:(MP.finals[id]?MP.finals[id].name:"a player");
+}
+function mpMyName(){ return (CFG.city||"").trim() || "Architect"; }
+function mpSend(o){
+  try{ if(MP.ws && MP.ws.readyState===1) MP.ws.send(JSON.stringify(o)); }catch(e){}
+}
+/* only the players who were present when the sheet started, and who are still
+   connected, are waited for */
+function mpActiveIds(){
+  const base=MP.participants.length?MP.participants:MP.players.map(p=>p.id);
+  return base.filter(id=>MP.players.some(p=>p.id===id));
+}
+function mpWaitingFor(){
+  if(!MP.on||!G||!G.started||G.over) return [];
+  return mpActiveIds().filter(id=>(MP.ready[id]||0)<G.round).map(mpWho);
+}
+function mpIAmWaiting(){
+  return MP.on && G && G.started && !G.over && (MP.ready[MP.me]||0)>=G.round;
+}
+
+function mpConnect(room){
+  const base=(CFG.relay||"").trim().replace(/\/+$/,"");
+  if(!base){ MP.error="Enter the relay address first."; return renderRoom(); }
+  room=String(room||"").toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,16);
+  if(room.length<4){ MP.error="Room codes need at least four characters."; return renderRoom(); }
+  mpDisconnect(true);
+  MP.room=room; MP.error=""; MP.status="connecting";
+  CFG.room=room; save();
+  const url=base.replace(/^http/,"ws")+"/room/"+room+"?name="+encodeURIComponent(mpMyName());
+  let ws;
+  try{ ws=MP_SOCKET(url); }
+  catch(e){ MP.status="offline"; MP.error="Could not open a connection."; return renderRoom(); }
+  MP.ws=ws;
+  ws.onopen=()=>{
+    MP.on=true; MP.status="lobby"; MP.error="";
+    /* the solo variant is a solo game; multiplayer is always the standard turn */
+    if(CFG.mode!=="standard"){
+      CFG.mode="standard"; save();
+      if(G && !G.started) newGame();
+    }
+    renderRoom(); render();
+  };
+  ws.onmessage=ev=>{ let m; try{ m=JSON.parse(ev.data); }catch(e){ return; } mpReceive(m); };
+  ws.onclose=()=>{ if(MP.on){ MP.status="lost"; MP.error="Connection closed."; }
+                   renderRoom(); render(); };
+  ws.onerror=()=>{ MP.error="Connection error."; renderRoom(); };
+}
+function mpDisconnect(quiet){
+  try{ if(MP.ws){ MP.ws.onclose=null; MP.ws.close(); } }catch(e){}
+  MP.ws=null; MP.on=false; MP.me=null; MP.players=[];
+  MP.ready={}; MP.claims=[]; MP.finals={}; MP.endedBy=null;
+  MP.participants=[]; MP.inProgress=false; MP.status="offline";
+  if(!quiet){ renderRoom(); render(); }
+}
+
+function planFromIds(ids){
+  if(!Array.isArray(ids)) return [];
+  const all=BASIC_PLANS.concat(ADV_PLANS);
+  const out=[];
+  ids.forEach(id=>{
+    const p=all.find(x=>x.id===id);
+    if(p) out.push(Object.assign({},p,{done:false,scored:0}));
+  });
+  return out;
+}
+function mpApplySetup(m){
+  if(!m||!m.seed) return;
+  CFG.seed=m.seed; CFG.mode="standard";
+  CFG.roundabouts=!!m.roundabouts;      /* everyone plays the same variant */
+  newGame();                       /* the seed rebuilds the identical deck */
+  const p=planFromIds(m.planIds);
+  if(p.length===3) G.plans=p;      /* sent explicitly rather than re-derived */
+  G.planRoll=m.planRoll|0;
+  startGame(true);
+}
+
+function mpReceive(m){
+  switch(m.t){
+    case "welcome":
+      MP.me=m.you;
+      /* the relay replays the host's setup; if one exists the sheet is already
+         under way, so joining now would start us rounds behind */
+      if(m.setup) MP.inProgress=true;
+      break;
+    case "roster":
+      MP.players=Array.isArray(m.players)?m.players:[];
+      Object.keys(MP.ready).forEach(id=>{
+        if(!MP.players.some(p=>p.id===id)) delete MP.ready[id];
+      });
+      mpTryAdvance();
+      break;
+    case "setup":
+      MP.inProgress=false;
+      if(!(G&&G.started)) mpApplySetup(m);
+      break;
+    case "ready":
+      MP.ready[m.from]=Math.max(MP.ready[m.from]||0,m.round|0);
+      mpTryAdvance();
+      break;
+    case "plan":
+      MP.claims.push({planId:m.planId, round:m.round|0, by:m.from});
+      break;
+    case "end":
+      if(G && G.started && !G.over){
+        MP.endedBy=m.from;
+        endGame(mpWho(m.from)+" ended the game \u2014 "+(m.reason||""), true);
+        return;                    /* endGame renders and reopens the scoresheet */
+      }
+      break;
+    case "final":
+      MP.finals[m.from]={name:m.name||mpWho(m.from), temp:m.temp|0, base:m.base|0};
+      if(G && G.over){ render(); result(G.why,score()); return; }
+      break;
+  }
+  renderRoom(); render();
+}
+
+function mpTryAdvance(){
+  if(!MP.on||!G||!G.started||G.over) return;
+  const ids=mpActiveIds();
+  if(!ids.length) return;
+  if(!ids.every(id=>(MP.ready[id]||0)>=G.round)) return;
+  nextRound();
+  if(G.over) return;
+  render();
+}
+
+/* p7: most boxes scores 7, next 4, third 1, ties score the same, none scores
+   nothing. Only resolvable once every player has reported. */
+function mpTempCounts(){
+  const out=[G?G.temp:0];
+  Object.keys(MP.finals).forEach(id=>{
+    if(id!==MP.me) out.push(MP.finals[id].temp);
+  });
+  return out;
+}
+/* Ranking resolves only once the sheet is closed and every player still in the
+   game has reported. Someone merely sitting in the room, or who left without
+   finishing, must not hold it up forever. */
+function mpFinalsIn(){
+  if(!MP.on || !G || !G.over) return false;
+  return mpActiveIds().filter(id=>id!==MP.me).every(id=>!!MP.finals[id]);
+}
+function positionalTemp(mine,counts){
+  if(!(mine>0)) return 0;
+  const tiers=[...new Set(counts.filter(c=>c>0))].sort((a,b)=>b-a);
+  const ranks=CFG.tempRanks||[7,4,1];
+  const at=tiers.indexOf(mine);
+  return ranks[at]===undefined?0:ranks[at];
+}
+
 /* ------------------------------------------------------- the city name
    The printed sheet has a blank for this in its top corner. Clicking the
    ellipsis in the masthead fills it in. */
+/* label plus a fixed-width on/off slot */
+function tglLabel(label,on){
+  return label+': <span class="tgl">'+(on?"on":"off")+'</span>';
+}
 function esc(t){
   return String(t).replace(/[&<>"']/g,c=>
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1471,6 +1916,7 @@ function esc(t){
 /* The name appears in the masthead and again on the briefing, so the widget is
    rendered per slot. Only one slot is ever in edit mode; the rest mirror it. */
 const CITY_SLOTS=["cityslot","briefcity"];
+const CITY_MAX=15;             /* the name has to fit in the masthead */
 let cityEditing=null;          /* the id of the slot being edited, or null */
 function renderCity(){
   const name=(CFG.city||"").trim();
@@ -1478,7 +1924,7 @@ function renderCity(){
     const slot=document.getElementById(sid);
     if(!slot) return;          /* the briefing slot only exists while it is open */
     if(cityEditing===sid){
-      slot.innerHTML='<input class="cityinput" id="'+sid+'-in" maxlength="24" value="'+
+      slot.innerHTML='<input class="cityinput" id="'+sid+'-in" maxlength="'+CITY_MAX+'" value="'+
         esc(name)+'" aria-label="Name of your city" placeholder="\u2026">';
       const inp=document.getElementById(sid+"-in");
       inp.onkeydown=e=>{
@@ -1531,7 +1977,9 @@ function commitSeed(v){
 }
 
 function commitCity(v){
-  CFG.city=String(v||"").trim();
+  /* trim again after slicing, or cutting mid-word leaves a trailing space in
+     the stored value that the display would quietly hide */
+  CFG.city=String(v||"").trim().slice(0,CITY_MAX).trim();
   cityEditing=null;
   save();
   renderCity();
@@ -1545,10 +1993,10 @@ function render(){
     + (advancedOn()?" \u00b7 advanced plans":"");
   $("handhead").textContent = CFG.mode==="solo"
     ? "Three construction cards \u2014 one for its number, another for its effect"
-    : "Three combinations \u2014 effect from the discard, number from the stack";
+    : "Card stacks";
   $("rd-round").textContent=G.round;
   $("rd-deck").textContent = CFG.mode==="solo" ? G.deck.length : "\u2014";
-  $("rd-built").textContent=houses()+"/"+allLots();
+  $("rd-built").textContent=houses()+"/"+buildable();
   const s=score(), el=$("rd-score");
   el.textContent=s.total; el.classList.toggle("bad",s.total<0);
   $("rd-best").textContent=best===null?"\u2014":best;
@@ -1648,8 +2096,10 @@ function soloCards(h){
   G.hand.forEach((c,i)=>{
     const numOn = sel && sel.numCard===i, effOn = sel && sel.effCard===i;
     const busy  = !!(sel && sel.phase!=="choose");
+    const dead  = G.started && !numberUsable(c.n, tempElsewhere(i));
     const d=document.createElement("div");
-    d.className="combo"+((numOn||effOn)?" chosen":"")+(busy&&!numOn&&!effOn?" dim":"");
+    d.className="combo"+((numOn||effOn)?" chosen":"")+(busy&&!numOn&&!effOn?" dim":"")+
+      (dead?" numdead":"");
     const shownN=(numOn && sel.n!==null && busy)?sel.n:c.n;
     d.innerHTML='<div class="combo-head">Card '+(i+1)+'</div>'+
       '<div class="combo-body"><div class="face big">'+
@@ -1659,11 +2109,14 @@ function soloCards(h){
         glyph(c.e,"corner br")+
       '</div></div>'+
       '<div class="legend"><span class="solo">'+
-        (numOn?"used as number":(effOn?"used as effect":"number \u00b7 effect"))+
+        (numOn?"used as number":(effOn?"used as effect":
+          (dead?"effect only":"number \u00b7 effect")))+
       '</span></div>';
     const p=pickRow(d);
     const bn=document.createElement("button"); bn.textContent="Number";
-    bn.className=numOn?"on":""; bn.disabled=busy; bn.onclick=()=>chooseNumber(i);
+    bn.className=numOn?"on":""; bn.disabled=busy||dead;
+    if(dead) bn.title="This number will not fit anywhere on your sheet.";
+    bn.onclick=()=>chooseNumber(i);
     const be=document.createElement("button"); be.textContent="Effect";
     be.className="oneff"+(effOn?" on":"");
     be.disabled=busy || !sel || sel.numCard===null || sel.numCard===i;
@@ -1680,8 +2133,10 @@ function comboStacks(h){
   G.shown.forEach((c,i)=>{
     const chosen = sel && sel.numCard===i;
     const busy = !!(sel && sel.phase!=="choose");
+    const dead = !!c && G.started && !numberUsable(c.n, c.e==="temp");
     const d=document.createElement("div");
-    d.className="combo"+(chosen?" chosen":"")+(busy&&!chosen?" dim":"");
+    d.className="combo"+(chosen?" chosen":"")+(busy&&!chosen?" dim":"")+
+      (dead?" numdead dead":"");
     if(!c){
       d.innerHTML='<div class="combo-head">Stack '+(i+1)+'</div>'+
         '<div class="combo-body"><div class="face"><span class="bignum">\u2014</span></div></div>'+
@@ -1706,8 +2161,10 @@ function comboStacks(h){
         '<span>'+G.stacks[i].length+' left</span></div>'+
       '<div class="cornernote">corners: '+EFFECTS[c.nextE].short+' next</div>';
     const p=pickRow(d);
-    const b=document.createElement("button"); b.textContent="Take this combination";
-    b.className=chosen?"on":""; b.disabled=busy;
+    const b=document.createElement("button");
+    b.textContent=dead?"No legal house":"Take this combination";
+    b.className=chosen?"on":""; b.disabled=busy||dead;
+    if(dead) b.title="This number will not fit anywhere on your sheet.";
     b.onclick=()=>takeCombination(i);
     p.appendChild(b);
     h.appendChild(d);
@@ -1740,19 +2197,26 @@ function streets(){
     st.slots.forEach((slot,i)=>{
       const legal = sel && sel.phase==="place" && canPlace(si,i,sel.n);
       const bt = sel && sel.phase==="bis" ? bisAt(si,i) : null;
+      const rp = sel && sel.phase==="roundabout" && slot.v===null && !slot.round;
       const b=document.createElement("button"); b.type="button";
       b.className="lot"+(slot.v!==null?" built":"")+(slot.locked?" locked":"")+
+        (slot.round?" roundabout":"")+(rp?" rndpick":"")+
         (legal?" legal":"")+(legal&&sel.eff==="pool"&&slot.isPool?" pool":"")+
         (bt?" src":"")+(G.inked===si+":"+i?" inked":"");
       b.setAttribute("aria-label","Street "+(si+1)+" house "+(i+1)+
-        (slot.v!==null?", "+slot.v+(slot.bis?" bis":""):", empty")+(slot.isPool?", planned pool":""));
+        (slot.round?", roundabout"
+          :(slot.v!==null?", "+slot.v+(slot.bis?" bis":""):", empty"))+
+        (slot.isPool&&!slot.round?", planned pool":""));
       let inner="";
-      if(slot.v!==null) inner+='<span class="val">'+slot.v+(slot.bis?'<sub>bis</sub>':'')+'</span>';
+      if(slot.round) inner+='<span class="rnd"></span>';
+      else if(slot.v!==null) inner+='<span class="val">'+slot.v+(slot.bis?'<sub>bis</sub>':'')+'</span>';
       else if(legal) inner+='<span class="ghost">'+sel.n+'</span>';
       else if(bt) inner+='<span class="ghost">'+bt.vals.join("/")+'</span>';
-      if(slot.isPool) inner+='<span class="pt'+(slot.pool?" filled":"")+'"></span>';
+      else if(rp) inner+='<span class="rnd" style="opacity:.45"></span>';
+      if(slot.isPool && !slot.round) inner+='<span class="pt'+(slot.pool?" filled":"")+'"></span>';
       b.innerHTML=inner;
-      if(legal) b.onclick=()=>place(si,i);
+      if(rp) b.onclick=()=>doRoundabout(si,i);
+      else if(legal) b.onclick=()=>place(si,i);
       else if(bt) b.onclick=()=>{ if(bt.vals.length===1) doBis(si,i,bt.vals[0]);
         else { sel.phase="bis-pick"; sel.t=[si,i]; sel.opts=bt.vals; render(); } };
       lots.appendChild(b);
@@ -1808,22 +2272,39 @@ function plans(){
 
 function tracks(){
   const h=$("tracks"); h.innerHTML="";
-  const add=(l,html)=>{ const d=document.createElement("div"); d.className="trow";
+  const add=(l,html,off)=>{ const d=document.createElement("div");
+    d.className="trow"+(off?" dim":"");
+    if(off) d.title="Switched off in Game setup";
     d.innerHTML='<span class="lbl">'+l+'</span>'+html; h.appendChild(d); };
   add("Pools ("+G.pools+")", boxes(CFG.pool,G.pools));
   add("Temp agency ("+G.temp+") \u2014 "+CFG.soloTempMin+"+ scores "+CFG.soloTempPts,
     '<span class="bx'+(G.temp>=CFG.soloTempMin?' out':'')+'">'+G.temp+" / "+CFG.soloTempMin+'</span>');
   add("Bis ("+G.bisCount+")", boxes(CFG.bis,G.bisCount));
+  add("Roundabouts "+(CFG.roundabouts
+        ? "("+G.rounds+" of "+(CFG.roundaboutValues.length-1)+")"
+        : "\u2014 off"),
+      boxes(CFG.roundaboutValues,G.rounds), !CFG.roundabouts);
   add("Permit refusal ("+G.refusals+" of 3)", boxes(CFG.refusal,G.refusals));
 }
 
-function sheet(s){
+/* icon, section, points \u2014 shared so the side panel and the final scoresheet
+   can never drift apart */
+function scoreRows(s){
   let h="";
-  s.rows.forEach(r=>{ h+='<tr'+(r[1]<0?' class="neg"':'')+'><td'+(r[2]?' class="sub"':'')+'>'+
-    r[0]+'</td><td>'+r[1]+'</td></tr>'; });
-  h+='<tr class="tot"><td>Total</td><td>'+s.total+'</td></tr>';
-  $("sheet").innerHTML=h;
+  s.rows.forEach(r=>{
+    const cls=[];
+    if(r[1]<0) cls.push("neg");
+    if(r[4]) cls.push("sep");
+    if(r[5]) cls.push("dim");
+    h+='<tr'+(cls.length?' class="'+cls.join(" ")+'"':'')+'>'+
+       '<td class="ic">'+(r[3]?glyph(r[3],"si"):'')+'</td>'+
+       '<td'+(r[2]?' class="sub"':'')+'>'+r[0]+'</td>'+
+       '<td>'+r[1]+' pts</td></tr>';
+  });
+  h+='<tr class="tot"><td class="ic"></td><td>Total</td><td>'+s.total+' pts</td></tr>';
+  return h;
 }
+function sheet(s){ $("sheet").innerHTML=scoreRows(s); }
 
 function status(){
   const m=$("msg"), c=$("chips"); c.innerHTML="";
@@ -1837,11 +2318,29 @@ function status(){
     m.innerHTML="Sheet ready. Press <b>Start</b> to deal the first cards.";
     return;
   }
+  if(mpIAmWaiting()){
+    const w=mpWaitingFor();
+    $("btn-refuse").disabled=true; $("btn-undo").disabled=true;
+    m.innerHTML="Round "+G.round+" committed. Waiting for <b>"+
+      esc(w.join(", ")||"the other players")+"</b>.";
+    return;
+  }
   if(G.over){ m.innerHTML="Sheet closed. Final scoring <b>"+score().total+"</b>."; return; }
 
+  if(sel && sel.phase==="roundabout"){
+    m.innerHTML="<b>Roundabout</b> \u2014 click an empty house. It is fenced on both "+
+      "sides, and numbering starts over beyond it.";
+    chip("Cancel", ()=>{ sel=null; render(); }, true);
+    return;
+  }
   if(!sel || sel.phase==="choose"){
+    if(canRoundabout()) chip("Roundabout", beginRoundabout, true);
     if(!mustBuild()){
-      m.innerHTML="<span class='warn'>No available number can be written \u2014 take a building permit refusal.</span>";
+      const shift = CFG.mode==="solo"
+        ? (G.hand||[]).some((c,i)=>c&&numberUsable(c.n,tempElsewhere(i)))
+        : (G.shown||[]).some(c=>c&&numberUsable(c.n,c.e==="temp"));
+      m.innerHTML="<span class='warn'>No number fits as it stands \u2014 take a building "+
+        "permit refusal"+(shift?", or use the temp agency to shift one.":".")+"</span>";
       return;
     }
     if(CFG.mode==="solo"){
@@ -1908,74 +2407,176 @@ function status(){
 
 /* ========================================================== MODALS */
 let boxSticky=false;
-function openBox(h,sticky,wide){
+function openBox(h,sticky,size){
+  roomOpen=false;
   const m=$("modal");
   m.innerHTML=h;
-  m.className = wide ? "modal wide" : "modal";
+  m.className = "modal" + (size===true ? " wide" : (size ? " "+size : ""));
   $("scrim").hidden=false;
   boxSticky=!!sticky;
 }
 function closeBox(){ if(boxSticky) return; $("scrim").hidden=true; }
-function forceCloseBox(){ boxSticky=false; $("scrim").hidden=true; }
-/* leaving a sub-panel while the sheet has not begun returns to the briefing */
-function backOut(){ if(G && !G.started) briefing(); else forceCloseBox(); }
+function forceCloseBox(){ boxSticky=false; roomOpen=false; $("scrim").hidden=true; }
+/* Sub-panels remember where they were opened from, so closing Theme after
+   reaching it through Setup returns to Setup rather than jumping to the
+   briefing. */
+let backTo=null;
+function backOut(){
+  const via=backTo; backTo=null;
+  if(via){ via(); return; }
+  if(G && !G.started) briefing(); else forceCloseBox();
+}
 
 /* A panel of its own rather than a section of Setup, so that toggling a plan
    cannot discard half-typed edits in the scoring fields. */
 function plansPanel(){
   const off=CFG.planOff||{};
   const live=activePlans();
+  const all=BASIC_PLANS.concat(ADV_PLANS);
+  /* Fixed legend: it describes every marking the panel can show, so it reads the
+     same whatever is currently selected. */
   let h='<h3>Available city plans</h3>'+
-    '<p class="lede">This is the pool a sheet draws from. Switch any plan off to keep it out; '+
-    'one has to stay on in each category. A folded corner marks the three on the table. '+
-    'Starred plans are the advanced ones.</p>';
+    '<p class="lede">'+
+    'This is the pool a sheet draws from. Switch any plan off to keep it out, one has '+
+      'to stay on in each category.<br>'+
+    'A folded corner marks the three on the table.<br>'+
+    'Starred plans are the advanced ones, and a ring marks the one that also needs '+
+      'roundabouts.<br>'+
+    'A striped row needs a variant that is switched off, so it cannot be drawn yet.'+
+    '</p>';
   h+='<div class="toolbar">'+
      '<button class="btn" id="pr">Randomize the three drawn</button>'+
-     '<button class="btn" id="pa">All 21 on</button>'+
-     '<button class="btn" id="pb">Standard only</button></div>';
+     '<button class="btn" id="pa">All on</button>'+
+     '<button class="btn'+(CFG.advanced?" on":"")+'" id="pav">'+
+       tglLabel("Advanced plans",CFG.advanced)+'</button>'+
+     '<button class="btn'+(CFG.roundabouts?" on":"")+'" id="prb">'+
+       tglLabel("Roundabouts",CFG.roundabouts)+'</button></div>';
   h+='<div class="planlist">';
   [1,2,3].forEach(n=>{
     h+='<div class="pgroup"><span class="pgh">Plan n\u00b0'+n+'</span><div class="pitems">';
-    BASIC_PLANS.concat(ADV_PLANS).filter(p=>p.n===n).forEach(p=>{
+    all.filter(p=>p.n===n).forEach(p=>{
       const dis=!!off[p.id];
       const inPlay=live.some(x=>x.id===p.id);
+      const unavail=!inPlay;              /* needs roundabouts, which are off */
       const drawn=!!(G && G.plans.some(q=>q.id===p.id));
       const isLast=inPlay && !dis &&
         live.filter(x=>x.n===n && x.id!==p.id && !off[x.id]).length===0;
-      const tip = drawn ? "On the table for this sheet."
+      const tip = unavail ? planGate(p)
+        : (drawn ? "On the table for this sheet."
         : (isLast ? "A sheet needs one plan from n\u00b0"+n+
-                    ", and this is the only one still on." : "");
-      h+='<button class="ptog '+(dis?"off":"on")+(isLast?" fixed":"")+(drawn?" drawn":"")+
+                    ", and this is the only one still on." : ""));
+      h+='<button class="ptog '+((dis||unavail)?"off":"on")+(unavail?" unavail":"")+
+         ((isLast||unavail)?" fixed":"")+(drawn?" drawn":"")+
          '" data-plan="'+p.id+'"'+(tip?' title="'+tip+'"':'')+'>'+
          '<span class="tick"></span><span>'+p.text+
            (p.sp?' <span class="star">\u2605</span>':'')+
+           (p.sp==="parkpoolround"?'<span class="rndmark" '+
+             'title="Needs roundabouts"></span>':'')+
          '</span><em>'+p.hi+' / '+p.lo+' pts</em></button>';
     });
     h+='</div></div>';
   });
   h+='</div><div class="toolbar"><button class="btn" onclick="backOut()">Done</button></div>';
-  openBox(h, false, true);
+  openBox(h, false, "wide");
   $("modal").querySelectorAll("button[data-plan]").forEach(b=>{
     b.onclick=()=>{ togglePlan(b.dataset.plan); plansPanel(); render(); };
   });
   $("pr").onclick=()=>{ redrawPlans(); plansPanel(); render(); };
   $("pa").onclick=()=>{ CFG.planOff={}; reconcilePlans(); save(); plansPanel(); render(); };
-  $("pb").onclick=()=>{ setAdvanced(false); plansPanel(); render(); };
+  $("pav").onclick=()=>{
+    setAdvanced(!CFG.advanced);
+    if(G && !G.started){ plansPanel(); render(); } else { closeBox(); newGame(); }
+  };
+  $("prb").onclick=()=>{
+    CFG.roundabouts=!CFG.roundabouts;
+    ensureCategories(); reconcilePlans(); save();
+    if(G && !G.started){ plansPanel(); render(); } else { closeBox(); newGame(); }
+  };
 }
+
+function roomPanel(){
+  if(!MP_ENABLED) return;
+  const st=MP.status, n=MP.players.length;
+  let msg, cls="";
+  if(st==="lobby"){ cls="live";
+    msg="In room <b>"+esc(MP.room)+"</b> with "+n+" player"+(n===1?"":"s")+". "+
+        (mpIsHost()?"You are the host, so you start the sheet."
+                   :"The host starts the sheet for everyone.");
+  } else if(st==="connecting"){ msg="Connecting\u2026"; }
+  else if(st==="lost"){ cls="bad"; msg="Connection lost. Reconnect to carry on."; }
+  else { msg="Not connected."; }
+  if(MP.on && MP.inProgress && !(G&&G.started)){
+    cls="bad";
+    msg="A sheet is already under way in this room. Ask the host to start a new one, "+
+        "or use a different room code.";
+  }
+  if(MP.error){ cls="bad"; msg=esc(MP.error); }
+
+  let h='<h3>Multiplayer</h3>'+
+    '<p class="lede">Both players derive the same deck from the same seed, so no cards '+
+    'travel between you \u2014 only who has finished the round, who took a City Plan and '+
+    'when, and the final temp counts. Multiplayer uses the standard turn; the host\'s '+
+    'seed and plan pool apply to everyone.</p>';
+
+  h+='<div class="rfield"><label>Relay address</label>'+
+     '<input id="rl-url" value="'+esc(CFG.relay||"")+'" spellcheck="false" '+
+     'placeholder="https://welcome-to-relay.you.workers.dev"></div>';
+  h+='<div class="rfield"><label>Room code</label>'+
+     '<input id="rl-room" value="'+esc(MP.room||CFG.room||"")+'" spellcheck="false" '+
+     'maxlength="16" placeholder="e.g. LYON42"></div>';
+
+  h+='<div class="toolbar">'+
+     (MP.on?'<button class="btn" id="rl-off">Leave the room</button>'
+           :'<button class="btn primary" id="rl-on">Connect</button>')+
+     '<button class="btn" id="rl-gen">Suggest a code</button></div>';
+
+  h+='<div class="rstatus '+cls+'">'+msg+'</div>';
+
+  if(MP.players.length){
+    h+='<h4>Players</h4><div class="roster">'+MP.players.map(pl=>{
+      const ready=G&&G.started&&(MP.ready[pl.id]||0)>=G.round;
+      return '<div class="pl'+(pl.id===MP.me?" me":"")+'">'+
+        '<span>'+esc(pl.name)+'</span>'+
+        (pl.id===mpHostId()?'<span class="badge host">host</span>':'')+
+        (pl.id===MP.me?'<span class="badge">you</span>':'')+
+        (G&&G.started&&!G.over
+          ?'<span class="rdy'+(ready?" on":"")+'">'+(ready?"round in":"playing")+'</span>':'')+
+        '</div>';
+    }).join("")+'</div>';
+  }
+
+  h+='<p class="note">Your city name is what the others see, so set it before connecting. '+
+     'The relay is a small Cloudflare Worker \u2014 see the README for deploying one.</p>';
+  h+='<div class="toolbar"><button class="btn" onclick="backOut()">Done</button></div>';
+
+  openBox(h);
+  roomOpen=true;
+  const url=$("rl-url"), room=$("rl-room");
+  url.onchange=()=>{ CFG.relay=url.value.trim(); save(); };
+  if($("rl-on")) $("rl-on").onclick=()=>{ CFG.relay=url.value.trim(); save(); mpConnect(room.value); };
+  if($("rl-off")) $("rl-off").onclick=()=>mpDisconnect();
+  $("rl-gen").onclick=()=>{ room.value=randomSeed(); };
+}
+function renderRoom(){ if(roomOpen) roomPanel(); }
 
 function briefing(){
   const rows=[
     ["Mode", CFG.mode==="solo" ? "Official solo variant \u2014 draw three, one number, one effect"
                                : "Standard turn \u2014 three number-effect combinations"],
     ["City plans", planPool().length+" of "+activePlans().length+" in the pool"+
-                   (advancedOn()?", advanced included":", standard only")],
+                   (advancedOn()?", advanced included":", standard only")+
+                   (CFG.roundabouts?" \u00b7 roundabouts on":"")],
     ["Deck", deckTotal()+" construction cards"+
              (CFG.mode==="solo" ? " plus the Solo card" : ", in three stacks")],
     ["Streets", CFG.streets.map(x=>x.lots).join(" \u00b7 ")+" houses"],
     ["Theme", THEMES[CFG.theme].name],
     ["Hints", CFG.hints ? "on" : "off"],
     ["Targets", Object.keys(CFG.targets).map(k=>k+" "+CFG.targets[k]+" pts").join(" \u00b7 ")],
-    ["Seed", '<span id="seedslot"></span>']
+    ["Seed", '<span id="seedslot"></span>'],
+    ["Players", !MP_ENABLED ? "solo" : MP.on
+      ? esc(MP.room)+" \u00b7 "+MP.players.length+" connected \u00b7 "+
+        (mpIsHost()?"you are the host":"the host starts")
+      : "solo \u2014 open Multiplayer to play with someone"]
   ];
   let h='<div class="gametitle">Welcome To <span id="briefcity"></span></div>'+
     '<h3>New sheet</h3>'+
@@ -1983,22 +2584,26 @@ function briefing(){
     '<table class="brief">'+rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join("")+
     '</table>';
   h+='<h4>City plans on the table</h4><table class="brief plans">'+
-     G.plans.map(p=>'<tr><td>n\u00b0'+p.n+(p.sp?' \u2605':'')+'</td><td>'+p.text+
+     G.plans.map(p=>'<tr><td>n\u00b0'+p.n+(p.sp?' \u2605':'')+
+       (p.sp==="parkpoolround"?'<span class="rndmark"></span>':'')+'</td><td>'+p.text+
        '</td><td>'+p.hi+' / '+p.lo+' pts</td></tr>').join("")+'</table>';
   if(best!==null) h+='<p class="note">Your best so far: <strong>'+best+'</strong> points.</p>';
-  h+='<div class="toolbar"><button class="btn primary" id="go">Start</button>'+
+  const guest=MP.on && !mpIsHost();
+  h+='<div class="toolbar"><button class="btn primary" id="go"'+(guest?' disabled':'')+'>'+
+       (guest?'The host starts':'Start')+'</button>'+
      '<button class="btn" id="rnd">Randomize plans</button>'+
-     '<button class="btn" id="pls">Available plans</button>'+
      '<button class="btn" id="chg">Change setup</button>'+
-     '<button class="btn" id="thm">Theme</button></div>';
+     '<button class="btn" id="mpb"'+(MP_ENABLED?''
+       :' disabled title="Multiplayer is switched off for now"')+
+       '>Multiplayer</button></div>';
+  backTo=null;                  /* the briefing is the root of the panel stack */
   openBox(h, true);
   renderCity();
   renderSeed();
   $("go").onclick=startGame;
   $("rnd").onclick=()=>{ redrawPlans(); briefing(); render(); };
-  $("pls").onclick=plansPanel;
   $("chg").onclick=setup;
-  $("thm").onclick=themePicker;
+  $("mpb").onclick=roomPanel;
 }
 $("scrim").addEventListener("click",e=>{ if(e.target===$("scrim")) closeBox(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeBox(); });
@@ -2007,9 +2612,7 @@ function result(why,s){
   let v="Keep practising";
   const t=Object.keys(CFG.targets).map(k=>[k,CFG.targets[k]]).sort((a,b)=>a[1]-b[1]);
   t.forEach(e=>{ if(s.total>=e[1]) v=e[0]; });
-  let rows=s.rows.map(r=>'<tr'+(r[1]<0?' class="neg"':'')+'><td'+(r[2]?' class="sub"':'')+'>'+
-    r[0]+'</td><td>'+r[1]+'</td></tr>').join("");
-  rows+='<tr class="tot"><td>Total</td><td>'+s.total+'</td></tr>';
+  const rows=scoreRows(s);
   const city=(CFG.city||"").trim();
   openBox('<h3>Final scoring</h3><p class="lede">'+
     (city?esc(city)+' \u2014 ':'')+why+'</p>'+
@@ -2022,71 +2625,114 @@ function result(why,s){
     (G.planRoll?' with plans rerolled \u00d7'+G.planRoll:'')+
     ' \u2014 enter it on a new sheet to play this one again.</p>'+
     '<table class="sheet">'+rows+'</table>'+
+    mpStandings()+
     '<div class="toolbar"><button class="btn" onclick="closeBox();newGame()">New sheet</button>'+
     '<button class="btn" onclick="closeBox()">Review the sheet</button></div>');
 }
 
+function mpStandings(){
+  if(!MP.on) return "";
+  const ids=Object.keys(MP.finals);
+  const missing=MP.players.filter(p=>!MP.finals[p.id]).map(p=>p.name);
+  if(ids.length<2){
+    return '<p class="note">Waiting for '+(missing.length?esc(missing.join(", ")):"the others")+
+           ' to finish before the temp agency can be ranked.</p>';
+  }
+  const counts=ids.map(i=>MP.finals[i].temp);
+  const rows=ids.map(i=>{
+    const f=MP.finals[i], tp=positionalTemp(f.temp,counts);
+    return {name:f.name, temp:f.temp, tp:tp, total:f.base+tp, me:i===MP.me};
+  }).sort((a,b)=>b.total-a.total);
+  const top=rows[0].total;
+  return '<h4>Final standings</h4><table class="sheet">'+
+    rows.map(r=>'<tr'+(r.me?'':'')+'><td>'+(r.total===top?'\u2605 ':'')+esc(r.name)+
+      (r.me?' (you)':'')+'<span class="mini">'+r.temp+' temps \u2192 '+r.tp+' pts</span></td>'+
+      '<td>'+r.total+'</td></tr>').join("")+'</table>'+
+    (missing.length?'<p class="note">Still to report: '+esc(missing.join(", "))+'.</p>':'');
+}
+
 function setup(){
   const f=(p,l,v)=>'<label><span class="lbl">'+l+'</span><input data-p="'+p+'" value="'+v+'"></label>';
-  const hist=numberHist();
-  let h='<h3>Setup and printed values</h3>'+
-    '<p class="lede">From the Blue Cocker / Deep Water Games 2018 English rulebook v2.0.</p>';
+  let h='<h3>Game setup</h3>'+
+    '<p class="lede">Modes, variants and the scoring tables.</p>';
 
   h+='<h4>Game mode</h4><div class="toolbar">'+
-     '<button class="btn'+(CFG.mode==="solo"?" on":"")+'" data-mode="solo">Official solo variant</button>'+
-     '<button class="btn'+(CFG.mode==="standard"?" on":"")+'" data-mode="standard">Standard turn, solo</button>'+
-     '<button class="btn'+(advancedOn()?" on":"")+'" id="adv">Advanced plans: '+(advancedOn()?"on":"off")+'</button>'+
-     '<button class="btn" id="pick">Available plans\u2026</button>'+
+     '<button class="btn'+(CFG.mode==="standard"?" on":"")+'" data-mode="standard">Standard Turn</button>'+
+     '<button class="btn'+(CFG.mode==="solo"?" on":"")+'" data-mode="solo">Solo Variant</button>'+
      '</div>'+
-     '<p class="note">The solo variant draws three cards and uses one for its number and a '+
-     'different one for its effect. The standard turn flips one card per stack and pairs the '+
-     'effect shown with the number now on top \u2014 useful for practising the multiplayer game.</p>';
+     '<p class="note">'+
+     'The standard turn flips one card per stack and pairs.<br>'+
+     'The solo variant draws three cards and uses one for its number and a different one '+
+       'for its effect.</p>'+
+     '<h4>Advanced variant</h4><div class="toolbar">'+
+     '<button class="btn'+(advancedOn()?" on":"")+'" id="adv">'+
+       tglLabel("Advanced plans",advancedOn())+'</button>'+
+     '<button class="btn'+(CFG.roundabouts?" on":"")+'" id="rnd2">'+
+       tglLabel("Roundabouts",CFG.roundabouts)+'</button>'+
+     '<button class="btn" id="pick">Available plans</button>'+
+     '</div>'+
+     '<p class="note">Advanced plans adds the nine starred City Plans. Roundabouts lets you '+
+     'replace an empty house with a Roundabout.</p>';
 
-  h+='<h4>Streets and parks</h4><div class="fieldgrid">';
+  h+='<h4>Appearance</h4><div class="toolbar">'+
+     '<button class="btn" id="themebtn">Theme: '+esc(THEMES[CFG.theme].name)+'</button>'+
+     '</div>';
+
+  h+='<h4>Streets and parks</h4>';
   CFG.streets.forEach((s,i)=>{
-    h+=f("streets."+i+".lots","Street "+(i+1)+" houses",s.lots);
-    h+=f("streets."+i+".parks","Street "+(i+1)+" park boxes",s.parks.join(","));
-    h+=f("streets."+i+".pools","Street "+(i+1)+" planned pools \u2014 INFERRED",s.pools.join(","));
+    h+='<div class="substack"><span class="subh">Street '+(i+1)+'</span>'+
+       '<div class="fieldgrid">'+
+         f("streets."+i+".lots","Houses",s.lots)+
+         f("streets."+i+".pools","Planned pools",s.pools.join(","))+
+         f("streets."+i+".parks","Parks",s.parks.join(","))+
+       '</div></div>';
   });
-  h+='</div><h4>Real estate columns \u2014 INFERRED</h4><div class="fieldgrid">';
+  h+='<p class="note">Planned pools are box positions along the street, counted from zero.</p>';
+  h+='<h4>Real estate</h4><div class="fieldgrid">';
   for(let n=1;n<=6;n++) h+=f("estate."+n,"Estate of "+n,CFG.estate[n].join(","));
-  h+='</div><h4>Other sections</h4><div class="fieldgrid">';
-  h+=f("pool","Pools",CFG.pool.join(","));
-  h+=f("bis","Bis",CFG.bis.join(","));
-  h+=f("refusal","Permit refusal",CFG.refusal.join(","));
-  h+=f("soloTempMin","Temps needed for 7 pts",CFG.soloTempMin);
   h+='</div>';
 
-  h+='<h4>Construction deck &mdash; 81 cards</h4>'+
-     '<p class="note">The number printed on the back of each effect card. Distribution for '+
-     hist.lo+'\u2013'+hist.hi+': <code>'+hist.counts.join(",")+'</code> = '+deckTotal()+
-     ' cards, matching the rulebook exactly.</p><div class="fieldgrid wide">';
-  Object.keys(CFG.deck).forEach(e=>h+=f("deck."+e,EFFECTS[e].label+" ("+CFG.deck[e].length+")",CFG.deck[e].join(",")));
+  h+='<h4>Other bonuses</h4><div class="fieldgrid">'+
+       f("pool","Pools",CFG.pool.join(","))+
+       f("soloTempMin","Temps for 7 pts, solo",CFG.soloTempMin)+
+       f("tempRanks","Temp ranking, multiplayer",CFG.tempRanks.join(","))+
+     '</div>';
+
+  h+='<h4>Penalties</h4><div class="fieldgrid">'+
+       f("bis","Bis",CFG.bis.join(","))+
+       f("roundaboutValues","Roundabouts",CFG.roundaboutValues.join(","))+
+       f("refusal","Building permit refusal",CFG.refusal.join(","))+
+     '</div>';
+
+  h+='<h4 id="deckhead">Construction deck</h4>'+
+     '<p class="note">The number printed on the back of each effect card.</p>'+
+     '<div class="fieldgrid wide">';
+  Object.keys(CFG.deck).forEach(e=>{
+    h+='<label><span class="lbl" id="dl-'+e+'"></span>'+
+       '<input data-p="deck.'+e+'" id="di-'+e+'" value="'+
+       esc(CFG.deck[e].join(","))+'" spellcheck="false"></label>';
+  });
   h+='</div>';
 
   h+='<div class="toolbar"><button class="btn" id="ap">Save and start new sheet</button>'+
      '<button class="btn" id="rs">Restore rulebook values</button>'+
      '<button class="btn" onclick="backOut()">Cancel</button></div>';
 
-  h+='<h4>What is still inferred, and what is left out</h4><p class="note">'+
-     '<strong>Real estate columns:</strong> not printed in the rules text. Reconstructed from the '+
-     'p6 example (a size-2 estate goes from 2 to 3 points) and cross-checked against two full '+
-     'worked scoresheets, which they reproduce exactly.<br>'+
-     '<strong>Planned pool positions:</strong> printed on the sheet only, so the spread here is a guess. '+
-     'This also affects the two advanced plans about pools.<br>'+
-     '<strong>Basic City Plans:</strong> the rulebook does not list the 18 combinations, so these '+
-     'twelve are mine, with point pairs read off the card photographs. The starred advanced plans '+
-     'are quoted verbatim from p10.<br>'+
-     '<strong>Not implemented:</strong> roundabouts and the advanced plan that needs one, and the '+
-     'expert variant (card passing, which needs opponents).</p>';
-
-  openBox(h);
+  openBox(h, false, "mid");
+  Object.keys(CFG.deck).forEach(e=>{
+    const inp=$("di-"+e);
+    if(inp) inp.oninput=refreshDeckCounts;
+  });
+  refreshDeckCounts();          /* fills the heading and every label */
   $("modal").querySelectorAll("button[data-mode]").forEach(b=>{
     b.onclick=()=>{ CFG.mode=b.dataset.mode; save(); closeBox(); newGame(); };
   });
   $("adv").onclick=()=>{ setAdvanced(!advancedOn());
     if(G && !G.started){ setup(); render(); } else { closeBox(); newGame(); } };
-  $("pick").onclick=plansPanel;
+  $("pick").onclick=()=>{ backTo=setup; plansPanel(); };
+  $("rnd2").onclick=()=>{ CFG.roundabouts=!CFG.roundabouts; ensureCategories(); reconcilePlans();
+    save(); if(G && !G.started){ setup(); render(); } else { closeBox(); newGame(); } };
+  $("themebtn").onclick=()=>{ backTo=setup; themePicker(); };
   $("ap").onclick=()=>{
     const next=copy(CFG);
     $("modal").querySelectorAll("input[data-p]").forEach(inp=>{
@@ -2101,8 +2747,9 @@ function setup(){
     });
     CFG=next; save(); closeBox(); newGame();
   };
-  $("rs").onclick=()=>{ const keep={mode:CFG.mode, planOff:CFG.planOff, theme:CFG.theme,
-      hints:CFG.hints, city:CFG.city};
+  $("rs").onclick=()=>{
+    const keep={};
+    PREF_KEYS.forEach(k=>{ keep[k]=CFG[k]; });   /* tables back, choices kept */
     CFG=Object.assign(copy(BASE),keep);
     save(); closeBox(); newGame(); };
 }
@@ -2111,11 +2758,14 @@ $("btn-refuse").onclick=refuse;
 $("btn-undo").onclick=undo;
 $("btn-hints").onclick=()=>{
   CFG.hints=!CFG.hints;
-  $("btn-hints").textContent="Hints: "+(CFG.hints?"on":"off");
+  $("btn-hints").innerHTML=tglLabel("Hints",CFG.hints);
   save(); render();
 };
-$("btn-setup").onclick=setup;
-$("btn-theme").onclick=themePicker;
+$("btn-setup").onclick=()=>{ backTo=null; setup(); };
+$("btn-mp").disabled=!MP_ENABLED;
+if(!MP_ENABLED) $("btn-mp").title="Multiplayer is switched off for now";
+$("btn-mp").onclick=()=>{ backTo=null; roomPanel(); };
+$("btn-theme").onclick=()=>{ backTo=null; themePicker(); };
 $("btn-new").onclick=()=>{ if(!G.over&&houses()>0&&!confirm("Start a new sheet?")) return; newGame(); };
 
 applyTheme(CFG.theme);

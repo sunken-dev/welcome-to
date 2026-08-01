@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo-square.svg" alt="Welcome To Logo" width="250">
+</p>
+
 # Welcome To
 
 An unofficial, fan-made browser implementation of *Welcome To Your Perfect Home*,

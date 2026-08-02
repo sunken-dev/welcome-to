@@ -10,7 +10,9 @@
     --stamp:#A93A2C;--pool:#3D7F98;--park:#4F7237;--flag:#C9A227;--plum:#7A5C86;--temp:#C97B2C;
     --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
     --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
-    --face-w:56px;--face-h:82px;   /* card face, and the building lots */
+    --face-w:71px;--face-h:104px;  /* card face */
+    --cardgap:12px;                /* between the two cards of a combination */
+    --lot-w:59px;--lot-h:86px;     /* building lot, 5% under the card */
     --r:0px;          /* panel and card rounding */
     --rs:0px;         /* small element rounding */
     --gsw:1.7;        /* glyph stroke weight */
@@ -31,17 +33,51 @@
     -webkit-text-size-adjust:100%;transition:background-color .35s ease,color .35s ease}
   #bgart{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
   .wrap{max-width:1240px;margin:0 auto;padding:18px 14px 70px}
-  .mast{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 22px;
+  /* the title and the mark share the first line, the figures take the second */
+  .mastline{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  /* Carried inline rather than linked: the page is one self-contained file, and
+     the deployed site publishes only the HTML. A test keeps this copy and the
+     one in assets/ from drifting apart. */
+  .mastlogo{height:44px;width:auto;flex:0 0 auto}
+  @media (max-width:520px){ .mastlogo{height:34px} }
+  .mast{display:flex;flex-direction:column;gap:12px;
     border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:16px}
   .mast h1{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:.16em;
     text-transform:uppercase;margin:0;line-height:1.1}
-  .mast .sub{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--ink-soft);margin-top:3px}
-  .mast-spacer{flex:1 1 40px}
+  /* the five counters to the left, the clock pushed to the right */
+  .statbar{display:flex;justify-content:space-between;align-items:flex-end;
+    gap:14px 22px;flex-wrap:wrap}
   .readout{display:flex;gap:18px;flex-wrap:wrap}
   .readout div{text-align:right}
   .readout .k{font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
-  .readout .v{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1.1}
+  /* Each figure gets a fixed slot wide enough for the largest value it can hold,
+     so the label beside it stays put as the number grows or shrinks. Tabular
+     figures matter as much as the width: several theme fonts set digits at
+     different widths, so even a reserved slot would shuffle without this. */
+  .readout .v{display:inline-block;margin-left:11px;text-align:right;
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+    font-family:var(--mono);font-size:12.5px;font-weight:700;line-height:1.1}
+  /* the unit belongs to the figure, not to the label above it, so it takes the
+     figure's colour rather than the label's grey */
+  /* set like the caption beneath the clock, so the small type in the readout is
+     all one size; only the colour marks it as part of the figure */
+  /* lower case, like every other "pts" in the app: the score sheet, the plan
+     values and the briefing targets all write it that way */
+  .readout .unit{font-family:var(--mono);font-size:8px;letter-spacing:.08em;
+    color:var(--ink);margin-left:4px}
+  /* and follows the figure when a negative score turns red */
+  .readout .v.bad + .unit{color:var(--stamp)}
+  #rd-round{min-width:2ch}     /* 1 through 30-odd */
+  #rd-deck {min-width:2ch}     /* 81 down to 0, or an em dash */
+  #rd-built{min-width:5ch}     /* 0/33 through 33/33 */
+  #rd-score{min-width:4ch}     /* three digits, and a minus sign early on */
+  #rd-best {min-width:4ch}
+  /* The clock names its own parts inline. Each figure keeps a slot of its own,
+     so the labels stay put whatever the times read. */
+  .readout .tl{font-family:var(--mono);font-size:8px;letter-spacing:.08em;
+    color:var(--ink-soft);margin-left:10px;margin-right:4px}
+  .readout .tl:first-child{margin-left:0}
+  .readout .tv{display:inline-block;min-width:5ch;text-align:right}
   .readout .v.bad{color:var(--stamp)}
   .cols{display:grid;grid-template-columns:minmax(0,1fr) 286px;gap:20px;align-items:start}
   @media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
@@ -61,7 +97,7 @@
      pixels over the tallest state: line heights vary a little between the theme
      fonts, and a box that grew to fit would be the one box out of step. */
   .combo{border:1px solid var(--rule-soft);background:var(--paper-2);padding:9px 9px 0;
-    display:flex;flex-direction:column;min-height:190px}
+    display:flex;flex-direction:column;min-height:216px}
   /* selection must not change the box geometry, or the card shifts by a pixel */
   .combo.chosen{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
   .combo.dim{opacity:.32}
@@ -70,9 +106,10 @@
   .combo.numdead .face{border-color:var(--stamp);border-style:dashed}
   .combo.numdead .legend span{color:var(--stamp)}
   .combo.dead{opacity:.62}
-  .combo-head{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;
+  .combo-head{font-family:var(--mono);font-size:10px;letter-spacing:.16em;
     text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
-  .combo-body{display:flex;align-items:center;justify-content:center;gap:7px}
+  .combo-body{flex:1 1 auto;display:flex;align-items:center;justify-content:center;
+    gap:var(--cardgap)}
   .face{position:relative;background:var(--card);border:1px solid var(--rule);
     width:var(--face-w);height:var(--face-h);flex:0 0 auto;display:flex;flex-direction:column;
     align-items:center;justify-content:center}
@@ -81,24 +118,31 @@
     4px 4px 0 var(--card),4px 4px 0 1px var(--rule)}
   /* a discarded card lies slightly askew */
   .face.discard{transform:rotate(-2.5deg);box-shadow:1px 2px 0 var(--drop)}
-  .bignum{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1}
+  .bignum{font-family:var(--mono);font-size:38px;font-weight:700;line-height:1}
   .face .corner{position:absolute;width:12px;height:12px}
   .face .corner.tl{top:3px;left:3px}
   .face .corner.br{bottom:3px;right:3px;transform:rotate(180deg)}
-  .face .gl{width:30px;height:30px}
-  .face .cap2{font-family:var(--mono);font-size:7.5px;letter-spacing:.05em;
+  .face .gl{width:38px;height:38px}
+  .face .cap2{font-family:var(--mono);font-size:9px;letter-spacing:.05em;
     text-transform:uppercase;text-align:center;line-height:1.2;margin-top:5px;padding:0 3px}
-  .link{font-family:var(--mono);font-size:14px;color:var(--ink-soft)}
-  .legend{display:flex;align-items:flex-start;justify-content:center;gap:7px;margin-top:6px}
-  .legend span{font-family:var(--mono);font-size:7px;letter-spacing:.07em;text-transform:uppercase;
-    color:var(--ink-soft);width:56px;text-align:center;line-height:1.25;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .legend span.mid{width:14px}
-  .legend span.solo{width:86px}
-  .cornernote{font-family:var(--mono);font-size:7px;letter-spacing:.07em;text-transform:uppercase;
+  .link{font-family:var(--mono);font-size:21px;color:var(--ink-soft)}
+  .legend{display:flex;align-items:flex-start;justify-content:center;
+    gap:var(--cardgap);margin-top:6px}
+  /* A floor rather than a fixed width. The floor keeps the standard turn's two
+     labels sitting under the cards they describe; letting them grow past it stops
+     the longer wordings being clipped, which they were in every theme, and the
+     row is centred so growing stays symmetrical. */
+  .legend span{font-family:var(--mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--ink-soft);min-width:var(--face-w);text-align:center;line-height:1.25;
+    white-space:nowrap}
+  .legend span.mid{flex:0 0 auto;min-width:0;width:13px}
+  .cornernote{font-family:var(--mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;
     color:var(--plum);text-align:center;margin-top:4px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pgap{flex:1 1 auto;min-height:13px}
+  /* A fixed gap before the buttons, a little under the 13px it used to be. It no
+     longer grows: the card area takes up whatever the box has spare, so this is
+     the gap itself rather than the gap plus the slack. */
+  .pgap{flex:0 0 auto;height:10px}
   .picks{display:flex;margin:0 -9px;border-top:1px dashed var(--rule)}
   .picks button{flex:1;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
     text-transform:uppercase;background:var(--card);color:var(--ink);border:0;
@@ -124,7 +168,7 @@
   .bx.live{border-color:var(--park);color:var(--park);font-weight:700}
   .road{overflow-x:auto;padding-bottom:5px}
   .lots{display:flex;align-items:stretch;min-width:max-content}
-  .lot{width:var(--face-w);height:var(--face-h);flex:0 0 auto;border:1px solid var(--rule);background:transparent;
+  .lot{width:var(--lot-w);height:var(--lot-h);flex:0 0 auto;border:1px solid var(--rule);background:transparent;
     font:inherit;color:inherit;padding:0;position:relative;display:flex;align-items:center;
     justify-content:center;cursor:default}
   .lot .val{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1}
@@ -133,14 +177,14 @@
   .lot.locked{background:repeating-linear-gradient(135deg,var(--paper-2) 0 5px,var(--locked) 5px 10px)}
   .lot.locked::before{content:"";position:absolute;left:1px;right:1px;top:3px;height:2px;background:var(--ink)}
   .lot.roundabout{background:var(--paper-2);border-color:var(--ink)}
-  .lot .rnd{width:24px;height:24px;border:2px solid var(--ink);border-radius:50%;
+  .lot .rnd{width:25px;height:25px;border:2px solid var(--ink);border-radius:50%;
     display:flex;align-items:center;justify-content:center}
   .lot .rnd::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--ink)}
   .lot.rndpick{cursor:pointer;background:rgba(122,92,134,.2);border-color:var(--plum);border-width:2px}
   .lot.rndpick:hover{background:rgba(122,92,134,.4)}
   .lot.inked{animation:ink .22s ease-out}
   @keyframes ink{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
-  .lot .pt{position:absolute;bottom:3px;right:3px;width:15px;height:10px;border:1px solid var(--pool);border-radius:2px}
+  .lot .pt{position:absolute;bottom:3px;right:3px;width:16px;height:10px;border:1px solid var(--pool);border-radius:2px}
   .lot .pt.filled{background:var(--pool)}
   .lot .pt.filled::after{content:"";position:absolute;inset:-3px;border:1.5px solid var(--pool);border-radius:4px}
   .lot.legal{cursor:pointer;background:var(--legal);border-color:var(--flag);border-width:2px}
@@ -303,8 +347,6 @@
   .themecard span{display:block;font-size:11.5px;color:var(--ink-soft)}
 
   /* clock: three readings in one readout cell */
-  .readout .k2{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.08em;
-    color:var(--ink-soft);margin-top:2px;white-space:nowrap}
 
   /* hint statistics */
   .hint[hidden]{display:none}
@@ -397,13 +439,16 @@
   .cityname.empty{letter-spacing:.2em}
   .cityinput{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink);
     background:transparent;border:0;border-bottom:2px solid var(--ink);
-    padding:0 3px 1px;width:min(320px,44vw)}
+    /* fifteen characters is the cap, and at this size they need about 225px */
+    padding:0 3px 1px;width:min(350px,44vw)}
   .cityinput:focus{outline:none}
   /* the game's title, overarching the dialog's own heading */
   .modal .gametitle{font-family:var(--mono);font-size:22px;font-weight:700;
     letter-spacing:.11em;text-transform:uppercase;line-height:1.15;
     margin:0 0 13px;padding-bottom:11px;border-bottom:2px solid var(--ink)}
-  .modal .gametitle .cityinput{width:min(260px,50vw)}
+  /* the briefing sets the title larger, so the same fifteen characters need
+     about 243px here; this is as narrow as it can go without clipping a name */
+  .modal .gametitle .cityinput{width:min(248px,50vw)}
   @media (max-width:520px){
     .modal .gametitle{font-size:16px;letter-spacing:.08em}
   }
@@ -458,7 +503,7 @@
 
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   @media (max-width:520px){
-    :root{--face-w:44px;--face-h:64px}
+    :root{--face-w:56px;--face-h:81px;--lot-w:46px;--lot-h:67px;--cardgap:9px}
     .ccard .n{font-size:30px;padding:11px 4px 4px}
     .mast h1{font-size:16px}
   }
@@ -469,19 +514,22 @@
 
 <div class="wrap">
   <div class="mast">
-    <div>
+    <div class="mastline">
       <h1><span id="mark"></span>Welcome To <span id="cityslot"></span></h1>
-      <div class="sub" id="modelabel">Official solo variant &middot; 2018 rules</div>
+      <svg class="mastlogo" viewBox="-189.4 -75.6 378.8 191.8" role="img"
+        aria-labelledby="logottl" xmlns="http://www.w3.org/2000/svg"><title id="logottl">Welcome To</title><g transform="rotate(27.5 110.00 30.00)"><rect x="70.00" y="-25.00" width="86" height="118" rx="0.0" fill="#A4B4BA" opacity=".40"/><rect x="67.00" y="-29.00" width="86" height="118" rx="0.0" fill="#E9E7DE"/><clipPath id="criso"><rect x="67.00" y="-29.00" width="86" height="118" rx="0.0"/></clipPath><g clip-path="url(#criso)"><defs><pattern id="ht0a" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.9" cy="1.9" r="1.05" fill="#FF4E8B" opacity=".22"/></pattern><pattern id="ht0b" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="4.7" cy="4.7" r="1.05" fill="#1F8FB0" opacity=".20"/></pattern></defs><rect x="67" y="-29" width="86" height="118" fill="url(#ht0a)"/><rect x="67" y="-29" width="86" height="118" fill="url(#ht0b)"/></g><rect x="67.00" y="-29.00" width="86" height="118" rx="0.0" fill="none" stroke="#A4B4BA" stroke-width="2"/><g transform="translate(84.58 5.00) scale(2.0833)" fill="none" stroke="#173B4A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.4"/><circle cx="15.4" cy="15" r="6.4" stroke="#FF4E8B"/></g></g><g transform="rotate(16.5 66.00 10.80)"><rect x="26.00" y="-44.20" width="86" height="118" rx="2.0" fill="#BFA97C" opacity=".40"/><rect x="23.00" y="-48.20" width="86" height="118" rx="2.0" fill="#E8DCC0"/><clipPath id="cscriptorium"><rect x="23.00" y="-48.20" width="86" height="118" rx="2.0"/></clipPath><g clip-path="url(#cscriptorium)"><g fill="#3A2A18"><ellipse cx="96.6" cy="10.7" rx="8.1" ry="9.4" opacity="0.09"/><ellipse cx="68.0" cy="5.6" rx="7.3" ry="5.5" opacity="0.11"/><ellipse cx="60.0" cy="-9.3" rx="6.2" ry="9.5" opacity="0.11"/><ellipse cx="59.2" cy="20.4" rx="10.5" ry="4.4" opacity="0.11"/><ellipse cx="48.0" cy="29.5" rx="10.8" ry="3.3" opacity="0.06"/><ellipse cx="57.3" cy="9.5" rx="5.1" ry="8.2" opacity="0.11"/><ellipse cx="75.9" cy="12.1" rx="9.0" ry="6.9" opacity="0.06"/><ellipse cx="38.4" cy="57.2" rx="10.7" ry="6.1" opacity="0.06"/><ellipse cx="53.0" cy="62.4" rx="5.4" ry="3.1" opacity="0.07"/><ellipse cx="103.9" cy="31.3" rx="10.1" ry="9.0" opacity="0.07"/><ellipse cx="106.3" cy="68.5" rx="6.3" ry="8.7" opacity="0.06"/></g></g><rect x="23.00" y="-48.20" width="86" height="118" rx="2.0" fill="none" stroke="#BFA97C" stroke-width="2"/><g transform="translate(34.00 -22.53) scale(2.6667)" fill="none" stroke="#3A2A18" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V5h9l5 5v10z"/><path d="M14 5v5h5"/><path d="M8 13h7M8 16.5h5"/></g></g><g transform="rotate(5.5 22.00 1.20)"><rect x="-18.00" y="-53.80" width="86" height="118" rx="5.0" fill="#37456A" opacity=".40"/><rect x="-21.00" y="-57.80" width="86" height="118" rx="5.0" fill="#0E1424"/><clipPath id="corbit"><rect x="-21.00" y="-57.80" width="86" height="118" rx="5.0"/></clipPath><g clip-path="url(#corbit)"><g fill="#DCE6F5"><circle cx="58.5" cy="34.5" r="0.84" opacity="0.33"/><circle cx="11.2" cy="18.4" r="0.84" opacity="0.66"/><circle cx="54.5" cy="29.1" r="0.60" opacity="0.53"/><circle cx="-6.6" cy="-13.7" r="0.91" opacity="0.58"/><circle cx="14.3" cy="-21.9" r="0.74" opacity="0.48"/><circle cx="-20.3" cy="24.8" r="0.65" opacity="0.89"/><circle cx="51.1" cy="-45.9" r="0.65" opacity="0.77"/><circle cx="62.3" cy="-19.9" r="0.85" opacity="0.90"/><circle cx="-2.2" cy="10.8" r="0.91" opacity="0.58"/><circle cx="-12.2" cy="-12.3" r="0.45" opacity="0.53"/><circle cx="-18.6" cy="48.8" r="0.72" opacity="0.61"/><circle cx="46.0" cy="46.4" r="0.57" opacity="0.54"/><circle cx="35.8" cy="-16.9" r="0.92" opacity="0.92"/><circle cx="51.0" cy="12.9" r="0.82" opacity="0.85"/><circle cx="42.0" cy="-22.1" r="0.55" opacity="0.70"/><circle cx="25.8" cy="17.5" r="0.41" opacity="0.84"/><circle cx="-3.6" cy="39.4" r="0.94" opacity="0.72"/><circle cx="11.1" cy="0.8" r="0.91" opacity="0.36"/><circle cx="4.9" cy="28.6" r="0.63" opacity="0.62"/><circle cx="30.1" cy="25.9" r="0.40" opacity="0.74"/><circle cx="2.7" cy="-23.0" r="0.63" opacity="0.77"/><circle cx="36.4" cy="-51.4" r="0.66" opacity="0.69"/><circle cx="60.6" cy="-3.5" r="0.36" opacity="0.91"/><circle cx="18.7" cy="-20.2" r="0.44" opacity="0.67"/><circle cx="-13.5" cy="19.9" r="0.67" opacity="0.84"/><circle cx="3.1" cy="16.6" r="0.34" opacity="0.78"/><circle cx="29.0" cy="-39.2" r="0.92" opacity="0.46"/><circle cx="38.6" cy="-16.1" r="0.53" opacity="0.68"/><circle cx="16.8" cy="59.5" r="0.32" opacity="0.44"/><circle cx="-4.4" cy="5.3" r="0.73" opacity="0.81"/><circle cx="30.3" cy="-4.3" r="0.84" opacity="0.49"/><circle cx="35.4" cy="51.9" r="0.32" opacity="0.46"/><circle cx="24.9" cy="-43.1" r="0.93" opacity="0.73"/><circle cx="32.2" cy="10.6" r="0.72" opacity="0.32"/><circle cx="39.7" cy="1.7" r="0.85" opacity="0.67"/><circle cx="10.0" cy="54.8" r="0.62" opacity="0.68"/><circle cx="47.0" cy="-36.7" r="0.83" opacity="0.71"/><circle cx="48.9" cy="19.4" r="0.79" opacity="0.82"/><circle cx="42.7" cy="7.4" r="0.78" opacity="0.49"/><circle cx="1.6" cy="22.8" r="0.32" opacity="0.46"/><circle cx="35.4" cy="-39.7" r="0.90" opacity="0.50"/><circle cx="55.4" cy="-25.1" r="0.59" opacity="0.62"/><circle cx="19.1" cy="-0.0" r="0.42" opacity="0.54"/><circle cx="-13.7" cy="-23.4" r="0.56" opacity="0.60"/><circle cx="15.1" cy="-1.6" r="0.71" opacity="0.72"/><circle cx="32.9" cy="-38.3" r="0.48" opacity="0.79"/><circle cx="13.1" cy="-8.3" r="0.39" opacity="0.66"/><circle cx="32.5" cy="-7.1" r="0.29" opacity="0.43"/><circle cx="-19.0" cy="9.1" r="0.81" opacity="0.60"/><circle cx="4.2" cy="36.0" r="0.38" opacity="0.55"/><circle cx="31.1" cy="-31.9" r="0.35" opacity="0.62"/><circle cx="27.0" cy="35.2" r="0.46" opacity="0.44"/></g></g><rect x="-21.00" y="-57.80" width="86" height="118" rx="5.0" fill="none" stroke="#37456A" stroke-width="2"/><g transform="translate(-1.08 -21.88) scale(1.9231)" fill="none" stroke="#DCE6F5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.6"/><ellipse cx="12" cy="12" rx="10.4" ry="4.1" transform="rotate(-24 12 12)"/></g></g><g transform="rotate(-5.5 -22.00 1.20)"><rect x="-62.00" y="-53.80" width="86" height="118" rx="10.0" fill="#DFC3AE" opacity=".40"/><rect x="-65.00" y="-57.80" width="86" height="118" rx="10.0" fill="#FBEFE4"/><clipPath id="ccats"><rect x="-65.00" y="-57.80" width="86" height="118" rx="10.0"/></clipPath><g clip-path="url(#ccats)"><g fill="#4A3A33" opacity=".17"><g transform="translate(14.5 -43.2) rotate(-18) scale(0.74)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(-50.1 28.5) rotate(4) scale(0.79)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(-30.0 18.7) rotate(-6) scale(0.90)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(10.0 33.6) rotate(-4) scale(0.74)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(-41.4 19.1) rotate(11) scale(0.78)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g></g></g><rect x="-65.00" y="-57.80" width="86" height="118" rx="10.0" fill="none" stroke="#DFC3AE" stroke-width="2"/><g transform="translate(-50.57 -30.23) scale(2.8571)" fill="none" stroke="#4A3A33" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 9.4L6.2 4l3.4 2.6"/><path d="M14.6 9.4L13.8 4l-3.4 2.6"/><circle cx="10" cy="12.4" r="5.6"/><path d="M8.2 12h.01M11.8 12h.01"/><path d="M9 14.6c.7.6 1.3.6 2 0"/></g></g><g transform="rotate(-16.5 -66.00 10.80)"><rect x="-106.00" y="-44.20" width="86" height="118" rx="7.0" fill="#A9C2B4" opacity=".40"/><rect x="-109.00" y="-48.20" width="86" height="118" rx="7.0" fill="#DCE9E3"/><clipPath id="chillside"><rect x="-109.00" y="-48.20" width="86" height="118" rx="7.0"/></clipPath><g clip-path="url(#chillside)"><g fill="#5C8A3E"><path opacity=".20" d="M-109.0,46.2 C-97.0,36.8 -86.6,50.9 -72.9,43.8 C-59.1,36.8 -45.4,50.9 -23.0,41.5 L-23.0,69.8 L-109.0,69.8 Z"/><path opacity=".26" d="M-109.0,56.8 C-91.8,49.7 -79.8,62.7 -62.6,55.6 C-47.1,49.7 -35.0,61.5 -23.0,54.5 L-23.0,69.8 L-109.0,69.8 Z"/></g></g><rect x="-109.00" y="-48.20" width="86" height="118" rx="7.0" fill="none" stroke="#A9C2B4" stroke-width="2"/><g transform="translate(-91.00 -17.08) scale(2.5000)" fill="none" stroke="#2A3F35" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17c4-4 7 2 10-2 2-2.6 4 .6 6 1.4"/><circle cx="14" cy="6.5" r="3.2"/><path d="M14 9.7V14"/></g></g><g transform="rotate(-27.5 -110.00 30.00)"><rect x="-150.00" y="-25.00" width="86" height="118" rx="0.0" fill="#AFBBAC" opacity=".40"/><rect x="-153.00" y="-29.00" width="86" height="118" rx="0.0" fill="#E6EBE2"/><clipPath id="cdrafting"><rect x="-153.00" y="-29.00" width="86" height="118" rx="0.0"/></clipPath><g clip-path="url(#cdrafting)"><g stroke="#1E2A31" stroke-width=".6" opacity=".16" fill="none"><path d="M-141 -29v118"/><path d="M-129 -29v118"/><path d="M-117 -29v118"/><path d="M-105 -29v118"/><path d="M-93 -29v118"/><path d="M-81 -29v118"/><path d="M-69 -29v118"/><path d="M-153 -17h86"/><path d="M-153 -5h86"/><path d="M-153 7h86"/><path d="M-153 19h86"/><path d="M-153 31h86"/><path d="M-153 43h86"/><path d="M-153 55h86"/><path d="M-153 67h86"/><path d="M-153 79h86"/></g></g><rect x="-153.00" y="-29.00" width="86" height="118" rx="0.0" fill="none" stroke="#AFBBAC" stroke-width="2"/><g transform="translate(-137.50 0.00) scale(2.5000)" fill="none" stroke="#1E2A31" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h16M11 18V6M7 9l4-3 4 3"/></g></g></svg>
     </div>
-    <div class="mast-spacer"></div>
-    <div class="readout">
-      <div><span class="k">Round</span><span class="v" id="rd-round">1</span></div>
-      <div><span class="k">Deck</span><span class="v" id="rd-deck">81</span></div>
-      <div><span class="k">Houses</span><span class="v" id="rd-built">0</span></div>
-      <div><span class="k">Score</span><span class="v" id="rd-score">0</span></div>
-      <div><span class="k">Best</span><span class="v" id="rd-best">&mdash;</span></div>
-      <div><span class="k">Time</span><span class="v" id="rd-time">0:00</span>
-   <span class="k2" id="rd-sub">round 0:00 &middot; avg &mdash;</span></div>
+    <div class="statbar">
+      <div class="readout">
+        <div><span class="k">Round</span><span class="v" id="rd-round">1</span></div>
+        <div><span class="k">Deck</span><span class="v" id="rd-deck">81</span></div>
+        <div><span class="k">Houses</span><span class="v" id="rd-built">0</span></div>
+        <div><span class="k">Score</span><span class="v" id="rd-score">0</span><span class="unit">pts</span></div>
+        <div><span class="k">Best</span><span class="v" id="rd-best">&mdash;</span><span class="unit">pts</span></div>
+      </div>
+      <div class="readout">
+        <div><span class="k">Time</span><span class="v" id="rd-time"><span class="tl">round</span><span class="tv">00:00</span><span class="tl">avg</span><span class="tv">00:00</span><span class="tl">total</span><span class="tv">00:00</span></span></div>
+      </div>
     </div>
   </div>
 
@@ -795,7 +843,6 @@ const THEMES = {
     css: ".panel{box-shadow:inset 0 0 26px rgba(58,42,24,.07)}"+
          ".panel>h2{text-transform:none;font-variant:small-caps;letter-spacing:.1em;font-size:12px}"+
          ".mast h1{text-transform:none;letter-spacing:.04em;font-size:23px}"+
-         ".mast .sub{text-transform:none;font-variant:small-caps;letter-spacing:.08em;font-size:11px}"+
          ".combo-head,.legend span,.cornernote{text-transform:none;font-variant:small-caps;letter-spacing:.05em}",
     glyphs: {
       surveyor:  '<path d="M4.5 21V9l2-3.6L8.5 9v12M15.5 21V9l2-3.6L19.5 9v12"/>'+
@@ -1125,6 +1172,16 @@ function stopClock(){
 function avgRound(){
   return T.rounds.length ? T.rounds.reduce((a,b)=>a+b,0)/T.rounds.length : null;
 }
+/* Fixed-width MM:SS for the masthead: the readouts sit in reserved slots, so a
+   clock that dropped a digit under ten minutes would shuffle inside its own. */
+function fmt2(ms){
+  /* hyphens rather than em dashes: an em dash is about twice a digit's width and
+     would push the slot wider than any real time */
+  if(ms===null||ms===undefined||!isFinite(ms)) return "--:--";
+  const s=Math.floor(ms/1000), m=Math.floor(s/60);
+  const pad=v=>(v<10?"0":"")+v;
+  return pad(Math.min(m,99))+":"+pad(s%60);
+}
 function fmt(ms){
   if(ms===null||ms===undefined||!isFinite(ms)) return "\u2014";
   const s=Math.floor(ms/1000), m=Math.floor(s/60), h=Math.floor(m/60);
@@ -1136,9 +1193,11 @@ function tickClock(){
   const now=Date.now();
   const gt = !T.running ? 0 : (T.stopped ? T.total : now-T.start);
   const rt = (T.stopped||T.roundStart===null) ? null : now-T.roundStart;
-  const e=document.getElementById("rd-time"); if(e) e.textContent=fmt(gt);
-  const sub=document.getElementById("rd-sub");
-  if(sub) sub.textContent="round "+fmt(rt)+" \u00b7 avg "+fmt(avgRound());
+  const e=document.getElementById("rd-time");
+  if(e){
+    const part=(name,ms)=>'<span class="tl">'+name+'</span><span class="tv">'+fmt2(ms)+'</span>';
+    e.innerHTML=part("round",rt)+part("avg",avgRound())+part("total",gt);
+  }
 }
 
 function copy(o){ return JSON.parse(JSON.stringify(o)); }
@@ -2041,9 +2100,6 @@ function commitCity(v){
 /* ========================================================== RENDER */
 const $=id=>document.getElementById(id);
 function render(){
-  $("modelabel").textContent = (CFG.mode==="solo"
-    ? "Official solo variant" : "Standard turn, played solo")+" \u00b7 2018 rules"
-    + (advancedOn()?" \u00b7 advanced plans":"");
   $("handhead").textContent = CFG.mode==="solo"
     ? "Three construction cards \u2014 one for its number, another for its effect"
     : "Card stacks";
@@ -2139,6 +2195,17 @@ function pendingCards(h){
         '<span class="bignum">?</span></div></div>'+
       '<div class="legend"><span'+(CFG.mode==="solo"?' class="solo"':'')+'>not dealt</span></div>'+
       (CFG.mode==="solo"?"":'<div class="cornernote">&nbsp;</div>');
+    /* The same button row the dealt card will have, disabled. The box was already
+       a fixed height, but without this the contents sat at the top before the
+       deal and jumped to the bottom the moment the sheet started. It also shows
+       what the card is about to offer. */
+    const p=pickRow(d);
+    const labels = CFG.mode==="solo" ? ["Number","Effect"] : ["Take this combination"];
+    labels.forEach(t=>{
+      const b=document.createElement("button");
+      b.textContent=t; b.disabled=true;
+      p.appendChild(b);
+    });
     h.appendChild(d);
   }
 }

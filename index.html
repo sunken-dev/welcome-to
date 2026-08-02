@@ -12,6 +12,8 @@
     --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
     --face-w:71px;--face-h:104px;  /* card face */
     --cardgap:12px;                /* between the two cards of a combination */
+    --gap:16px;                    /* between every box on the page */
+    --bxw:25px;--bxh:23px;         /* one size for every track box */
     --lot-w:59px;--lot-h:86px;     /* building lot, 5% under the card */
     --r:0px;          /* panel and card rounding */
     --rs:0px;         /* small element rounding */
@@ -32,16 +34,17 @@
     color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;
     -webkit-text-size-adjust:100%;transition:background-color .35s ease,color .35s ease}
   #bgart{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-  .wrap{max-width:1240px;margin:0 auto;padding:18px 14px 70px}
+  .wrap{max-width:1240px;margin:0 auto;padding:18px 14px 70px;
+    display:flex;flex-direction:column;gap:var(--gap)}
   /* the title and the mark share the first line, the figures take the second */
-  .mastline{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .mastline{display:flex;align-items:center;justify-content:space-between;gap:var(--gap)}
   /* Carried inline rather than linked: the page is one self-contained file, and
      the deployed site publishes only the HTML. A test keeps this copy and the
      one in assets/ from drifting apart. */
   .mastlogo{height:44px;width:auto;flex:0 0 auto}
   @media (max-width:520px){ .mastlogo{height:34px} }
   .mast{display:flex;flex-direction:column;gap:5px;
-    border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:16px}
+    border-bottom:2px solid var(--ink);padding-bottom:10px}
   .mast h1{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:.16em;
     text-transform:uppercase;margin:0;line-height:1.1}
   /* the five counters to the left, the clock pushed to the right */
@@ -79,9 +82,33 @@
   .readout .tl:first-child{margin-left:0}
   .readout .tv{display:inline-block;min-width:5ch;text-align:right}
   .readout .v.bad{color:var(--stamp)}
-  .cols{display:grid;grid-template-columns:minmax(0,1fr) 286px;gap:20px;align-items:start}
+  /* stretch, not start, so the score box runs the full height of the board */
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 286px;gap:var(--gap);
+    align-items:stretch}
+  /* each cell stacks its own panels with the same gap; the pair keeps its grid */
+  .cols>div:not(.row2){display:flex;flex-direction:column;gap:var(--gap)}
+  /* a lone panel in a stretched cell grows to fill it */
+  .cols>div:not(.row2)>.panel:only-child{flex:1}
   @media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
-  .panel{background:var(--card);border:1px solid var(--rule);padding:12px 13px 14px;margin-bottom:16px}
+  /* The second row runs the full width of both columns. The shares below are the
+     plans a fifth narrower and the ladder half the width they had when the two
+     shared the row alone, which frees the rest for the two new boxes. Grid items
+     stretch, so all four come out the same height. */
+  /* Shares sized to what each box actually holds: the penalties need a line wide
+     enough for ten bis boxes, the pools only two across, and what is left over
+     goes to the plans, whose text benefits from every pixel. */
+  .row2{grid-column:1/-1;display:grid;
+    grid-template-columns:401fr 205fr 100fr 112fr 330fr;
+    gap:var(--gap);align-items:stretch}
+  @media (max-width:1200px){.row2{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media (max-width:900px){.row2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+  @media (max-width:640px){.row2{grid-template-columns:minmax(0,1fr)}}
+  /* the pool ladder in three columns, as it reads on the sheet */
+  .bxgrid{display:grid;gap:4px;width:max-content}
+  /* the box that reaches the scoring threshold */
+  .bx.goal{box-shadow:inset 0 0 0 2px var(--stamp)}
+
+  .panel{background:var(--card);border:1px solid var(--rule);padding:12px 13px 14px}
   .panel>h2{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
     color:var(--ink-soft);margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule-soft)}
 
@@ -162,8 +189,11 @@
   .sh .nm{font-weight:700}
   .track{display:flex;gap:3px;align-items:center}
   .track b{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--ink-soft);font-weight:400}
-  .bx{font-family:var(--mono);font-size:10px;min-width:19px;height:17px;line-height:15px;text-align:center;
-    border:1px solid var(--rule);background:var(--card);padding:0 2px}
+  /* Every box on every track is this size: the estate ladder, the pools, the
+     temp tally and the penalties. One rule, so they cannot drift apart. */
+  .bx{font-family:var(--mono);font-size:10px;width:var(--bxw);height:var(--bxh);
+    line-height:calc(var(--bxh) - 2px);text-align:center;flex:0 0 auto;
+    border:1px solid var(--rule);background:var(--card);padding:0}
   .bx.out{background:var(--markbg);color:var(--markfg);border-color:var(--markbg);text-decoration:line-through}
   .bx.live{border-color:var(--park);color:var(--park);font-weight:700}
   .road{overflow-x:auto;padding-bottom:5px}
@@ -204,9 +234,9 @@
   .edge::before{content:"";position:absolute;top:4px;bottom:4px;left:50%;width:3px;
     transform:translateX(-50%);background:var(--ink)}
 
-  .stair{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;align-items:end}
-  /* 17px elsewhere; a fifth taller here, where the columns are the control */
-  .stair .bx{height:20px;line-height:18px}
+  .stair{display:grid;grid-template-columns:repeat(6,var(--bxw));gap:5px;
+    align-items:end;align-content:start;justify-content:start}
+
   .stair .col .cap{padding:3px 0}
   .col{display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
   .col .cap{font-family:var(--mono);font-size:9.5px;text-align:center;font-weight:700;
@@ -214,7 +244,7 @@
   .col.pick{cursor:pointer}
   .col.pick .cap{background:var(--plum);color:var(--onaccent);border-color:var(--plum)}
   .col.pick:hover .cap{background:var(--ink)}
-  .col .bx{width:100%}
+
 
   .plan{border-left:3px solid var(--rule);padding:0 0 0 9px;margin-bottom:12px}
   .plan .tier{font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
@@ -234,10 +264,20 @@
   .sheet tr.neg td:last-child{color:var(--stamp)}
   .sheet tr.tot td{border-bottom:0;border-top:2px solid var(--ink);padding-top:6px;font-weight:700}
   .sheet tr.tot td:last-child{font-size:17px}
-  .sheet td.sub{padding-left:9px;color:var(--ink-soft);font-size:11.5px}
-  /* three weights: dotted between rows, this between bonuses and penalties,
-     and the ink rule above the total */
-  .sheet tr.sep td{border-top:2px solid var(--rule);padding-top:5px}
+  /* A breakdown row is set apart from the row it belongs to by tone and size, and
+     its figure has to carry the same treatment or it reads as a total in its own
+     right. The indent stays on the label alone. */
+  .sheet tr.subrow td{color:var(--ink-soft);font-size:11.5px}
+  /* A negative figure still shows red even inside a breakdown: the rule for it
+     above carries a class more than this one, so it wins wherever it is. */
+  .sheet td.sub{padding-left:9px}
+  /* the sheet's own headings: the second opens a gap rather than drawing a rule,
+     which is what used to divide the bonuses from the penalties */
+  .sheet tr.head td{font-family:var(--mono);font-size:9px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--ink-soft);
+    border-bottom:1px solid var(--rule-soft);padding-bottom:5px}
+  .sheet tr.head.gap td{padding-top:17px}
+  /* two weights: dotted between the rows, and the ink rule above the total */
   /* a section whose variant is switched off: shown, but plainly inactive */
   .sheet tr.dim{opacity:.4}
   .trow.dim{opacity:.4}
@@ -248,7 +288,7 @@
   .trow .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;
     color:var(--ink-soft);width:100%}
 
-  .status{position:sticky;bottom:0;margin-top:4px;background:var(--bar);color:var(--barfg);
+  .status{position:sticky;bottom:0;background:var(--bar);color:var(--barfg);
     padding:10px 13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .status .msg{flex:1 1 220px;font-size:13px}
   .status .msg b{font-family:var(--mono);letter-spacing:.06em}
@@ -306,7 +346,7 @@
   .fieldgrid input{width:100%;font-family:var(--mono);font-size:12px;padding:4px 6px;
     border:1px solid var(--rule);background:var(--paper);color:var(--ink)}
   .verdict{font-family:var(--mono);font-size:30px;font-weight:700;margin:6px 0 2px}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--gap)}
   .note{font-size:11.5px;color:var(--ink-soft)}
   .note code{font-family:var(--mono);font-size:11px}
   /* theme-driven rounding */
@@ -533,6 +573,9 @@
     </div>
   </div>
 
+  <!-- Two columns and two rows. The board and the score box share the first row;
+       the plans, the estate ladder and the sections share the second, so the
+       sections begin level with the plans rather than following the score box. -->
   <div class="cols">
     <div>
       <div class="panel">
@@ -540,12 +583,16 @@
         <div class="hand" id="hand"></div>
       </div>
       <div class="panel"><h2>Your city</h2><div id="streets"></div></div>
-      <div class="panel"><h2>Housing estate values</h2><div class="stair" id="stair"></div></div>
     </div>
     <div>
-      <div class="panel"><h2>City plans</h2><div id="plans"></div></div>
-      <div class="panel"><h2>Sections</h2><div class="tracks" id="tracks"></div></div>
       <div class="panel"><h2>Final scoring</h2><table class="sheet" id="sheet"></table></div>
+    </div>
+    <div class="row2">
+      <div class="panel"><h2>City plans</h2><div id="plans"></div></div>
+      <div class="panel"><h2>Housing estate values</h2><div class="stair" id="stair"></div></div>
+      <div class="panel"><h2>Pools</h2><div class="tracks" id="tracks"></div></div>
+      <div class="panel"><h2>Temp agency</h2><div class="tracks" id="temps"></div></div>
+      <div class="panel"><h2>Penalties</h2><div class="tracks" id="pens"></div></div>
     </div>
   </div>
 
@@ -1475,14 +1522,45 @@ function tempPoints(){
 }
 function score(){
   const rows=[]; let total=0;
-  let pl=0; G.plans.forEach(p=>{ if(p.done) pl+=p.scored; });
+  rows.push(["Achievements",null,false,null,false,false,true]);
+  /* Broken down the same way the estates are: a total, then a line per part.
+     Each set of parts sums to the row above it, which the tests check. */
+  let pl=0; const perPlan=[];
+  G.plans.slice().sort((a,b)=>a.n-b.n).forEach(p=>{
+    const v=p.done?p.scored:0;
+    pl+=v;
+    perPlan.push(["Plan n\u00b0"+p.n+(p.done?"":" (open)"),v,true,null]);
+  });
   rows.push(["City plans",pl,false,"plan"]); total+=pl;
+  perPlan.forEach(r=>rows.push(r));
 
-  let pk=0; G.streets.forEach((st,i)=>{ pk+=CFG.streets[i].parks[st.parks]; });
+  let pk=0; const perPark=[];
+  G.streets.forEach((st,i)=>{
+    const ladder=CFG.streets[i].parks;
+    const v=ladder[Math.min(st.parks,ladder.length-1)];
+    pk+=v;
+    perPark.push(["Street "+(i+1)+" ("+st.parks+" of "+(ladder.length-1)+")",v,true,null]);
+  });
   rows.push(["Parks",pk,false,"landscaper"]); total+=pk;
+  perPark.forEach(r=>rows.push(r));
 
+  /* Unlike the parks, the pools share one ladder across all three streets: the
+     score depends on how many are built in total, not on where they are. So the
+     per-street lines below are a division of that one figure, walking the ladder
+     street by street. They add up to the same total, and the count in each label
+     is exact; only the split of the points is a convention. */
   const po=CFG.pool[Math.min(G.pools,CFG.pool.length-1)];
+  const perPool=[]; let walked=0;
+  G.streets.forEach((st,i)=>{
+    const have=st.slots.filter(x=>x.pool).length;
+    const can=st.slots.filter(x=>x.isPool).length;
+    const from=CFG.pool[Math.min(walked,CFG.pool.length-1)];
+    walked+=have;
+    const to=CFG.pool[Math.min(walked,CFG.pool.length-1)];
+    perPool.push(["Street "+(i+1)+" ("+have+" of "+can+")",to-from,true,null]);
+  });
   rows.push(["Pools",po,false,"pool"]); total+=po;
+  perPool.forEach(r=>rows.push(r));
 
   const tw=tempPoints();
   rows.push([MP.on&&!mpFinalsIn()?"Temp agency (ranked at the end)":"Temp agency",tw,false,"temp"]);
@@ -1500,8 +1578,10 @@ function score(){
   rows.push(["Completed housing estates",et,false,"agent"]); total+=et;
   perSize.forEach(r=>rows.push(r));          /* nested under their own total */
 
+  /* a heading and a gap here rather than a rule across the sheet */
+  rows.push(["Penalties",null,false,null,true,false,true]);
   const bi=-CFG.bis[Math.min(G.bisCount,CFG.bis.length-1)];
-  rows.push(["Bis",bi,false,"bis",true]);    /* first penalty: draws the divider */
+  rows.push(["Bis",bi,false,"bis"]);
   total+=bi;
 
   /* Kept in the list even when the variant is off, dimmed rather than removed,
@@ -1827,11 +1907,15 @@ function soloStats(){
   return {pool:pool, nums:nums, effs:effs, soloP:soloP, earliest:earliest, drawn:drawn};
 }
 function standardStats(){
+  /* The top card of each stack is known both ways round: its number is printed
+     large and its effect shows in the corners of the card in front of it. So
+     everything still unknown is what lies beneath, and that is counted here for
+     effects as well as numbers. */
   return G.stacks.map(st=>{
-    const below=st.slice(1);          /* the visible top card is already known */
-    const nums={};
-    below.forEach(c=>nums[c.n]=(nums[c.n]||0)+1);
-    return {pool:below.length, nums:nums};
+    const below=st.slice(1);
+    const nums={}, effs={};
+    below.forEach(c=>{ nums[c.n]=(nums[c.n]||0)+1; effs[c.e]=(effs[c.e]||0)+1; });
+    return {pool:below.length, nums:nums, effs:effs};
   });
 }
 
@@ -2171,6 +2255,19 @@ function hints(){
          ' cards beneath the top)</div>'+
          bars(s2.nums, s2.pool, (k,pool)=>k/pool)+'</div>';
     });
+    /* the same effect tally the solo variant shows, over what is left in the
+       three stacks together */
+    const pool=st.reduce((a,x)=>a+x.pool,0);
+    const tally={};
+    st.forEach(x=>Object.keys(x.effs).forEach(e=>{ tally[e]=(tally[e]||0)+x.effs[e]; }));
+    h+='<div class="hrow"><div class="hcap">Effect \u2014 how many are left across the '+
+       'three stacks, and what share of the '+pool+' cards still hidden</div>'+
+       '<div class="heff">'+Object.keys(EFFECTS).map(e=>{
+         const k=tally[e]||0;
+         return '<div class="heffcell">'+glyph(e,"")+
+           '<span class="en">'+EFFECTS[e].short+'<br>'+k+' left</span>'+
+           '<span class="ep">'+(pool&&k?pct(k/pool):"\u2013")+'</span></div>';
+       }).join("")+'</div></div>';
     h+='<div class="hfoot">The effect for next round is already visible in the corners of '+
        'each stack, so only the number is uncertain. Average round <b>'+fmt(avgRound())+'</b>.</div>';
     body.innerHTML=h;
@@ -2392,19 +2489,47 @@ function plans(){
 
 function tracks(){
   const h=$("tracks"); h.innerHTML="";
+  /* a label only where the panel heading does not already say it */
   const add=(l,html,off)=>{ const d=document.createElement("div");
     d.className="trow"+(off?" dim":"");
     if(off) d.title="Switched off in Game setup";
-    d.innerHTML='<span class="lbl">'+l+'</span>'+html; h.appendChild(d); };
-  add("Pools ("+G.pools+")", boxes(CFG.pool,G.pools));
-  add("Temp agency ("+G.temp+") \u2014 "+CFG.soloTempMin+"+ scores "+CFG.soloTempPts,
-    '<span class="bx'+(G.temp>=CFG.soloTempMin?' out':'')+'">'+G.temp+" / "+CFG.soloTempMin+'</span>');
-  add("Bis ("+G.bisCount+")", boxes(CFG.bis,G.bisCount));
-  add("Roundabouts "+(CFG.roundabouts
+    d.innerHTML=(l?'<span class="lbl">'+l+'</span>':'')+html; h.appendChild(d); };
+  add("", '<div class="bxgrid" style="grid-template-columns:repeat(2,var(--bxw))">'+
+    boxes(CFG.pool,G.pools)+'</div>');
+
+  /* One box per Temp Agency card in the deck, filled as they are hired: the
+     effect is the only way to hire one, so the deck is the ceiling. Taken from
+     the deck rather than fixed, so editing it in Game setup moves the track too.
+     Under the multiplayer rules the track is purely a count, ranked against the
+     other players at the end; the threshold is a solo-variant rule, so the mark
+     for it only appears when that rule is the one in force. */
+  const tmp=$("temps"); tmp.innerHTML="";
+  { const d=document.createElement("div"); d.className="trow";
+    const most=CFG.deck.temp.length, thresholdApplies=!MP.on;
+    /* Columns that divide the track evenly, so no row is left ragged. */
+    const cols=(most%3===0)?3:((most%2===0)?2:3);
+    /* No numerals: every other track in the app puts points in its boxes, and a
+       hired temp is worth nothing on its own. These are a tally. */
+    let g="";
+    for(let k=1;k<=most;k++)
+      g+='<span class="bx'+(k<=G.temp?" out":(k===G.temp+1?" live":""))+
+         ((thresholdApplies&&k===CFG.soloTempMin)?" goal":"")+'"></span>';
+    d.innerHTML='<div class="bxgrid" title="'+G.temp+" of "+most+' temps hired"'+
+      ' style="grid-template-columns:repeat('+cols+',var(--bxw))">'+g+'</div>';
+    tmp.appendChild(d); }
+
+  /* the three penalties keep their own box */
+  const pen=$("pens"); pen.innerHTML="";
+  const addPen=(l,html,off)=>{ const d=document.createElement("div");
+    d.className="trow"+(off?" dim":"");
+    if(off) d.title="Switched off in Game setup";
+    d.innerHTML='<span class="lbl">'+l+'</span>'+html; pen.appendChild(d); };
+  addPen("Bis ("+G.bisCount+")", boxes(CFG.bis,G.bisCount));
+  addPen("Roundabouts "+(CFG.roundabouts
         ? "("+G.rounds+" of "+(CFG.roundaboutValues.length-1)+")"
         : "\u2014 off"),
       boxes(CFG.roundaboutValues,G.rounds), !CFG.roundabouts);
-  add("Permit refusal ("+G.refusals+" of 3)", boxes(CFG.refusal,G.refusals));
+  addPen("Permit refusal ("+G.refusals+" of 3)", boxes(CFG.refusal,G.refusals));
 }
 
 /* icon, section, points \u2014 shared so the side panel and the final scoresheet
@@ -2412,10 +2537,14 @@ function tracks(){
 function scoreRows(s){
   let h="";
   s.rows.forEach(r=>{
+    if(r[6]){                                 /* a heading, spanning the sheet */
+      h+='<tr class="head'+(r[4]?" gap":"")+'"><td colspan="3">'+r[0]+'</td></tr>';
+      return;
+    }
     const cls=[];
     if(r[1]<0) cls.push("neg");
-    if(r[4]) cls.push("sep");
     if(r[5]) cls.push("dim");
+    if(r[2]) cls.push("subrow");
     h+='<tr'+(cls.length?' class="'+cls.join(" ")+'"':'')+'>'+
        '<td class="ic">'+(r[3]?glyph(r[3],"si"):'')+'</td>'+
        '<td'+(r[2]?' class="sub"':'')+'>'+r[0]+'</td>'+

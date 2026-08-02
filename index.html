@@ -53,14 +53,21 @@
      discard showing its effect and a stack showing the next number */
   .hand{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
   @media (max-width:640px){.hand{grid-template-columns:1fr;gap:10px}}
+  /* One height for every state. Solo shows a large face and two buttons, the
+     standard turn a smaller face plus a corner note and one button, and before
+     the deal there are no buttons at all — left to itself the box swung by 41px
+     between them and the row jumped as the sheet started or the mode changed.
+     min-height rather than height so nothing can ever be clipped, with a few
+     pixels over the tallest state: line heights vary a little between the theme
+     fonts, and a box that grew to fit would be the one box out of step. */
   .combo{border:1px solid var(--rule-soft);background:var(--paper-2);padding:9px 9px 0;
-    display:flex;flex-direction:column}
+    display:flex;flex-direction:column;min-height:190px}
   /* selection must not change the box geometry, or the card shifts by a pixel */
   .combo.chosen{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
   .combo.dim{opacity:.32}
   /* a number with nowhere legal left to go */
   .combo.numdead .bignum{color:var(--stamp);opacity:.6;text-decoration:line-through}
-  .combo.numdead .face.big,.combo.numdead .face.stack{border-color:var(--stamp);border-style:dashed}
+  .combo.numdead .face{border-color:var(--stamp);border-style:dashed}
   .combo.numdead .legend span{color:var(--stamp)}
   .combo.dead{opacity:.62}
   .combo-head{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;
@@ -74,16 +81,13 @@
     4px 4px 0 var(--card),4px 4px 0 1px var(--rule)}
   /* a discarded card lies slightly askew */
   .face.discard{transform:rotate(-2.5deg);box-shadow:1px 2px 0 var(--drop)}
-  .face.big{width:86px;height:118px}
   .bignum{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1}
-  .face.big .bignum{font-size:40px}
   .face .corner{position:absolute;width:12px;height:12px}
   .face .corner.tl{top:3px;left:3px}
   .face .corner.br{bottom:3px;right:3px;transform:rotate(180deg)}
   .face .gl{width:30px;height:30px}
   .face .cap2{font-family:var(--mono);font-size:7.5px;letter-spacing:.05em;
     text-transform:uppercase;text-align:center;line-height:1.2;margin-top:5px;padding:0 3px}
-  .face.big .cap2{font-size:8px;margin-top:7px}
   .link{font-family:var(--mono);font-size:14px;color:var(--ink-soft)}
   .legend{display:flex;align-items:flex-start;justify-content:center;gap:7px;margin-top:6px}
   .legend span{font-family:var(--mono);font-size:7px;letter-spacing:.07em;text-transform:uppercase;
@@ -98,7 +102,9 @@
   .picks{display:flex;margin:0 -9px;border-top:1px dashed var(--rule)}
   .picks button{flex:1;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
     text-transform:uppercase;background:var(--card);color:var(--ink);border:0;
-    padding:8px 2px;cursor:pointer}
+    padding:8px 2px;cursor:pointer;
+    /* a wrapped label would grow one box and undo the fixed height */
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .picks button+button{border-left:1px dashed var(--rule)}
   .picks button:hover:not(:disabled){background:var(--ink);color:var(--card)}
   .picks button:disabled{opacity:.3;cursor:default}
@@ -943,33 +949,47 @@ const BASE = {
 /* Basic City Plans are all housing-estate plans (p8). The rulebook does not
    print the 18 combinations, so these twelve are INFERRED, using point pairs
    read off the card photographs (n1 ~ 8/4, n2 ~ 9/5-11/6, n3 ~ 13/7). */
+/* The eighteen standard City Plans, requirements and both values taken from the
+   printed cards. These were guesses until now: only one of the twelve I had
+   invented turned out to be a real plan. */
 const BASIC_PLANS = [
-  {n:1, hi:8,  lo:4, text:"Two complete estates of size 4",            req:[4,4]},
-  {n:1, hi:8,  lo:4, text:"Two complete estates of size 3",            req:[3,3]},
-  {n:1, hi:7,  lo:4, text:"Three complete estates of size 2",          req:[2,2,2]},
-  {n:1, hi:8,  lo:4, text:"Two estates of size 1 and one of size 5",   req:[1,1,5]},
-  {n:2, hi:9,  lo:5, text:"Three estates of size 1 and one of size 4", req:[1,1,1,4]},
-  {n:2, hi:10, lo:5, text:"One estate of size 2 and one of size 5",    req:[2,5]},
-  {n:2, hi:11, lo:6, text:"Two complete estates of size 5",            req:[5,5]},
-  {n:2, hi:11, lo:6, text:"One estate of size 2 and one of size 6",    req:[2,6]},
-  {n:3, hi:13, lo:7, text:"One estate each of size 2, 3 and 4",        req:[2,3,4]},
-  {n:3, hi:13, lo:7, text:"One estate of size 3 and one of size 6",    req:[3,6]},
-  {n:3, hi:13, lo:7, text:"Two complete estates of size 6",            req:[6,6]},
-  {n:3, hi:12, lo:6, text:"One estate each of size 1, 3 and 5",        req:[1,3,5]}
+  {n:1, hi:8,  lo:4, text:"Six complete estates of size 1",             req:[1,1,1,1,1,1]},
+  {n:1, hi:8,  lo:4, text:"Four complete estates of size 2",            req:[2,2,2,2]},
+  {n:1, hi:8,  lo:4, text:"Three complete estates of size 3",           req:[3,3,3]},
+  {n:1, hi:6,  lo:3, text:"Two complete estates of size 4",             req:[4,4]},
+  {n:1, hi:8,  lo:4, text:"Two complete estates of size 5",             req:[5,5]},
+  {n:1, hi:10, lo:6, text:"Two complete estates of size 6",             req:[6,6]},
+
+  {n:2, hi:11, lo:6, text:"Three estates of size 1 and one of size 6",  req:[1,1,1,6]},
+  {n:2, hi:10, lo:6, text:"Two estates of size 2 and one of size 5",    req:[2,2,5]},
+  {n:2, hi:12, lo:7, text:"Two estates of size 3 and one of size 4",    req:[3,3,4]},
+  {n:2, hi:8,  lo:4, text:"One estate of size 3 and one of size 6",     req:[3,6]},
+  {n:2, hi:9,  lo:5, text:"One estate of size 4 and one of size 5",     req:[4,5]},
+  {n:2, hi:9,  lo:5, text:"Three estates of size 1 and one of size 4",  req:[1,1,1,4]},
+
+  {n:3, hi:12, lo:7, text:"One estate each of size 1, 2 and 6",         req:[1,2,6]},
+  {n:3, hi:13, lo:7, text:"One estate each of size 1, 4 and 5",         req:[1,4,5]},
+  {n:3, hi:7,  lo:3, text:"One estate of size 3 and one of size 4",     req:[3,4]},
+  {n:3, hi:7,  lo:3, text:"One estate of size 2 and one of size 5",     req:[2,5]},
+  {n:3, hi:11, lo:6, text:"One estate of size 1, two of size 2 and one of size 3", req:[1,2,2,3]},
+  {n:3, hi:13, lo:7, text:"One estate each of size 2, 3 and 5",         req:[2,3,5]}
 ];
 
-/* Advanced City Plans, wording and values taken verbatim from p10. The one
-   requiring a roundabout is omitted because roundabouts are not implemented. */
+/* The ten advanced City Plans. Corrected from the cards: there is no plan for
+   filling the middle street, the bottom-street plans score more than the middle
+   ones, and "any two streets" is two separate plans, one for parks and one for
+   pools, rather than a single either-or. */
 const ADV_PLANS = [
-  {n:1, hi:6, lo:3, text:"All houses built on Street 1",                       sp:"fill", street:0},
-  {n:1, hi:6, lo:3, text:"All houses built on Street 2",                       sp:"fill", street:1},
-  {n:1, hi:6, lo:3, text:"All houses built on Street 3",                       sp:"fill", street:2},
+  {n:1, hi:6, lo:3, text:"All houses built on the top street",                 sp:"fill", street:0},
+  {n:1, hi:8, lo:4, text:"All houses built on the bottom street",              sp:"fill", street:2},
   {n:1, hi:7, lo:4, text:"The first and last house of each street built",      sp:"ends"},
   {n:1, hi:6, lo:3, text:"Seven temps hired",                                  sp:"temps"},
   {n:1, hi:8, lo:3, text:"Five bis houses built on the same street",           sp:"bis5"},
-  {n:2, hi:8, lo:3, text:"All parks and all pools built on Street 2",          sp:"parkpool", street:1},
-  {n:2, hi:8, lo:3, text:"All parks and all pools built on Street 3",          sp:"parkpool", street:2},
-  {n:2, hi:7, lo:4, text:"Two streets with all parks or all pools built",      sp:"twostreets"},
+
+  {n:2, hi:7, lo:4, text:"All pools built on any two streets",                 sp:"twopools"},
+  {n:2, hi:7, lo:4, text:"All parks built on any two streets",                 sp:"twoparks"},
+  {n:2, hi:8, lo:3, text:"All parks and all pools built on the middle street", sp:"parkpool", street:1},
+  {n:2, hi:10,lo:5, text:"All parks and all pools built on the bottom street", sp:"parkpool", street:2},
   {n:2, hi:10,lo:5, text:"All parks, all pools and a roundabout in one street", sp:"parkpoolround"}
 ];
 
@@ -1065,12 +1085,15 @@ function togglePlan(id){
 }
 
 const SPECIAL = {
-  fill:      (p)=> G.streets[p.street].slots.every(s=>s.v!==null),
+  /* a roundabout box can never be numbered, and the end-of-game condition already
+     counts one as done, so filling a street has to read it the same way */
+  fill:      (p)=> G.streets[p.street].slots.every(s=>s.v!==null||s.round),
   ends:      ()=> G.streets.every(st=>st.slots[0].v!==null && st.slots[st.slots.length-1].v!==null),
   temps:     ()=> G.temp>=7,
   bis5:      ()=> G.streets.some(st=>st.slots.filter(s=>s.bis).length>=5),
   parkpool:  (p)=> allParks(p.street) && allPools(p.street),
-  twostreets:()=> [0,1,2].filter(i=>allParks(i)||allPools(i)).length>=2,
+  twopools:  ()=> [0,1,2].filter(i=>allPools(i)).length>=2,
+  twoparks:  ()=> [0,1,2].filter(i=>allParks(i)).length>=2,
   parkpoolround:()=> [0,1,2].some(i=>allParks(i)&&allPools(i)&&hasRoundabout(i))
 };
 function hasRoundabout(i){ return G.streets[i].slots.some(s=>s.round); }
@@ -1687,6 +1710,13 @@ async function load(){
             CFG.advanced=true;          /* a curated mix, or all of them on */
           }
         }
+        /* Plan ids are derived from the requirement itself, so a corrected plan
+           table can leave stored choices naming plans that no longer exist.
+           Drop them rather than carry them around for ever. */
+        const knownIds=BASIC_PLANS.concat(ADV_PLANS).map(q=>q.id);
+        Object.keys(CFG.planOff||{}).forEach(k=>{
+          if(knownIds.indexOf(k)<0) delete CFG.planOff[k];
+        });
         ensureCategories();
         CFG.city=String(CFG.city||"").trim().slice(0,CITY_MAX).trim();
       }
@@ -2105,7 +2135,7 @@ function pendingCards(h){
     const d=document.createElement("div");
     d.className="combo dim";
     d.innerHTML='<div class="combo-head">'+(CFG.mode==="solo"?"Card ":"Stack ")+(i+1)+'</div>'+
-      '<div class="combo-body"><div class="face'+(CFG.mode==="solo"?" big":" stack")+'">'+
+      '<div class="combo-body"><div class="face'+(CFG.mode==="solo"?"":" stack")+'">'+
         '<span class="bignum">?</span></div></div>'+
       '<div class="legend"><span'+(CFG.mode==="solo"?' class="solo"':'')+'>not dealt</span></div>'+
       (CFG.mode==="solo"?"":'<div class="cornernote">&nbsp;</div>');
@@ -2125,7 +2155,7 @@ function soloCards(h){
       (dead?" numdead":"");
     const shownN=(numOn && sel.n!==null && busy)?sel.n:c.n;
     d.innerHTML='<div class="combo-head">Card '+(i+1)+'</div>'+
-      '<div class="combo-body"><div class="face big">'+
+      '<div class="combo-body"><div class="face">'+
         glyph(c.e,"corner tl")+
         '<span class="bignum">'+shownN+(shownN!==c.n?"*":"")+'</span>'+
         '<span class="cap2">'+EFFECTS[c.e].short+'</span>'+

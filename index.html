@@ -751,8 +751,13 @@ const EFFECTS = {
 /* Original glyphs for the six effects — plain geometry, not the published art. */
 const GCOLOR = { surveyor:"var(--ink)", agent:"var(--plum)", landscaper:"var(--park)",
                  pool:"var(--pool)", temp:"var(--temp)", bis:"var(--stamp)",
-                 plan:"var(--flag)", roundabout:"var(--ink)", refusal:"var(--stamp)" };
+                 plan:"var(--flag)", roundabout:"var(--ink)", refusal:"var(--stamp)",
+                 /* the two headings of the scoresheet */
+                 achievements:"var(--flag)", penalties:"var(--stamp)" };
 const BASE_GPATH = {
+  achievements:'<path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8'+
+    'L3.6 9.7l5.8-.8z"/>',
+  penalties:'<path d="M12 4.4L21.2 19.8H2.8z"/><path d="M12 10.2v4.2M12 17.2h.01"/>',
   surveyor:  '<path d="M3 21V10l2-2 2 2v11M10 21V10l2-2 2 2v11M17 21V10l2-2 2 2v11"/><path d="M2 13.5h20M2 17.5h20"/>',
   agent:     '<path d="M4 14.5l8-7 8 7"/><path d="M4 20l8-7 8 7"/>',
   landscaper:'<circle cx="12" cy="8.5" r="4.5"/><circle cx="6.6" cy="12.4" r="3"/><circle cx="17.4" cy="12.4" r="3"/><path d="M12 14v7"/>',
@@ -855,6 +860,9 @@ const THEMES = {
           'fill="var(--park)" opacity=".13"/>'+
       '</svg>',
     glyphs: {
+      achievements:'<path d="M7.2 19.4c-3.2-4.2-2.8-9.4 1.4-12.8M16.8 19.4c3.2-4.2 2.8-9.4-1.4-12.8'+
+        'M9.8 20.6h4.4"/>',
+      penalties:'<path d="M12 4.2v12.6"/><path d="M6.6 11.4L12 16.8l5.4-5.4"/>',
       /* a rustic crossed-rail fence rather than pickets */
       surveyor:  '<path d="M4 20V7M20 20V7"/><path d="M2 10.5h20M2 16.5h20"/><path d="M4 10.5l16 6M20 10.5l-16 6"/>',
       /* growth, as a sprouting shoot */
@@ -913,6 +921,9 @@ const THEMES = {
         '<rect width="100%" height="100%" fill="url(#pawpat)"/>'+
       '</svg>',
     glyphs: {
+      achievements:'<circle cx="12" cy="11.6" r="6.2"/><path d="M12 5.4V3.2M10.4 15.4h3.2"/>',
+      penalties:'<path d="M7.4 5.8c1.6 4 2 8.4 1.2 12.6M12 5c1.6 4.4 2 9.2 1.2 13.8'+
+        'M16.6 5.8c1.6 4 2 8.4 1.2 12.6"/>',
       /* a fence with a tail flicking over it */
       surveyor:  '<path d="M4 21v-9.5a2 2 0 014 0V21M12.5 21v-9.5a2 2 0 014 0V21"/>'+
                  '<path d="M2.5 14.5h16M2.5 18h16"/>'+
@@ -973,6 +984,9 @@ const THEMES = {
          ".mast h1{text-shadow:0 0 18px rgba(79,209,224,.34)}"+
          ".face.stack{box-shadow:2px 2px 0 var(--card),2px 2px 0 1px var(--rule),4px 4px 0 var(--card),4px 4px 0 1px var(--rule)}",
     glyphs: {
+      achievements:'<circle cx="12" cy="9.6" r="5.2"/><path d="M8.4 13.8l-2 6.6 5.6-3 5.6 3-2-6.6"/>',
+      penalties:'<circle cx="17.2" cy="6.8" r="2.2"/><path d="M15.4 8.6L7.2 16.8"/>'+
+        '<path d="M7.2 16.8h4.6M7.2 16.8v-4.6"/>',
       surveyor:  '<path d="M5 21V6M19 21V6"/><path d="M5 10h3M11 10h2M16 10h3M5 15h2M10 15h3M17 15h2"/>',
       agent:     '<path d="M4 20c5-1.5 10-7 12-16"/><path d="M11 3.6l5-.6-1.2 5"/>'+
                  '<path d="M6.5 9.5l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z"/>',
@@ -1015,6 +1029,8 @@ const THEMES = {
          ".mast h1{text-transform:none;letter-spacing:.04em;font-size:26px}"+
          ".combo-head,.legend span,.cornernote{text-transform:none;font-variant:small-caps;letter-spacing:.05em}",
     glyphs: {
+      achievements:'<path d="M12 4.4v15.2M5.4 8.2l13.2 7.6M18.6 8.2L5.4 15.8"/>',
+      penalties:'<circle cx="11.2" cy="13.6" r="5"/><circle cx="17.8" cy="7.4" r="1.7"/>',
       surveyor:  '<path d="M4.5 21V9l2-3.6L8.5 9v12M15.5 21V9l2-3.6L19.5 9v12"/>'+
                  '<path d="M2.5 12.5h19M2.5 17h19"/>',
       agent:     '<path d="M12 21c-4.6-1.8-6.6-5-6.6-9.4V5.4L12 3l6.6 2.4v6.2c0 4.4-2 7.6-6.6 9.4z"/>'+
@@ -1060,6 +1076,9 @@ const THEMES = {
          ".bignum{letter-spacing:-.03em}"+
          ".modal{box-shadow:6px 6px 0 rgba(255,78,139,.28)}",
     glyphs: {
+      achievements:'<path d="M12 3.2l2.3 6.3 6.6.2-5.3 4 1.8 6.5L12 16.5l-5.4 3.7'+
+        ' 1.8-6.5-5.3-4 6.6-.2z"/>',
+      penalties:'<path d="M5.6 8.2L12 14.6l6.4-6.4M5.6 13.8L12 20.2l6.4-6.4"/>',
       surveyor:  '<path d="M4 21V7M12 21V7M20 21V7"/><path d="M2 11.5h20M2 16.5h20"/>',
       agent:     '<path d="M4 20h4v-6H4zM10 20h4V9h-4zM16 20h4V4h-4z"/>',
       landscaper:'<path d="M12 21v-5"/><path d="M12 3l6.4 7.4H5.6z"/><path d="M12 8.6l4.6 7.4H7.4z"/>',
@@ -1672,7 +1691,7 @@ function tempPoints(){
 }
 function score(){
   const rows=[]; let total=0;
-  rows.push(["Achievements",null,false,null,false,false,true]);
+  rows.push(["Achievements",null,false,"achievements",false,false,true]);
   /* Broken down the same way the estates are: a total, then a line per part.
      Each set of parts sums to the row above it, which the tests check. */
   let pl=0; const perPlan=[];
@@ -1728,7 +1747,7 @@ function score(){
   perSize.forEach(r=>rows.push(r));          /* nested under their own total */
 
   /* a heading and a gap here rather than a rule across the sheet */
-  rows.push(["Penalties",null,false,null,true,false,true]);
+  rows.push(["Penalties",null,false,"penalties",true,false,true]);
   const bi=-CFG.bis[Math.min(G.bisCount,CFG.bis.length-1)];
   rows.push(["Bis",bi,false,"bis"]);
   total+=bi;
@@ -3090,8 +3109,10 @@ function tracks(){
 function scoreRows(s){
   let h="";
   s.rows.forEach(r=>{
-    if(r[6]){                                 /* a heading, spanning the sheet */
-      h+='<tr class="head'+(r[4]?" gap":"")+'"><td colspan="3">'+r[0]+'</td></tr>';
+    if(r[6]){                                 /* a heading, with its own icon */
+      h+='<tr class="head'+(r[4]?" gap":"")+'">'+
+         '<td class="ic">'+(r[3]?glyph(r[3],"si"):'')+'</td>'+
+         '<td colspan="2">'+r[0]+'</td></tr>';
       return;
     }
     const cls=[];

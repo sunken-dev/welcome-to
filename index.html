@@ -94,7 +94,9 @@
   .readout .tv{display:inline-block;min-width:5ch;text-align:right}
   .readout .v.bad{color:var(--stamp)}
   /* stretch, not start, so the score box runs the full height of the board */
-  .cols{display:grid;grid-template-columns:minmax(0,1fr) 286px;gap:var(--gap);
+  /* The score sheet gives up a little width so the card stacks and the streets
+     have room for the action tiles beside the combinations. */
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 268px;gap:var(--gap);
     align-items:stretch}
   /* each cell stacks its own panels with the same gap; the pair keeps its grid */
   .cols>div:not(.row2){display:flex;flex-direction:column;gap:var(--gap)}
@@ -129,8 +131,30 @@
 
   /* construction cards: on the table these are two separate objects, a
      discard showing its effect and a stack showing the next number */
-  .hand{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  /* Three combinations and, beside them, the two ways to spend a round that are
+     not a card. The combinations give up a little width for it. */
+  .hand{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 150px;gap:14px}
+  @media (max-width:900px){.hand{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
   @media (max-width:640px){.hand{grid-template-columns:1fr;gap:10px}}
+  .acts{display:grid;grid-auto-rows:1fr;gap:14px;min-width:0}
+  /* built like a combination, so the row reads as four things you can do */
+  .act{position:relative;border:1px solid var(--rule-soft);background:var(--paper-2);
+    padding:9px 9px 0;display:flex;flex-direction:column;min-width:0}
+  .act-h{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-soft);display:flex;align-items:center;gap:5px;flex:0 0 auto}
+  .act-h svg{width:15px;height:15px;flex:0 0 auto}
+  .act-p{font-size:11px;line-height:1.35;margin-top:6px;flex:1 1 auto}
+  .act-foot{margin:auto -9px 0;display:flex;border-top:1px dashed var(--rule)}
+  /* the one that commits reads as the primary action, as it does on a combination */
+  .act-b.go{background:var(--ink);color:var(--card)}
+  .act-b.go:hover:not(:disabled){background:var(--ink-soft)}
+  /* nothing to be done with it as things stand */
+  .act.idle{opacity:.5}
+  /* another action is under way, so this one takes no clicks */
+  .act.off{opacity:.4;pointer-events:none}
+  /* the one under way is picked out, as a combination is by its overlay */
+  .act.busy{border:2px solid var(--ink);background:var(--card);padding:8px 8px 0}
+  .act.busy .act-foot{margin:auto -8px 0}
   /* One height for every state. Solo shows a large face and two buttons, the
      standard turn a smaller face plus a corner note and one button, and before
      the deal there are no buttons at all — left to itself the box swung by 41px
@@ -214,14 +238,16 @@
      the gap itself rather than the gap plus the slack. */
   .pgap{flex:0 0 auto;height:10px}
   .picks{display:flex;margin:0 -9px;border-top:1px dashed var(--rule)}
-  .picks button{flex:1;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+  /* The button that starts a turn and the two that spend one without a card are the
+     same control, so they share one rule rather than two that must be kept in step. */
+  .picks button,.act-b{flex:1;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
     text-transform:uppercase;background:var(--card);color:var(--ink);border:0;
     padding:8px 2px;cursor:pointer;
     /* a wrapped label would grow one box and undo the fixed height */
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .picks button+button{border-left:1px dashed var(--rule)}
-  .picks button:hover:not(:disabled){background:var(--ink);color:var(--card)}
-  .picks button:disabled{opacity:.3;cursor:default}
+  .picks button+button,.act-b+.act-b{border-left:1px dashed var(--rule)}
+  .picks button:hover:not(:disabled),.act-b:hover:not(:disabled){background:var(--ink);color:var(--card)}
+  .picks button:disabled,.act-b:disabled{opacity:.3;cursor:default}
   .picks button.on{background:var(--ink);color:var(--card)}
   .picks button.oneff.on{background:var(--plum)}
 
@@ -392,6 +418,29 @@
   .modal.mid{max-width:750px}
   .modal h3{font-family:var(--mono);font-size:13px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 4px}
   .modal .lede{color:var(--ink-soft);font-size:12.5px;margin:0 0 14px}
+  /* the rules: sections, an icon beside each heading, and pairs of icon and text */
+  .rsec{margin:0 0 16px;padding-top:12px;border-top:1px solid var(--rule-soft)}
+  .rsec h4{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-soft);margin:0 0 7px;display:flex;align-items:center;gap:7px}
+  .rsec h4 svg{width:16px;height:16px;flex:0 0 auto}
+  .rsec p{margin:0 0 7px;font-size:12.5px;line-height:1.5}
+  .rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:8px}
+  .rrow{display:flex;gap:8px;align-items:flex-start;background:var(--paper-2);
+    border:1px solid var(--rule-soft);border-radius:calc(var(--rs)*.6);padding:7px 9px}
+  .rrow svg{width:20px;height:20px;flex:0 0 auto;margin-top:1px}
+  .rrow b{display:block;font-size:12px}
+  .rrow span{display:block;font-size:11.5px;color:var(--ink-soft);line-height:1.35}
+  .rlist{margin:0;padding-left:18px;font-size:12.5px;line-height:1.6}
+  /* the street, drawn the way the sheet draws one */
+  .rfig{width:100%;max-width:330px;height:auto;display:block;margin:4px 0 9px}
+  .rfig .rb{fill:var(--card);stroke:var(--rule);stroke-width:1}
+  /* not ".gap": that is the fence space between houses, and it sets a width, which
+     in SVG is a geometry property and would override the attribute */
+  .rfig .rb.rgap{fill:var(--paper-2);stroke:var(--park);stroke-dasharray:3 2}
+  .rfig .rt{font-family:var(--mono);font-size:15px;fill:var(--ink);text-anchor:middle}
+  .rfig .rt.rhi{fill:var(--park)}
+  .rfig .rc{font-family:var(--mono);font-size:8.5px;fill:var(--park);text-anchor:middle;
+    letter-spacing:.1em;text-transform:uppercase}
   .modal .btn{color:var(--ink);border-color:var(--ink)}
   .modal .btn:hover{background:var(--ink);color:var(--card)}
   .modal .btn.on{background:var(--ink);color:var(--card)}
@@ -426,7 +475,7 @@
   .panel,.modal,.combo{border-radius:var(--r)}
   .face,.lot{border-radius:var(--rs)}
   .bx,.col .cap{border-radius:calc(var(--rs)*.45)}
-  .btn,.chip,.picks button,.vbtn{border-radius:calc(var(--rs)*.7)}
+  .btn,.chip,.picks button,.act-b,.vbtn{border-radius:calc(var(--rs)*.7)}
   .status{border-radius:var(--r) var(--r) 0 0}
   #mark{display:inline-block;vertical-align:-5px;margin-right:8px}
   #mark svg{width:25px;height:25px}
@@ -539,7 +588,9 @@
   .brief tr:last-child td{border-bottom:0}
   .brief td:first-child{font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;
     text-transform:uppercase;color:var(--ink-soft);width:92px;padding-top:6px}
-  .brief.plans td:first-child{width:46px}
+  /* wide enough for the number, a star and the roundabout mark on one line: at
+     46px the mark wrapped and pushed the row open */
+  .brief.plans td:first-child{width:64px;white-space:nowrap}
   .brief.plans td:last-child{text-align:right;font-family:var(--mono);font-weight:700;
     white-space:nowrap;width:1px;padding-left:12px}
   .modal .btn.primary{background:var(--ink);color:var(--card)}
@@ -733,8 +784,8 @@
   <div class="status">
     <div class="msg" id="msg">Choose a card for its number.</div>
     <div class="chips" id="chips"></div>
-    <button class="btn stampish" id="btn-refuse">Permit refusal</button>
     <button class="btn" id="btn-undo">Undo round</button>
+    <button class="btn" id="btn-rules">Rules</button>
     <button class="btn" id="btn-hints">Hints: <span class="tgl">off</span></button>
     <button class="btn" id="btn-mp">Multiplayer</button>
     <button class="btn" id="btn-theme">Theme</button>
@@ -2004,6 +2055,13 @@ function doRoundabout(si,i){
   render();
 }
 
+/* Asking for a refusal opens the same kind of confirmation the combinations use,
+   on the refusal tile, rather than acting on the press. */
+function askRefusal(){
+  if(locked()||mustBuild()||sel) return;
+  sel={phase:"refusing"};
+  render();
+}
 function refuse(){
   if(locked()||mustBuild()) return;
   keep();
@@ -2760,8 +2818,9 @@ function hints(){
    action, holds whatever choice it needs, and ends in a single confirmation. The
    board stays live underneath: effects that need a target are picked there and
    reported back here, so the shape of a turn never changes from card to card. */
-function overlayFor(i){
-  if(!sel || sel.phase==="roundabout" || sel.numCard!==i) return null;
+/* The card that gives the effect carries the effect's own choices, so a parameter
+   is set on the card it belongs to rather than on the one holding the number. */
+function effectOverlay(i){
   const o=document.createElement("div"); o.className="ovl";
   const line=(cls,html)=>{ const d=document.createElement("div"); d.className=cls;
     d.innerHTML=html; o.appendChild(d); return d; };
@@ -2770,24 +2829,10 @@ function overlayFor(i){
   const btn=(par,label,fn,kind)=>{ const b=document.createElement("button");
     b.className="ovl-b"+(kind?" "+kind:""); b.textContent=label;
     b.onclick=fn; par.appendChild(b); return b; };
-
-  const eff = sel.eff ? EFFECTS[sel.eff] : null;
-  /* while the effect is still being chosen there is nothing to name yet, and
-     "No effect" would read as though one had already been declined */
-  line("ovl-h", sel.phase==="choose" ? "Choose an effect"
-        : (eff ? eff.short : "No effect"));
+  const eff=EFFECTS[cardAt(i).e];
+  line("ovl-h", eff.short);
 
   switch(sel.phase){
-    case "choose": {                     /* solo: the effect comes from another card */
-      line("ovl-p","Number <b>"+cardAt(sel.numCard).n+"</b>. Take another card\u2019s "+
-        "effect, or go without one.");
-      const r=opts();
-      (G.hand||[]).forEach((c,j)=>{
-        if(!c||j===sel.numCard) return;
-        btn(r,EFFECTS[c.e].short,()=>chooseEffect(j));
-      });
-      btn(r,"No effect",takeNoEffect,"ghost");
-      break; }
     case "temp": {
       const base=cardAt(sel.numCard).n;
       line("ovl-p","Write <b>"+base+"</b> changed by 1 or 2. Using it crosses a temp box.");
@@ -2798,8 +2843,7 @@ function overlayFor(i){
       btn(r,"Leave it unused",declineTemp,"ghost");
       break; }
     case "place":
-      line("ovl-p","Write <b>"+sel.n+"</b> in an empty house on your sheet."+
-        (sel.eff==="pool"?" A blue house has a planned pool.":""));
+      line("ovl-p","Waiting on the house. "+eff.hint+".");
       break;
     case "pool": {
       const has=G.streets[sel.street].slots[sel.idx].isPool;
@@ -2830,6 +2874,121 @@ function overlayFor(i){
       btn(opts(),"Leave it unused",skipEffect,"ghost");
       break;
     case "ready":
+      line("ovl-p", (sel.used===false)
+        ? "Not used."
+        : "Applied"+(sel.at?" \u2014 "+sel.at:"")+".");
+      break;
+    default:
+      line("ovl-p", eff.hint+".");
+  }
+
+  /* A way out of the turn from here too, since this card is where you may be
+     looking. Confirming belongs to the number card, which holds the placement. */
+  const foot=document.createElement("div"); foot.className="ovl-foot";
+  const back=document.createElement("button");
+  back.className="ovl-b ghost"; back.textContent="Take another card";
+  back.onclick=backOutTurn; foot.appendChild(back);
+  o.appendChild(foot);
+  return o;
+}
+
+function overlayFor(i){
+  if(!sel || sel.phase==="roundabout") return null;
+  /* solo: the effect card hosts the effect's own choices */
+  if(CFG.mode==="solo" && sel.effCard===i && sel.effCard!==sel.numCard)
+    return effectOverlay(i);
+  if(sel.numCard!==i) return null;
+  const o=document.createElement("div"); o.className="ovl";
+  const line=(cls,html)=>{ const d=document.createElement("div"); d.className=cls;
+    d.innerHTML=html; o.appendChild(d); return d; };
+  const opts=()=>{ const d=document.createElement("div"); d.className="ovl-opts";
+    o.appendChild(d); return d; };
+  const btn=(par,label,fn,kind)=>{ const b=document.createElement("button");
+    b.className="ovl-b"+(kind?" "+kind:""); b.textContent=label;
+    b.onclick=fn; par.appendChild(b); return b; };
+
+  const eff = sel.eff ? EFFECTS[sel.eff] : null;
+  /* In the solo variant the effect is named on its own card, so this one names the
+     number instead. While the effect is still being chosen there is nothing to name
+     yet, and "No effect" would read as though one had already been declined. */
+  const splitHead = CFG.mode==="solo" && sel.effCard!==null &&
+                    sel.effCard!==sel.numCard;
+  line("ovl-h", sel.phase==="choose" ? "Choose an effect"
+        : splitHead ? ("Number "+(sel.n!==null?sel.n:cardAt(sel.numCard).n))
+        : (eff ? eff.short : "No effect"));
+
+  /* In the solo variant the effect comes from a different card, so its own choices
+     are made there; the number card keeps the placement and the confirmation. */
+  const split = CFG.mode==="solo" && sel.effCard!==null && sel.effCard!==sel.numCard;
+  const effName = eff ? eff.short : "the effect";
+
+  switch(sel.phase){
+    case "choose": {                     /* solo: the effect comes from another card */
+      line("ovl-p","Number <b>"+cardAt(sel.numCard).n+"</b>. Take the effect from one "+
+        "of the other two cards, or go without one.");
+      const r=opts();
+      btn(r,"No effect",takeNoEffect,"ghost");
+      break; }
+    case "temp": if(split){
+      line("ovl-p","Set the shift on the <b>"+effName+"</b> card.");
+      break;
+    } else {
+      const base=cardAt(sel.numCard).n;
+      line("ovl-p","Write <b>"+base+"</b> changed by 1 or 2. Using it crosses a temp box.");
+      const r=opts();
+      [-2,-1,1,2].forEach(d=>{ const n=base+d;
+        if(n<CFG.numMin||n>CFG.numMax) return;
+        btn(r,(d>0?"+":"")+d+" \u2192 "+n,()=>setTemp(d)); });
+      btn(r,"Leave it unused",declineTemp,"ghost");
+      break; }
+    case "place":
+      line("ovl-p","Write <b>"+sel.n+"</b> in an empty house on your sheet."+
+        (sel.eff==="pool"?" A blue house has a planned pool.":""));
+      break;
+    case "pool": if(split){
+      line("ovl-p","House <b>"+sel.n+"</b> written. Decide the pool on the <b>"+effName+"</b> card.");
+      break;
+    } else {
+      const has=G.streets[sel.street].slots[sel.idx].isPool;
+      line("ovl-p",has?"That house has a planned pool. Build it?"
+        :"That house has no planned pool, so none can be built.");
+      const r=opts();
+      if(has) btn(r,"Build the pool",()=>doPool(true));
+      btn(r,has?"Leave it":"Carry on",()=>doPool(false),"ghost");
+      break; }
+    case "park": if(split){
+      line("ovl-p","House <b>"+sel.n+"</b> written. Cross the park on the <b>"+effName+"</b> card.");
+      break;
+    } else {
+      const full=allParks(sel.street);
+      line("ovl-p",full?"Every park on Street "+(sel.street+1)+" is crossed already."
+        :"Cross a park on Street "+(sel.street+1)+".");
+      const r=opts();
+      if(!full) btn(r,"Cross a park",()=>doPark(true));
+      btn(r,full?"Carry on":"Leave it",()=>doPark(false),"ghost");
+      break; }
+    case "fence": if(split){
+      line("ovl-p","House <b>"+sel.n+"</b> written. Draw the fence from the <b>"+effName+"</b> card.");
+      break;
+    }
+      line("ovl-p","Draw a fence on any dotted space, on any street.");
+      btn(opts(),"Leave it unused",skipEffect,"ghost");
+      break;
+    case "agent": if(split){
+      line("ovl-p","House <b>"+sel.n+"</b> written. Choose the column from the <b>"+effName+"</b> card.");
+      break;
+    }
+      line("ovl-p","Choose an estate size column in Housing estate values.");
+      btn(opts(),"Leave it unused",skipEffect,"ghost");
+      break;
+    case "bis": if(split){
+      line("ovl-p","House <b>"+sel.n+"</b> written. Place the bis from the <b>"+effName+"</b> card.");
+      break;
+    }
+      line("ovl-p","Copy a house number into an empty house beside it.");
+      btn(opts(),"Leave it unused",skipEffect,"ghost");
+      break;
+    case "ready":
       line("ovl-p", (sel.used===false || !sel.eff)
         ? "House <b>"+sel.n+"</b> written. The effect goes unused."
         : "House <b>"+sel.n+"</b> written, effect applied"+
@@ -2850,11 +3009,83 @@ function overlayFor(i){
   return o;
 }
 
+/* The two ways to spend a round that are not a card: a permit refusal and a
+   roundabout. They sit beside the combinations rather than in the bar at the foot,
+   because they are alternatives to taking a card, and each carries its own
+   confirmation the same way a combination does. */
+function actionTiles(h){
+  const col=document.createElement("div"); col.className="acts";
+  col.appendChild(actTile("refusal"));
+  col.appendChild(actTile("roundabout"));
+  h.appendChild(col);
+}
+function actTile(kind){
+  const busy = !!(sel && sel.phase===(kind==="refusal"?"refusing":"roundabout"));
+  const other = !!(sel && !busy);
+  const can = kind==="refusal"
+    ? (!locked() && !mustBuild() && !sel)
+    : canRoundabout();
+  const d=document.createElement("div");
+  d.className="act"+(busy?" busy":"")+(other?" off":"")+((!can&&!busy)?" idle":"");
+
+  const why = kind==="refusal"
+    ? (!G.started ? "Once the sheet is under way"
+      : mustBuild() ? "Only when no number fits anywhere"
+      : "")
+    : (!CFG.roundabouts ? "Switched off in Game setup"
+      : !G.started ? "Once the sheet is under way"
+      : G.rounds>=CFG.roundaboutValues.length-1 ? "No roundabouts left"
+      : !roundaboutSpots().length ? "Nowhere to put one"
+      : "");
+  if(why) d.title=why;
+
+  const head=document.createElement("div"); head.className="act-h";
+  head.innerHTML=glyph(kind==="refusal"?"refusal":"roundabout","gi")+
+    '<span>'+(kind==="refusal"?"Permit refusal":"Roundabout")+'</span>';
+  d.appendChild(head);
+
+  const body=document.createElement("div"); body.className="act-p";
+  if(busy){
+    if(kind==="refusal"){
+      const last=CFG.refusal.length-1, nth=G.refusals+1;
+      const cost=CFG.refusal[Math.min(nth,last)]-CFG.refusal[Math.min(G.refusals,last)];
+      /* the ladder starts free, and the last one closes the sheet */
+      const what = nth>=last ? "which closes the sheet"
+        : cost===0 ? "which costs nothing"
+        : "costing <b>"+cost+"</b> point"+(cost===1?"":"s");
+      body.innerHTML="Nothing fits. This would be refusal <b>"+nth+"</b> of "+last+
+        ", "+what+".";
+    } else {
+      body.innerHTML="Fence on both sides and restart numbering.";
+    }
+  } else {
+    body.innerHTML = kind==="refusal"
+      ? "When no number fits, take a refusal instead."
+      : (why || "Turn an empty house into a roundabout.");
+  }
+  d.appendChild(body);
+
+  const foot=document.createElement("div"); foot.className="act-foot";
+  const add=(label,fn,kindly)=>{ const b=document.createElement("button");
+    b.className="act-b"+(kindly?" go":" ghost"); b.textContent=label;
+    b.disabled=!fn; if(fn) b.onclick=fn; foot.appendChild(b); };
+  if(busy){
+    add("Look again", ()=>{ sel=null; render(); }, false);
+    if(kind==="refusal") add("Confirm", refuse, true);
+  } else {
+    add(kind==="refusal"?"Take a refusal":"Place a roundabout",
+        can ? (kind==="refusal"?askRefusal:beginRoundabout) : null, true);
+  }
+  d.appendChild(foot);
+  return d;
+}
+
 function hand(){
   const h=$("hand"); h.innerHTML="";
-  if(!G.started) return pendingCards(h);
-  if(CFG.mode==="solo") return soloCards(h);
-  return comboStacks(h);
+  if(!G.started) pendingCards(h);
+  else if(CFG.mode==="solo") soloCards(h);
+  else comboStacks(h);
+  actionTiles(h);
 }
 
 /* Before the sheet begins nothing has been dealt, so show face-down cards
@@ -2873,8 +3104,11 @@ function pendingCards(h){
        deal and jumped to the bottom the moment the sheet started. It also shows
        what the card is about to offer. */
     const p=pickRow(d);
-    /* the same single button the dealt card will have, so nothing shifts on Start */
-    const labels = [CFG.mode==="solo" ? "Take this number" : "Take this combination"];
+    /* the same buttons the dealt card will have, so nothing shifts on Start: the
+       solo variant asks two things of a card, the standard turn one */
+    const labels = CFG.mode==="solo"
+      ? ["Take this number","Take this effect"]
+      : ["Take this combination"];
     labels.forEach(t=>{
       const b=document.createElement("button");
       b.textContent=t; b.disabled=true;
@@ -2907,16 +3141,37 @@ function soloCards(h){
           (dead?"effect only":"number \u00b7 effect")))+
       '</span></div>';
     const p=pickRow(d);
-    /* One way in, as in the standard turn: take the card for its number and the
-       effect is chosen inside the overlay, from the two you did not take. */
+    /* Two steps, each taken on the card it belongs to: first a card for its
+       number, then one of the two left for its effect. The effect is offered on
+       the card that carries it, so you choose by looking at the card rather than
+       by picking a name off a list. */
+    const picking = !!(sel && sel.phase==="choose" && sel.numCard!==null &&
+                       sel.effCard===null);
+    /* Both ways to use a card, always both shown, so the pair of choices a round
+       asks for is visible from the start rather than appearing a step in. */
     const bn=document.createElement("button");
     bn.textContent=dead?"No legal house":"Take this number";
-    bn.className=numOn?"on":""; bn.disabled=busy||dead||!!sel;
-    if(dead) bn.title="This number will not fit anywhere on your sheet.";
+    bn.className=numOn?"on":""; bn.disabled=dead||!!sel;
+    bn.title=dead ? "This number will not fit anywhere on your sheet."
+      : (sel ? "A number is already taken for this round" : "");
     bn.onclick=()=>chooseNumber(i);
     p.appendChild(bn);
+
+    const be=document.createElement("button");
+    be.className="oneff"+(effOn?" on":"");
+    be.textContent="Take this effect";
+    be.disabled=!picking||numOn;
+    be.title = numOn ? "This card is giving the number"
+      : picking ? EFFECTS[c.e].short+" \u2014 "+EFFECTS[c.e].hint
+      : "Take a card for its number first";
+    be.onclick=()=>chooseEffect(i);
+    p.appendChild(be);
     const ov=overlayFor(i); if(ov) d.appendChild(ov);
-    if(sel && sel.numCard!==null && sel.numCard!==i) d.classList.add("off");
+    /* While an effect is being picked the other two stay live, since that is where
+       the choice is made. Afterwards the one that gave the effect stays marked
+       rather than shut off: it is in use, not unavailable. */
+    if(sel && sel.numCard!==null && sel.numCard!==i && !picking && !effOn)
+      d.classList.add("off");
     h.appendChild(d);
   });
 }
@@ -3197,18 +3452,17 @@ function sheet(s){ $("sheet").innerHTML=scoreRows(s); }
 function status(){
   const m=$("msg"), c=$("chips"); c.innerHTML="";
   $("btn-undo").disabled=!snap||G.over;
-  $("btn-refuse").disabled=G.over||!G.started||mustBuild();
   const chip=(t,fn,g)=>{ const b=document.createElement("button");
     b.className="chip"+(g?" ghosty":""); b.textContent=t; b.onclick=fn; c.appendChild(b); };
 
   if(!G.started){
-    $("btn-refuse").disabled=true; $("btn-undo").disabled=true;
+    $("btn-undo").disabled=true;
     m.innerHTML="Sheet ready. Press <b>Start</b> to deal the first cards.";
     return;
   }
   if(mpIAmWaiting()){
     const w=mpWaitingFor();
-    $("btn-refuse").disabled=true; $("btn-undo").disabled=true;
+    $("btn-undo").disabled=true;
     m.innerHTML="Round "+G.round+" committed. Waiting for <b>"+
       esc(w.join(", ")||"the other players")+"</b>.";
     return;
@@ -3216,13 +3470,14 @@ function status(){
   if(G.over){ m.innerHTML="Sheet closed. Final scoring <b>"+score().total+"</b>."; return; }
 
   if(sel && sel.phase==="roundabout"){
-    m.innerHTML="<b>Roundabout</b> \u2014 click an empty house. It is fenced on both "+
-      "sides, and numbering starts over beyond it.";
-    chip("Cancel", ()=>{ sel=null; render(); }, true);
+    m.innerHTML="<b>Roundabout</b> \u2014 click an empty house on your sheet.";
+    return;
+  }
+  if(sel && sel.phase==="refusing"){
+    m.innerHTML="<b>Permit refusal</b> \u2014 confirm it on the card, or look again.";
     return;
   }
   if(!sel || sel.phase==="choose"){
-    if(canRoundabout()) chip("Roundabout", beginRoundabout, true);
     if(!mustBuild()){
       const shift = CFG.mode==="solo"
         ? (G.hand||[]).some((c,i)=>c&&numberUsable(c.n,tempElsewhere(i)))
@@ -3763,6 +4018,109 @@ function roomPanel(){
 }
 function renderRoom(){ if(roomOpen) roomPanel(); }
 
+/* A plain account of the rules, in the words the interface uses. The pictograms
+   are the same glyphs the sheet draws, so a rule and the thing it governs look
+   alike. */
+function rulesPanel(){
+  const g=(k)=>glyph(k,"gi");
+  const eff=k=>'<div class="rrow">'+g(k)+'<div><b>'+EFFECTS[k].label+'</b>'+
+    '<span>'+EFFECTS[k].hint+'</span></div></div>';
+
+  /* A street, to show what ascending order allows. The houses are square, as they
+     are on the sheet, so the figure reads as a row of houses. */
+  const street=(()=>{
+    const W=32, GAP=4, Y=6;
+    const box=(k,txt,cls)=>{ const x=2+k*(W+GAP);
+      return '<rect class="rb'+(cls?" "+cls:"")+'" x="'+x+'" y="'+Y+
+        '" width="'+W+'" height="'+W+'" rx="2"/>'+
+        (txt?'<text class="rt'+(cls==="rgap"?" rhi":"")+'" x="'+(x+W/2)+
+          '" y="'+(Y+W/2+5)+'">'+txt+'</text>':""); };
+    const span=2+5*(W+GAP)-GAP;
+    let out='<svg viewBox="0 0 '+span+' '+(Y+W+18)+'" class="rfig" role="img" '+
+      'aria-label="A street reading 3, 7, an empty house, then 12">';
+    out+=box(0,"3")+box(1,"7")+box(2,"?","rgap")+box(3,"12")+box(4,"");
+    out+='<text class="rc" x="'+(span/2)+'" y="'+(Y+W+13)+'">8 to 11 fit here</text></svg>';
+    return out;
+  })();
+
+  let h='<h3>How it works</h3>'+
+    '<p class="lede">You are laying out three streets of houses. Every round you take '+
+    'a house number and one effect to go with it. Score as many points as you can '+
+    'before the sheet closes.</p>';
+
+  h+='<div class="rsec"><h4>'+g("stacks")+'A round</h4>'+
+     '<p>In the <b>standard turn</b> each of the three stacks offers one combination: '+
+     'a number, together with the effect printed on the card in front of it. Take one '+
+     'of the three.</p>'+
+     '<p>In the <b>solo variant</b> three cards are dealt face up. Take one for its '+
+     '<b>number</b> and a second for its <b>effect</b>. The third is discarded.</p></div>';
+
+  h+='<div class="rsec"><h4>'+g("city")+'Writing the number</h4>'+
+     '<p>Write it in any empty house on any street. Along a street the numbers must '+
+     'always increase from left to right, so a house will take a number only if that '+
+     'number is higher than everything to its left and lower than everything to its '+
+     'right.</p>'+
+     street+
+     '<p>Fences do not interrupt that order. A <b>roundabout</b> does: numbering starts '+
+     'over on the far side of one.</p></div>';
+
+  h+='<div class="rsec"><h4>'+g("plan")+'The six effects</h4>'+
+     '<p>An effect may always be declined.</p>'+
+     '<div class="rgrid">'+
+     ["surveyor","agent","landscaper","pool","temp","bis"].map(eff).join("")+
+     '</div></div>';
+
+  h+='<div class="rsec"><h4>'+g("refusal")+'When nothing fits</h4>'+
+     '<p>If no number on offer can be written anywhere, you must take a '+
+     '<b>building permit refusal</b> instead. The first costs nothing, the second '+
+     'costs <b>'+(CFG.refusal[2]-CFG.refusal[1])+'</b>, and the third ends the sheet.</p>'+
+     '<p>Two things can rescue a round that looks stuck. A <b>Temp Agency</b> effect '+
+     'shifts the number by 1 or 2, which may bring it into a gap that would '+
+     'otherwise be closed to it.</p>'+
+     '<div class="rrow">'+g("roundabout")+'<div><b>Roundabout</b><span>Turn an empty '+
+     'house into a roundabout instead of building. Numbering starts over beyond it, so '+
+     'a low number becomes legal again on the far side. It is fenced on both sides, '+
+     'and it costs points.</span></div></div></div>';
+
+  h+='<div class="rsec"><h4>'+g("achievements")+'What scores</h4>'+
+     '<div class="rgrid">'+
+     '<div class="rrow">'+g("plan")+'<div><b>City plans</b><span>Three goals. '+
+       'Complete one for the higher score. Once the Solo card turns up, the plans are '+
+       'approved and pay the lower one.</span></div></div>'+
+     '<div class="rrow">'+g("landscaper")+'<div><b>Parks</b><span>Crossed per street, '+
+       'each street on its own ladder</span></div></div>'+
+     '<div class="rrow">'+g("pool")+'<div><b>Pools</b><span>One ladder across all '+
+       'three streets</span></div></div>'+
+     '<div class="rrow">'+g("temp")+'<div><b>Temp agency</b><span>'+
+       CFG.soloTempMin+' or more crossed scores '+CFG.soloTempPts+'</span></div></div>'+
+     '<div class="rrow">'+g("agent")+'<div><b>Completed housing estates</b><span>'+
+       'A run of built houses closed by fences, worth whatever its size is worth '+
+       'on the ladder</span></div></div>'+
+     '</div></div>';
+
+  h+='<div class="rsec"><h4>'+g("penalties")+'What costs</h4>'+
+     '<div class="rgrid">'+
+     '<div class="rrow">'+g("bis")+'<div><b>Bis</b><span>Each duplicated house</span></div></div>'+
+     '<div class="rrow">'+g("roundabout")+'<div><b>Roundabouts</b><span>Each one '+
+       'placed</span></div></div>'+
+     '<div class="rrow">'+g("refusal")+'<div><b>Permit refusals</b><span>The second '+
+       'and third</span></div></div>'+
+     '</div></div>';
+
+  h+='<div class="rsec"><h4>'+g("scoring")+'When it ends</h4>'+
+     '<p>The sheet closes as soon as any one of these happens:</p>'+
+     '<ul class="rlist"><li>all three <b>City plans</b> are achieved</li>'+
+     '<li>every house on all three streets is built</li>'+
+     '<li>a third <b>building permit refusal</b> is taken</li>'+
+     '<li>the cards run out</li></ul></div>';
+
+  h+='<div class="toolbar"><button class="btn primary" id="rules-done">Close</button></div>';
+  openBox(h, false, "mid");
+  /* Done goes back where this was opened from, by the same route every other
+     sub-panel uses: backOut returns to whatever set backTo, or closes. */
+  $("rules-done").onclick=backOut;
+}
+
 function briefing(){
   const rows=[
     ["Mode", CFG.mode==="solo" ? "Official solo variant \u2014 draw three, one number, one effect"
@@ -3800,6 +4158,7 @@ function briefing(){
   h+='<div class="toolbar"><button class="btn primary" id="go"'+(guest?' disabled':'')+'>'+
        (guest?'The host starts':'Start')+'</button>'+
      '<button class="btn" id="rnd">Randomize plans</button>'+
+     '<button class="btn" id="rul">Rules</button>'+
      '<button class="btn" id="chg">Change setup</button>'+
      '<button class="btn" id="shr">Share setup</button>'+
      '<button class="btn" id="mpb"'+(MP_ENABLED?''
@@ -3813,6 +4172,7 @@ function briefing(){
   $("rnd").onclick=()=>{ redrawPlans(); briefing(); render(); };
   $("chg").onclick=setup;
   $("shr").onclick=()=>{ backTo=null; sharePanel(); };
+  $("rul").onclick=()=>{ backTo=briefing; rulesPanel(); };
   $("mpb").onclick=roomPanel;
 }
 $("scrim").addEventListener("click",e=>{ if(e.target===$("scrim")) closeBox(); });
@@ -3966,8 +4326,8 @@ function setup(){
     save(); closeBox(); newGame(); };
 }
 
-$("btn-refuse").onclick=refuse;
 $("btn-undo").onclick=undo;
+$("btn-rules").onclick=rulesPanel;
 $("btn-hints").onclick=()=>{
   CFG.hints=!CFG.hints;
   $("btn-hints").innerHTML=tglLabel("Hints",CFG.hints);

@@ -126,7 +126,35 @@
      min-height rather than height so nothing can ever be clipped, with a few
      pixels over the tallest state: line heights vary a little between the theme
      fonts, and a box that grew to fit would be the one box out of step. */
-  .combo{border:1px solid var(--rule-soft);background:var(--paper-2);padding:9px 9px 0;
+  /* the overlay sits over the card it belongs to, so .combo is its frame */
+  .ovl{position:absolute;inset:0;z-index:5;background:var(--card);
+    border:2px solid var(--ink);padding:9px;display:flex;flex-direction:column;
+    gap:6px;overflow-y:auto}
+  .ovl-h{font-family:var(--mono);font-size:10px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink-soft)}
+  .ovl-p{font-size:12px;line-height:1.35;flex:0 0 auto}
+  .ovl-opts{display:flex;flex-wrap:wrap;gap:4px}
+  /* The pair that ends a turn is built like the button that begins one: bled to
+     the edges of the card, split by a dashed rule, sitting in the bottom corners.
+     The overlay's own 9px padding is cancelled so they reach the border. */
+  .ovl-foot{margin-top:auto;display:flex;margin:auto -9px -9px;
+    border-top:1px dashed var(--rule)}
+  .ovl-foot .ovl-b{flex:1;border:0;border-radius:0;padding:8px 2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ovl-foot .ovl-b+.ovl-b{border-left:1px dashed var(--rule)}
+  /* the options above keep their own outlined shape */
+  .ovl-opts .ovl-b{border:1px solid var(--ink);padding:5px 7px;border-radius:var(--rs)}
+  .ovl-b{font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+    text-transform:uppercase;background:var(--card);color:var(--ink);cursor:pointer}
+  .ovl-b:hover{background:var(--paper-2)}
+  .ovl-b.ghost{color:var(--ink-soft)}
+  .ovl-opts .ovl-b.ghost{border-color:var(--rule)}
+  .ovl-b.go{background:var(--ink);color:var(--card)}
+  .ovl-b.go:hover{background:var(--ink-soft)}
+  .ovl-b:disabled{opacity:.4;cursor:default}
+  /* a card the turn is not about takes no clicks while the overlay is open */
+  .combo.off{opacity:.4;pointer-events:none}
+  .combo{position:relative;border:1px solid var(--rule-soft);background:var(--paper-2);padding:9px 9px 0;
     display:flex;flex-direction:column;min-height:216px}
   /* selection must not change the box geometry, or the card shifts by a pixel */
   .combo.chosen{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
@@ -1677,11 +1705,13 @@ function keep(){ snap={G:copy(G)}; }
    disabled too, but the guard belongs here rather than only in the view. */
 function locked(){ return !G || !G.started || G.over || mpIAmWaiting(); }
 
+/* Solo: taking a card for its number opens the overlay on it, and the effect is
+   then chosen from the other two inside that overlay. */
 function chooseNumber(i){
   if(locked()) return;
-  if(!sel) sel={numCard:null, effCard:null, phase:"choose", n:null, usedEffect:false};
-  if(sel.phase!=="choose") return;
-  sel.numCard = (sel.numCard===i) ? null : i;
+  if(sel && sel.phase!=="choose") return;
+  if(!sel){ keep(); sel={numCard:null, effCard:null, phase:"choose", n:null, usedEffect:false}; }
+  sel.numCard=i;
   if(sel.effCard===sel.numCard) sel.effCard=null;
   render();
 }
@@ -1700,12 +1730,29 @@ function takeNoEffect(){
 }
 function takeCombination(i){
   if(locked()||(sel&&sel.phase!=="choose")) return;
+  keep();                              /* so backing out undoes the whole turn */
   sel={numCard:i, effCard:i, phase:"choose", n:null, usedEffect:false};
   confirmChoice();
 }
 function cards(){ return CFG.mode==="solo" ? G.hand : G.shown.filter(x=>x!==null); }
 function cardAt(i){ return CFG.mode==="solo" ? G.hand[i] : G.shown[i]; }
 
+/* A turn now runs inside an overlay on the card it belongs to, and nothing is
+   final until it is confirmed. Every effect therefore ends by asking for that
+   confirmation instead of closing the round itself, which is what made the six
+   effects feel like six different flows. */
+function awaitConfirm(){ if(sel) sel.phase="ready"; render(); }
+function turnReady(){ return !!(sel && sel.phase==="ready"); }
+function confirmTurn(){
+  if(locked()||!turnReady()) return;
+  endRound();
+}
+/* Back to the three cards, with everything this turn did undone. */
+function backOutTurn(){
+  if(locked()||!sel||sel.phase==="roundabout") return;
+  if(snap){ G=copy(snap.G); snap=null; }
+  sel=null; render();
+}
 function confirmChoice(){
   if(!sel || sel.numCard===null) return;
   sel.n = cardAt(sel.numCard).n;
@@ -1723,7 +1770,6 @@ function declineTemp(){ sel.n=cardAt(sel.numCard).n; sel.eff=null; sel.usedEffec
 
 function place(si,idx){
   if(locked()||!sel||sel.phase!=="place"||!canPlace(si,idx,sel.n)) return;
-  keep();
   const st=G.streets[si];
   st.slots[idx].v=sel.n;
   G.inked=si+":"+idx; sel.street=si; sel.idx=idx;
@@ -1734,28 +1780,37 @@ function place(si,idx){
   if(sel.eff==="surveyor"){ sel.phase="fence"; render(); return; }
   if(sel.eff==="agent"){ sel.phase="agent"; render(); return; }
   if(sel.eff==="bis"){ sel.phase="bis"; render(); return; }
-  endRound();
+  awaitConfirm();
 }
 function doPool(yes){
+  if(!sel) return;
   if(yes){
     const s=G.streets[sel.street].slots[sel.idx];
     if(s.isPool && !s.pool && G.pools<CFG.pool.length-1){ s.pool=true; G.pools++; }
   }
-  endRound();
+  sel.used=yes; awaitConfirm();
 }
 function doPark(yes){
+  if(!sel) return;
   if(yes){ const st=G.streets[sel.street];
     if(st.parks < CFG.streets[sel.street].parks.length-1) st.parks++; }
-  endRound();
+  sel.used=yes; awaitConfirm();
 }
 function doFence(si,gi){ if(!sel||sel.phase!=="fence"||!fenceOK(si,gi)) return;
-  G.streets[si].fences[gi]=true; endRound(); }
+  G.streets[si].fences[gi]=true;
+  sel.used=true; sel.at="fence "+(si+1)+":"+(gi+1); awaitConfirm(); }
 function doAgent(n){ if(!sel||sel.phase!=="agent") return;
-  if(G.improve[n]>=CFG.estate[n].length-1) return; G.improve[n]++; endRound(); }
+  if(G.improve[n]>=CFG.estate[n].length-1) return; G.improve[n]++;
+  sel.used=true; sel.at="size "+(n+1); awaitConfirm(); }
 function doBis(si,i,v){
+  if(!sel) return;
   const s=G.streets[si].slots[i];
-  s.v=v; s.bis=true; G.bisCount++; G.inked=si+":"+i; endRound();
+  s.v=v; s.bis=true; G.bisCount++; G.inked=si+":"+i;
+  sel.used=true; sel.at="street "+(si+1)+", house "+(i+1); awaitConfirm();
 }
+/* leaving an effect unused is a choice like any other, so it lands in the same
+   place: the overlay, then confirm */
+function skipEffect(){ if(!sel) return; sel.used=false; awaitConfirm(); }
 
 /* p11: at any point in the turn, before or after the card is used. It occupies
    an empty box, is fenced on both sides, and is not a house. */
@@ -2318,6 +2373,102 @@ function hints(){
   }
 }
 
+
+/* ---------------------------------------------------------------- the overlay
+   One panel, on the card the turn belongs to, for every effect. It explains the
+   action, holds whatever choice it needs, and ends in a single confirmation. The
+   board stays live underneath: effects that need a target are picked there and
+   reported back here, so the shape of a turn never changes from card to card. */
+function overlayFor(i){
+  if(!sel || sel.phase==="roundabout" || sel.numCard!==i) return null;
+  const o=document.createElement("div"); o.className="ovl";
+  const line=(cls,html)=>{ const d=document.createElement("div"); d.className=cls;
+    d.innerHTML=html; o.appendChild(d); return d; };
+  const opts=()=>{ const d=document.createElement("div"); d.className="ovl-opts";
+    o.appendChild(d); return d; };
+  const btn=(par,label,fn,kind)=>{ const b=document.createElement("button");
+    b.className="ovl-b"+(kind?" "+kind:""); b.textContent=label;
+    b.onclick=fn; par.appendChild(b); return b; };
+
+  const eff = sel.eff ? EFFECTS[sel.eff] : null;
+  /* while the effect is still being chosen there is nothing to name yet, and
+     "No effect" would read as though one had already been declined */
+  line("ovl-h", sel.phase==="choose" ? "Choose an effect"
+        : (eff ? eff.short : "No effect"));
+
+  switch(sel.phase){
+    case "choose": {                     /* solo: the effect comes from another card */
+      line("ovl-p","Number <b>"+cardAt(sel.numCard).n+"</b>. Take another card\u2019s "+
+        "effect, or go without one.");
+      const r=opts();
+      (G.hand||[]).forEach((c,j)=>{
+        if(!c||j===sel.numCard) return;
+        btn(r,EFFECTS[c.e].short,()=>chooseEffect(j));
+      });
+      btn(r,"No effect",takeNoEffect,"ghost");
+      break; }
+    case "temp": {
+      const base=cardAt(sel.numCard).n;
+      line("ovl-p","Write <b>"+base+"</b> changed by 1 or 2. Using it crosses a temp box.");
+      const r=opts();
+      [-2,-1,1,2].forEach(d=>{ const n=base+d;
+        if(n<CFG.numMin||n>CFG.numMax) return;
+        btn(r,(d>0?"+":"")+d+" \u2192 "+n,()=>setTemp(d)); });
+      btn(r,"Leave it unused",declineTemp,"ghost");
+      break; }
+    case "place":
+      line("ovl-p","Write <b>"+sel.n+"</b> in an empty house on your sheet."+
+        (sel.eff==="pool"?" A blue house has a planned pool.":""));
+      break;
+    case "pool": {
+      const has=G.streets[sel.street].slots[sel.idx].isPool;
+      line("ovl-p",has?"That house has a planned pool. Build it?"
+        :"That house has no planned pool, so none can be built.");
+      const r=opts();
+      if(has) btn(r,"Build the pool",()=>doPool(true));
+      btn(r,has?"Leave it":"Carry on",()=>doPool(false),"ghost");
+      break; }
+    case "park": {
+      const full=allParks(sel.street);
+      line("ovl-p",full?"Every park on Street "+(sel.street+1)+" is crossed already."
+        :"Cross a park on Street "+(sel.street+1)+".");
+      const r=opts();
+      if(!full) btn(r,"Cross a park",()=>doPark(true));
+      btn(r,full?"Carry on":"Leave it",()=>doPark(false),"ghost");
+      break; }
+    case "fence":
+      line("ovl-p","Draw a fence on any dotted space, on any street.");
+      btn(opts(),"Leave it unused",skipEffect,"ghost");
+      break;
+    case "agent":
+      line("ovl-p","Choose an estate size column in Housing estate values.");
+      btn(opts(),"Leave it unused",skipEffect,"ghost");
+      break;
+    case "bis":
+      line("ovl-p","Copy a house number into an empty house beside it.");
+      btn(opts(),"Leave it unused",skipEffect,"ghost");
+      break;
+    case "ready":
+      line("ovl-p", (sel.used===false || !sel.eff)
+        ? "House <b>"+sel.n+"</b> written. The effect goes unused."
+        : "House <b>"+sel.n+"</b> written, effect applied"+
+          (sel.at?" \u2014 "+sel.at:"")+".");
+      break;
+  }
+
+  const foot=document.createElement("div"); foot.className="ovl-foot";
+  const back=document.createElement("button");
+  back.className="ovl-b ghost"; back.textContent="Take another card";
+  back.onclick=backOutTurn; foot.appendChild(back);
+  const ok=document.createElement("button");
+  ok.className="ovl-b go"; ok.textContent="Confirm";
+  ok.disabled=!turnReady();
+  ok.title=turnReady()?"End the round":"Place the house first";
+  ok.onclick=confirmTurn; foot.appendChild(ok);
+  o.appendChild(foot);
+  return o;
+}
+
 function hand(){
   const h=$("hand"); h.innerHTML="";
   if(!G.started) return pendingCards(h);
@@ -2341,7 +2492,8 @@ function pendingCards(h){
        deal and jumped to the bottom the moment the sheet started. It also shows
        what the card is about to offer. */
     const p=pickRow(d);
-    const labels = CFG.mode==="solo" ? ["Number","Effect"] : ["Take this combination"];
+    /* the same single button the dealt card will have, so nothing shifts on Start */
+    const labels = [CFG.mode==="solo" ? "Take this number" : "Take this combination"];
     labels.forEach(t=>{
       const b=document.createElement("button");
       b.textContent=t; b.disabled=true;
@@ -2374,18 +2526,20 @@ function soloCards(h){
           (dead?"effect only":"number \u00b7 effect")))+
       '</span></div>';
     const p=pickRow(d);
-    const bn=document.createElement("button"); bn.textContent="Number";
-    bn.className=numOn?"on":""; bn.disabled=busy||dead;
+    /* One way in, as in the standard turn: take the card for its number and the
+       effect is chosen inside the overlay, from the two you did not take. */
+    const bn=document.createElement("button");
+    bn.textContent=dead?"No legal house":"Take this number";
+    bn.className=numOn?"on":""; bn.disabled=busy||dead||!!sel;
     if(dead) bn.title="This number will not fit anywhere on your sheet.";
     bn.onclick=()=>chooseNumber(i);
-    const be=document.createElement("button"); be.textContent="Effect";
-    be.className="oneff"+(effOn?" on":"");
-    be.disabled=busy || !sel || sel.numCard===null || sel.numCard===i;
-    be.onclick=()=>chooseEffect(i);
-    p.appendChild(bn); p.appendChild(be);
+    p.appendChild(bn);
+    const ov=overlayFor(i); if(ov) d.appendChild(ov);
+    if(sel && sel.numCard!==null && sel.numCard!==i) d.classList.add("off");
     h.appendChild(d);
   });
 }
+
 
 /* Standard turn: each stack is two objects on the table — the card just flipped,
    lying in the discard with its effect showing, and the stack itself, whose top
@@ -2424,10 +2578,13 @@ function comboStacks(h){
     const p=pickRow(d);
     const b=document.createElement("button");
     b.textContent=dead?"No legal house":"Take this combination";
-    b.className=chosen?"on":""; b.disabled=busy||dead;
+    b.className=chosen?"on":""; b.disabled=busy||dead||!!sel;
     if(dead) b.title="This number will not fit anywhere on your sheet.";
     b.onclick=()=>takeCombination(i);
     p.appendChild(b);
+    const ov=overlayFor(i); if(ov) d.appendChild(ov);
+    /* the other two take no clicks while a turn is open */
+    if(sel && sel.numCard!==null && sel.numCard!==i) d.classList.add("off");
     h.appendChild(d);
   });
 }
@@ -2686,65 +2843,48 @@ function status(){
       return;
     }
     if(CFG.mode==="solo"){
-      if(sel && sel.numCard!==null){
-        m.innerHTML="Number <b>"+cardAt(sel.numCard).n+
-          "</b> taken. Now take another card's <b>effect</b>, or go without one.";
-        chip("No effect", takeNoEffect);
-        chip("Change number", ()=>{ sel=null; render(); }, true);
-      } else {
-        m.innerHTML="Take a card for its <b>number</b>.";
-      }
+      m.innerHTML = (sel && sel.numCard!==null)
+        ? "Number <b>"+cardAt(sel.numCard).n+"</b> taken. Choose the effect on the card."
+        : "Take a card for its <b>number</b>.";
     } else {
       m.innerHTML="Take one of the three combinations.";
     }
     return;
   }
 
+  /* The controls for a turn live in the overlay on the card now. What is left
+     here is the running commentary, which is the part worth keeping in view. */
   switch(sel.phase){
-    case "temp":{
-      const base=cardAt(sel.numCard).n;
-      m.innerHTML="<b>Temp Agency</b> \u2014 write <b>"+base+"</b> changed by 1 or 2. Using it crosses a box.";
-      [-2,-1,0,1,2].forEach(d=>{ const n=base+d;
-        if(n<CFG.numMin||n>CFG.numMax) return;
-        chip((d>0?"+":"")+d+" \u2192 "+n, ()=>setTemp(d)); });
-      chip("Do not use the effect", declineTemp, true);
-      break; }
+    case "temp":
+      m.innerHTML="<b>Temp Agency</b> \u2014 choose how far to shift the number, on the card.";
+      break;
     case "place":
       m.innerHTML="Write <b>"+sel.n+"</b> in an empty house."+
         (sel.eff==="pool"?" <span class='warn'>Blue houses have a planned pool.</span>":"");
-      chip("Back", ()=>{ sel=null; render(); }, true);
       break;
-    case "pool":{
-      const has=G.streets[sel.street].slots[sel.idx].isPool;
-      m.innerHTML = has ? "<b>Pool Manufacturer</b> \u2014 build this pool?"
-        : "<b>Pool Manufacturer</b> \u2014 no planned pool in that house, so none is built.";
-      if(has) chip("Build the pool", ()=>doPool(true));
-      chip(has?"Skip":"Continue", ()=>doPool(false), true);
-      break; }
-    case "park":{
-      const full=allParks(sel.street);
-      m.innerHTML="<b>Landscaper</b> \u2014 cross a park on Street "+(sel.street+1)+
-        (full?". <span class='warn'>All crossed already.</span>":".");
-      if(!full) chip("Build the park", ()=>doPark(true));
-      chip(full?"Continue":"Skip", ()=>doPark(false), true);
-      break; }
+    case "pool":
+      m.innerHTML="<b>Pool Manufacturer</b> \u2014 decide on the pool, on the card.";
+      break;
+    case "park":
+      m.innerHTML="<b>Landscaper</b> \u2014 decide on the park, on the card.";
+      break;
     case "fence":
-      m.innerHTML="<b>Surveyor</b> \u2014 draw a fence on any dotted space, any street.";
-      chip("Skip the effect", endRound, true);
+      m.innerHTML="<b>Surveyor</b> \u2014 click a dotted space on any street.";
       break;
     case "agent":
-      m.innerHTML="<b>Real Estate Agent</b> \u2014 choose an estate size column.";
-      chip("Skip the effect", endRound, true);
+      m.innerHTML="<b>Real Estate Agent</b> \u2014 click an estate size column.";
       break;
     case "bis":
-      m.innerHTML="<b>Bis</b> \u2014 duplicate a house number into an empty house beside it.";
-      chip("Skip the effect", endRound, true);
+      m.innerHTML="<b>Bis</b> \u2014 click an empty house beside a numbered one.";
       break;
-    case "bis-pick":
-      m.innerHTML="Duplicate which number?";
-      sel.opts.forEach(v=>chip(v+" bis", ()=>doBis(sel.t[0],sel.t[1],v)));
+    case "ready":
+      m.innerHTML="Ready. <b>Confirm</b> on the card to end the round, or take another card.";
+      break;
+    case "choose":
+      m.innerHTML="Choose the effect on the card, or go without one.";
       break;
   }
+
 }
 
 /* ========================================================== MODALS */

@@ -1,6 +1,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Welcome To …</title>
+<title>Welcome To — a practice sheet</title>
+<!-- Without these a scraper finds no summary and falls back to the first text in
+     the document, which is the stylesheet. WhatsApp showed CSS as the preview.
+     The image has to be a raster: none of them will render an SVG. -->
+<meta name="description" content="Practise Welcome To Your Perfect Home on your own.
+Three streets, three city plans, the standard turn or the official solo variant,
+with the odds worked out for you. No account, nothing saved but your best score.">
+<link rel="canonical" href="https://welcome-to.sunken.dev/">
+<!-- All in one folder. A browser that reads these uses them wherever they sit; the
+     root paths are only the fallback for anything that does not parse the page.
+     The svg is listed first: a browser that understands it prefers it and ignores
+     the rest, and it stays crisp at any size. -->
+<link rel="icon" href="/assets/favicon/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon/favicon.ico" sizes="32x32">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/favicon/site.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Welcome To">
+<meta property="og:title" content="Welcome To — a practice sheet">
+<meta property="og:description" content="Three streets, three city plans, the standard
+turn or the official solo variant, with the odds worked out for you.">
+<meta property="og:url" content="https://welcome-to.sunken.dev/">
+<meta property="og:image" content="https://welcome-to.sunken.dev/assets/preview.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Six construction cards fanned out, one in each
+of the six themes">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#E6EBE2">
 <style>
   /* Every value here is set by the active theme. See THEMES in the script:
      adding a theme means adding one object, nothing else. */
@@ -312,8 +343,18 @@
   .lot .val{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1}
   .lot .val sub{font-size:11px;color:var(--stamp);vertical-align:baseline}
   .lot.built{background:var(--paper-2);border-color:var(--ink)}
+  /* A locked run reads as one estate: the hatch marks each house, and the bar runs
+     edge to edge so the bars of neighbouring houses join into a single line across
+     the whole run. Its colour says which plan spent them. */
   .lot.locked{background:repeating-linear-gradient(135deg,var(--paper-2) 0 5px,var(--locked) 5px 10px)}
-  .lot.locked::before{content:"";position:absolute;left:1px;right:1px;top:3px;height:2px;background:var(--ink)}
+  .lot.locked::before{content:"";position:absolute;left:-1px;right:-1px;top:3px;height:3px;
+    background:var(--lockbar,var(--ink))}
+  .lot.locked.lock1{--lockbar:var(--flag)}
+  .lot.locked.lock2{--lockbar:var(--pool)}
+  .lot.locked.lock3{--lockbar:var(--plum)}
+  /* the ends of the run are closed off, so it reads as a bounded thing */
+  .lot.locked.lockstart::before{left:2px;border-radius:2px 0 0 2px}
+  .lot.locked.lockend::before{right:2px;border-radius:0 2px 2px 0}
   .lot.roundabout{background:var(--paper-2);border-color:var(--ink)}
   .lot .rnd{width:25px;height:25px;border:2px solid var(--ink);border-radius:50%;
     display:flex;align-items:center;justify-content:center}
@@ -1901,7 +1942,13 @@ function validatePlan(pi){
   const m=matchPlan(p);
   if(!m) return;
   keep();
-  m.forEach(e=>e.idx.forEach(i=>{ G.streets[e.si].slots[i].locked=true; }));
+  /* Which plan spent them, not merely that they are spent: with three plans in
+     play it matters which run paid for which, and it lets the sheet draw each
+     locked run as one unit rather than a row of hatched houses. */
+  m.forEach(e=>e.idx.forEach(i=>{
+    const slot=G.streets[e.si].slots[i];
+    slot.locked=true; slot.lockedBy=p.n;
+  }));
   p.done=true;
   if(MP.on){
     /* p8: whoever gets there first in a round takes the higher amount, and so
@@ -3294,14 +3341,25 @@ function streets(){
       const bt = sel && sel.phase==="bis" ? bisAt(si,i) : null;
       const rp = sel && sel.phase==="roundabout" && slot.v===null && !slot.round;
       const b=document.createElement("button"); b.type="button";
-      b.className="lot"+(slot.v!==null?" built":"")+(slot.locked?" locked":"")+
+      /* the first and last of a locked run, so the bar can be closed at its ends */
+      const prevLocked = i>0 && st.slots[i-1].locked &&
+        st.slots[i-1].lockedBy===slot.lockedBy && !st.fences[i-1];
+      const nextLocked = i+1<st.slots.length && st.slots[i+1].locked &&
+        st.slots[i+1].lockedBy===slot.lockedBy && !st.fences[i];
+      b.className="lot"+(slot.v!==null?" built":"")+
+        (slot.locked?" locked lock"+(slot.lockedBy||1)+
+          (prevLocked?"":" lockstart")+(nextLocked?"":" lockend"):"")+
         (slot.round?" roundabout":"")+(rp?" rndpick":"")+
         (legal?" legal":"")+(legal&&sel.eff==="pool"&&slot.isPool?" pool":"")+
         (bt?" src":"")+(G.inked===si+":"+i?" inked":"");
       b.setAttribute("aria-label","Street "+(si+1)+" house "+(i+1)+
         (slot.round?", roundabout"
           :(slot.v!==null?", "+slot.v+(slot.bis?" bis":""):", empty"))+
-        (slot.isPool&&!slot.round?", planned pool":""));
+        (slot.isPool&&!slot.round?", planned pool":"")+
+        (slot.locked?", spent on City Plan n\u00b0"+(slot.lockedBy||"?"):""));
+      if(slot.locked)
+        b.title="Spent on City Plan n\u00b0"+(slot.lockedBy||"?")+
+          ". This estate can no longer be changed or used for another plan.";
       let inner="";
       if(slot.round) inner+='<span class="rnd"></span>';
       else if(slot.v!==null) inner+='<span class="val">'+slot.v+(slot.bis?'<sub>bis</sub>':'')+'</span>';
@@ -3502,6 +3560,19 @@ function status(){
         : "Take a card for its <b>number</b>.";
     } else {
       m.innerHTML="Take one of the three combinations.";
+    }
+    /* An achieved plan is not safe until it is claimed: nothing locks the estates
+       until then, so a later fence can break one up and the plan slips away. The
+       only other sign is a small button on the plan itself, which is easy to miss. */
+    const ripe=G.plans.filter(p=>!p.done && matchPlan(p));
+    if(ripe.length){
+      m.innerHTML+=" <span class='warn'>"+
+        (ripe.length===1
+          ? "Plan n\u00b0"+ripe[0].n+" is ready for <b>"+
+            (G.approved?ripe[0].lo:ripe[0].hi)+"</b> points. Achieve it before "+
+            "anything breaks up the estates."
+          : ripe.length+" plans are ready. Achieve them before anything breaks up "+
+            "the estates.")+"</span>";
     }
     return;
   }

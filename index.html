@@ -173,11 +173,15 @@
   /* The pair that ends a turn is built like the button that begins one: bled to
      the edges of the card, split by a dashed rule, sitting in the bottom corners.
      The overlay's own 9px padding is cancelled so they reach the border. */
-  .ovl-foot{margin-top:auto;display:flex;margin:auto -9px -9px;
+  /* The two ways to end a turn sit one above the other, the way out on top and the
+     one that commits beneath it, so the button that ends the round is the last thing
+     the eye reaches. */
+  .ovl-foot{margin-top:auto;display:flex;flex-direction:column;margin:auto -9px -9px;
     border-top:1px dashed var(--rule)}
   .ovl-foot .ovl-b{flex:1;border:0;border-radius:0;padding:8px 2px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ovl-foot .ovl-b+.ovl-b{border-left:1px dashed var(--rule)}
+  /* stacked, so the rule between them runs across rather than down */
+  .ovl-foot .ovl-b+.ovl-b{border-top:1px dashed var(--rule)}
   /* the options above keep their own outlined shape */
   .ovl-opts .ovl-b{border:1px solid var(--ink);padding:5px 7px;border-radius:var(--rs)}
   .ovl-b{font-family:var(--mono);font-size:9px;letter-spacing:.1em;
@@ -237,7 +241,11 @@
      longer grows: the card area takes up whatever the box has spare, so this is
      the gap itself rather than the gap plus the slack. */
   .pgap{flex:0 0 auto;height:10px}
-  .picks{display:flex;margin:0 -9px;border-top:1px dashed var(--rule)}
+  /* The solo variant asks two things of a card, so its buttons stack the way the
+     overlay's pair does. The standard turn has only one, where the direction makes
+     no difference. */
+  .picks{display:flex;flex-direction:column;margin:0 -9px;
+    border-top:1px dashed var(--rule)}
   /* The button that starts a turn and the two that spend one without a card are the
      same control, so they share one rule rather than two that must be kept in step. */
   .picks button,.act-b{flex:1;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
@@ -245,7 +253,9 @@
     padding:8px 2px;cursor:pointer;
     /* a wrapped label would grow one box and undo the fixed height */
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .picks button+button,.act-b+.act-b{border-left:1px dashed var(--rule)}
+  /* stacked here, side by side on the action tiles, so the rule runs differently */
+  .picks button+button{border-top:1px dashed var(--rule)}
+  .act-b+.act-b{border-left:1px dashed var(--rule)}
   .picks button:hover:not(:disabled),.act-b:hover:not(:disabled){background:var(--ink);color:var(--card)}
   .picks button:disabled,.act-b:disabled{opacity:.3;cursor:default}
   .picks button.on{background:var(--ink);color:var(--card)}

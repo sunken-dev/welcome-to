@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Welcome To</title>
+  <rect width="64" height="64" rx="7" fill="#1E2A31"/>
+  <g stroke="#1E2A31" stroke-width="2" stroke-linejoin="round">
+    <rect x="10" y="13" width="28" height="40" rx="2" fill="#DCE9E3" transform="rotate(-13 24 33)"/>
+    <rect x="26" y="13" width="28" height="40" rx="2" fill="#E9E7DE" transform="rotate(13 40 33)"/>
+    <rect x="18" y="9" width="28" height="46" rx="2" fill="#F2F5EF"/>
+  </g>
+  <g fill="none" stroke="#1E2A31" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M23 32l9-8 9 8"/>
+    <path d="M26 30v14h12V30"/>
+    <path d="M23 45h18"/>
+  </g>
+  <rect x="30" y="37" width="4.5" height="7" rx=".7" fill="#A93A2C"/>
+</svg>

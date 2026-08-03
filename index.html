@@ -455,6 +455,20 @@
 
   /* hint statistics */
   .hint[hidden]{display:none}
+  /* The numbers take the greater part of the width, the card types a narrower
+     column of their own beside them, so the two are read side by side rather
+     than one after the other. */
+  .hgrid{display:grid;grid-template-columns:72fr 28fr;gap:16px;align-items:start}
+  @media (max-width:900px){ .hgrid{grid-template-columns:minmax(0,1fr)} }
+  /* the two number charts share the left side: how likely, and how much room */
+  .hpair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+  @media (max-width:1100px){ .hpair{grid-template-columns:minmax(0,1fr)} }
+  /* no room as it stands, but a temp shift would reach some */
+  .hcell.rescue .hbar{background:var(--temp)}
+  .hcell.rescue .hpct{color:var(--temp);font-weight:700}
+  /* no room, and no shift reaches any */
+  .hcell.dead .hbar{background:var(--rule)}
+  .hcell.dead .hlbl,.hcell.dead .hpct{opacity:.4}
   .hrow{margin-bottom:11px}
   .hrow:last-child{margin-bottom:0}
   .hcap{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;
@@ -463,19 +477,32 @@
   .hstrip{display:flex;gap:3px;align-items:flex-end}
   .hcell{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px}
   .hbarwrap{width:100%;height:32px;display:flex;align-items:flex-end}
-  .hbar{width:100%;min-height:1px;background:var(--pool);
+  /* the statistics' own colour, set by each theme: the bars used to borrow the
+     Pool Manufacturer's accent, which had nothing to do with what they show */
+  .hbar{width:100%;min-height:1px;background:var(--stat,var(--pool));
     border-radius:calc(var(--rs)*.4) calc(var(--rs)*.4) 0 0;transition:height .25s ease}
   .hcell.zero .hbar{background:var(--rule)}
   .hlbl{font-family:var(--mono);font-size:10px;font-weight:700;line-height:1}
   .hpct{font-family:var(--mono);font-size:8px;color:var(--ink-soft);line-height:1}
   .hcell.zero .hlbl,.hcell.zero .hpct{opacity:.4}
-  .heff{display:flex;gap:7px;flex-wrap:wrap}
-  .heffcell{flex:1 1 96px;display:flex;align-items:center;gap:6px;
+  .heff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  /* the glyph, then three lines about the effect, then its figure standing the
+     full height of them */
+  .heffcell{min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;gap:7px;
     background:var(--paper-2);border:1px solid var(--rule-soft);padding:5px 7px;
     border-radius:calc(var(--rs)*.6)}
-  .heffcell svg{width:17px;height:17px;flex:0 0 auto}
-  .heffcell .en{font-family:var(--mono);font-size:9px;letter-spacing:.06em;line-height:1.2}
-  .heffcell .ep{font-family:var(--mono);font-size:12px;font-weight:700;margin-left:auto}
+  .heffcell svg{width:24px;height:24px;flex:0 0 auto}
+  .einfo{display:flex;flex-direction:column;min-width:0;
+    font-family:var(--mono);font-size:9px;letter-spacing:.06em;line-height:1.3}
+  .einfo .ename{font-weight:700}
+  .einfo .ecount{color:var(--ink-soft)}
+  .einfo .euse{color:var(--park)}
+  .heffcell .ep{font-family:var(--mono);font-size:12px;font-weight:700;
+    align-self:stretch;display:flex;align-items:center}
+  /* an effect that could do nothing on the sheet as it stands */
+  .heffcell.idle{opacity:.6}
+  .heffcell.idle .einfo .euse{color:var(--stamp)}
   .hfoot{font-size:11.5px;color:var(--ink-soft);margin-top:9px;
     border-top:1px dotted var(--rule-soft);padding-top:7px}
   .hfoot b{font-family:var(--mono);color:var(--ink)}
@@ -544,16 +571,18 @@
   .cityname.empty{letter-spacing:.2em}
   .cityinput{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink);
     background:transparent;border:0;border-bottom:2px solid var(--ink);
-    /* fifteen characters is the cap, and at this size they need about 225px */
-    padding:0 3px 1px;width:min(350px,44vw)}
+    /* Twenty characters is the cap. At 26px with .16em of tracking that is about
+       434px in the widest theme face, where a proportional one is uppercased. */
+    padding:0 3px 1px;width:min(450px,44vw)}
   .cityinput:focus{outline:none}
   /* the game's title, overarching the dialog's own heading */
   .modal .gametitle{font-family:var(--mono);font-size:22px;font-weight:700;
     letter-spacing:.11em;text-transform:uppercase;line-height:1.15;
     margin:0 0 13px;padding-bottom:11px;border-bottom:2px solid var(--ink)}
-  /* the briefing sets the title larger, so the same fifteen characters need
-     about 243px here; this is as narrow as it can go without clipping a name */
-  .modal .gametitle .cityinput{width:min(248px,50vw)}
+  /* the dialog sets the title at 22px, so twenty characters need about 347px in
+     the widest face; the dialog itself has to be wide enough for that plus the
+     words before it */
+  .modal .gametitle .cityinput{width:min(360px,50vw)}
   @media (max-width:520px){
     .modal .gametitle{font-size:16px;letter-spacing:.08em}
   }
@@ -760,7 +789,8 @@ function mottle(){
 const THEMES = {
   drafting: {
     name: "Drafting office",
-    corner: {file:"draftingOffice", opacity:".13"},
+    stat: "var(--pool)",
+    corner: {file:"draftingOffice", wash:"saturate(.12) contrast(.40) brightness(1.34)"},
     qr: {dots:"square", corners:"square", cornerDots:"square"},
     blurb: "Plan paper and stencil numerals. The technical one.",
     swatch: ["#E6EBE2","#1E2A31","#A93A2C","#3D7F98","#4F7237"],
@@ -780,7 +810,8 @@ const THEMES = {
 
   hillside: {
     name: "Hillside",
-    corner: {file:"hillside", opacity:".14"},
+    stat: "var(--park)",
+    corner: {file:"hillside", wash:"saturate(.14) contrast(.42) brightness(1.30)"},
     qr: {dots:"classy", corners:"extra-rounded", cornerDots:"dot"},
     blurb: "Soft painterly meadow. Sunlight, sky wash, rolling green.",
     swatch: ["#DCE9E3","#2A3F35","#C4643F","#4E8FA8","#5C8A3E"],
@@ -827,7 +858,8 @@ const THEMES = {
 
   cats: {
     name: "Cat town",
-    corner: {file:"catTown", opacity:".15"},
+    stat: "var(--temp)",
+    corner: {file:"catTown", wash:"saturate(.14) contrast(.40) brightness(1.32)"},
     qr: {dots:"rounded", corners:"extra-rounded", cornerDots:"dot"},
     blurb: "Peach paper, paw prints, yarn and milk. The very cute one.",
     swatch: ["#FBEFE4","#4A3A33","#D96A7A","#6BAFC4","#7FAE62"],
@@ -893,7 +925,8 @@ const THEMES = {
 
   orbit: {
     name: "Orbit",
-    corner: {file:"orbit", opacity:".22"},
+    stat: "var(--pool)",
+    corner: {file:"orbit", wash:"saturate(.16) contrast(.55) brightness(.40)"},
     qr: {dots:"dots", corners:"dot", cornerDots:"dot"},
     blurb: "Night side of the planet. Starfield and instrument glow.",
     swatch: ["#0E1424","#DCE6F5","#FF6B6B","#4FD1E0","#5FE3A1"],
@@ -937,7 +970,8 @@ const THEMES = {
 
   scriptorium: {
     name: "Scriptorium",
-    corner: {file:"scriptorium", opacity:".13"},
+    stat: "var(--flag)",
+    corner: {file:"scriptorium", wash:"saturate(.13) contrast(.40) brightness(1.30)"},
     qr: {dots:"classy", corners:"square", cornerDots:"square"},
     blurb: "Vellum, oak-gall ink and vermilion rubrication.",
     swatch: ["#E8DCC0","#3A2A18","#A02A20","#2F6B7A","#B58A2B"],
@@ -979,7 +1013,8 @@ const THEMES = {
 
   riso: {
     name: "Risograph",
-    corner: {file:"risograph", opacity:".13"},
+    stat: "var(--stamp)",
+    corner: {file:"risograph", wash:"saturate(.13) contrast(.42) brightness(1.32)"},
     qr: {dots:"square", corners:"extra-rounded", cornerDots:"square"},
     blurb: "Two-ink duplicator print. Halftone dots, a hair of misregistration.",
     swatch: ["#E9E7DE","#173B4A","#FF4E8B","#FFD400","#1F8FB0"],
@@ -1027,11 +1062,19 @@ function applyTheme(id){
   GPATH = Object.assign({}, BASE_GPATH, t.glyphs||{});
   const css=document.getElementById("themecss"); if(css) css.textContent = t.css || "";
   const art=document.getElementById("bgart"); if(art) art.innerHTML = t.bgart || "";
+  root.style.setProperty("--stat", t.stat || "var(--pool)");
   const corner=document.getElementById("bgcorner");
   if(corner){
+    /* Loaded from the folder beside the page rather than carried inside it: the
+       six images come to 863kB, and embedding them nearly doubled the page. The
+       consequence is that the picture is absent wherever the page is opened
+       without assets/backgrounds/ next to it. */
     const c=t.corner;
     corner.style.backgroundImage = c ? 'url("assets/backgrounds/'+c.file+'.webp")' : "none";
-    corner.style.opacity = c ? c.opacity : "0";
+    /* Washed out rather than made translucent: the picture keeps its own body,
+       and is pulled toward the paper tone instead of letting the page through it.
+       Each theme sets its own, since Orbit has to darken where the rest lighten. */
+    corner.style.filter = (c && c.wash) ? c.wash : "none";
   }
   const mk=document.getElementById("mark");
   if(mk) mk.innerHTML = t.mark
@@ -2228,7 +2271,7 @@ function esc(t){
 /* The name appears in the masthead and again on the briefing, so the widget is
    rendered per slot. Only one slot is ever in edit mode; the rest mirror it. */
 const CITY_SLOTS=["cityslot","briefcity"];
-const CITY_MAX=15;             /* the name has to fit in the masthead */
+const CITY_MAX=20;             /* the name has to fit the masthead and the briefing */
 let cityEditing=null;          /* the id of the slot being edited, or null */
 function renderCity(){
   const name=(CFG.city||"").trim();
@@ -2317,6 +2360,105 @@ function render(){
 }
 
 function pct(p){ return (p*100).toFixed(p>=0.095?0:1)+"%"; }
+/* How many empty houses a number could legally be written in, as the sheet
+   stands. Roundabouts are not speculated about: this is the board as it is, so
+   the figure is what is available without taking one. Note the counts are not
+   independent \u2014 filling one space changes the rest \u2014 so it measures slack
+   rather than a number of futures. */
+function spotsFor(n){
+  let k=0;
+  for(let si=0;si<G.streets.length;si++)
+    for(let i=0;i<G.streets[si].slots.length;i++)
+      if(canPlace(si,i,n)) k++;
+  return k;
+}
+
+/* Whether an effect could do anything at all on the sheet as it stands. Several
+   act on the street the house goes in, so this answers "somewhere", not "here". */
+function effectUsable(e){
+  switch(e){
+    case "surveyor":
+      for(let a=0;a<G.streets.length;a++)
+        for(let b=0;b<G.streets[a].fences.length;b++) if(fenceOK(a,b)) return true;
+      return false;
+    case "landscaper": return G.streets.some((st,i)=>!allParks(i));
+    case "pool": return G.pools<CFG.pool.length-1 &&
+      G.streets.some(st=>st.slots.some(x=>x.isPool && !x.pool && x.v===null));
+    /* the same keys doAgent uses, so the two cannot disagree about the columns */
+    case "agent": return Object.keys(G.improve)
+      .some(k=>G.improve[k] < CFG.estate[k].length-1);
+    case "temp": return G.temp < CFG.deck.temp.length;
+    case "bis": return bisTargets().length>0;
+  }
+  return true;
+}
+
+/* The companion to the number chart: not how likely a number is, but how much
+   room is left for it. A number with no room is either finished or waiting on a
+   temp shift, and those read differently. */
+/* An effect in the hints: the glyph, then its name, how many are left and
+   whether it could do anything, then the figure beside all three. */
+/* The chance a number turns up next round in at least one of the three stacks.
+   The stacks are independent piles and each reveals one card, so this is one
+   minus the chance of missing it in all three \u2014 not the sum of the three, which
+   would overcount the rounds where it appears twice. */
+function anyStackBars(st){
+  const range=numberHist();
+  const items=[];
+  for(let n=range.lo;n<=range.hi;n++){
+    let miss=1, k=0;
+    st.forEach(s2=>{
+      const c=s2.nums[n]||0;
+      k+=c;
+      if(s2.pool>0) miss *= (1-c/s2.pool);
+    });
+    items.push({n:n, k:k, p:1-miss});
+  }
+  const max=Math.max.apply(null, items.map(i=>i.p)) || 1;
+  return '<div class="hstrip">'+items.map(i=>
+    '<div class="hcell'+(i.k===0?" zero":"")+'" title="'+i.k+
+      ' across the three stacks">'+
+      '<div class="hbarwrap"><span class="hbar" style="height:'+
+        (i.p<=0?2:Math.max(4,Math.round(100*i.p/max)))+'%"></span></div>'+
+      '<span class="hlbl">'+i.n+'</span>'+
+      '<span class="hpct">'+(i.k===0?"\u2013":pct(i.p))+'</span>'+
+    '</div>').join("")+'</div>';
+}
+
+function effCell(e, left, figure){
+  const ok=effectUsable(e);
+  return '<div class="heffcell'+(ok?"":" idle")+'" title="'+
+    (ok?"Something on the sheet can take this effect"
+       :"Nothing on the sheet can take this effect as it stands")+'">'+
+    glyph(e,"")+
+    '<span class="einfo">'+
+      '<span class="ename">'+EFFECTS[e].short+'</span>'+
+      '<span class="ecount">'+left+' left</span>'+
+      '<span class="euse">'+(ok?"usable":"unusable")+'</span>'+
+    '</span>'+
+    '<span class="ep">'+figure+'</span></div>';
+}
+
+function spotBars(){
+  const range=numberHist();
+  const items=[];
+  for(let n=range.lo;n<=range.hi;n++){
+    const k=spotsFor(n);
+    items.push({n:n, k:k, rescue:k===0 && numberUsable(n,true)});
+  }
+  const max=Math.max.apply(null, items.map(i=>i.k)) || 1;
+  return '<div class="hstrip">'+items.map(i=>
+    '<div class="hcell'+(i.k===0?(i.rescue?" rescue":" dead"):"")+'" title="'+
+      (i.k===0 ? (i.rescue?"nowhere as it stands, but a temp shift would reach one"
+                         :"nowhere left, and no shift reaches one")
+               : i.k+(i.k===1?" space":" spaces"))+'">'+
+      '<div class="hbarwrap"><span class="hbar" style="height:'+
+        (i.k<=0?2:Math.max(4,Math.round(100*i.k/max)))+'%"></span></div>'+
+      '<span class="hlbl">'+i.n+'</span>'+
+      '<span class="hpct">'+(i.k===0?(i.rescue?"\u00b12":"\u2014"):i.k)+'</span>'+
+    '</div>').join("")+'</div>';
+}
+
 function bars(nums, pool, scoreFn){
   const range=numberHist();
   const items=[];
@@ -2347,16 +2489,19 @@ function hints(){
 
   if(CFG.mode==="solo"){
     const st=soloStats();
-    let h='<div class="hrow"><div class="hcap">House number \u2014 chance it appears '+
+    let h='<div class="hgrid"><div class="hpair">'+
+          '<div class="hrow"><div class="hcap">House number \u2014 chance it appears '+
           'among your next <em>three</em> cards</div>'+
-          bars(st.nums, st.pool, atLeastOneIn3)+'</div>';
-    h+='<div class="hrow"><div class="hcap">Effect \u2014 same, among your next three</div>'+
-       '<div class="heff">'+Object.keys(EFFECTS).map(e=>{
-         const k=st.effs[e]||0;
-         return '<div class="heffcell">'+glyph(e,"")+
-           '<span class="en">'+EFFECTS[e].short+'<br>'+k+' left</span>'+
-           '<span class="ep">'+(k?pct(atLeastOneIn3(k,st.pool)):"\u2013")+'</span></div>';
-       }).join("")+'</div></div>';
+          bars(st.nums, st.pool, atLeastOneIn3)+'</div>'+
+          '<div class="hrow"><div class="hcap">Room left \u2014 empty houses each number '+
+          'still fits, without taking a <em>roundabout</em></div>'+
+          spotBars()+'</div>'+
+          '</div><div>'+
+          '<div class="hrow"><div class="hcap">Effect \u2014 same, among your next three</div>'+
+          '<div class="heff">'+Object.keys(EFFECTS).map(e=>{
+            const k=st.effs[e]||0;
+            return effCell(e, k, k?pct(atLeastOneIn3(k,st.pool)):"\u2013");
+          }).join("")+'</div></div></div></div>';
     h+='<div class="hfoot"><b>'+st.pool+'</b> construction cards left. Solo card: '+
        (G.soloSeen
          ? 'already drawn, plans are approved.'
@@ -2367,13 +2512,20 @@ function hints(){
     body.innerHTML=h;
   } else {
     const st=standardStats();
-    let h="";
+    let h='<div class="hgrid"><div class="hpair"><div>';
     st.forEach((s2,i)=>{
       h+='<div class="hrow"><div class="hcap">Stack '+(i+1)+
          ' \u2014 chance of each number <em>next</em> round &nbsp;('+s2.pool+
          ' cards beneath the top)</div>'+
          bars(s2.nums, s2.pool, (k,pool)=>k/pool)+'</div>';
     });
+    h+='</div><div>'+
+       '<div class="hrow"><div class="hcap">The chance you draw this number '+
+       '<em>next</em> round, from any of the three stacks</div>'+
+       anyStackBars(st)+'</div>'+
+       '<div class="hrow"><div class="hcap">Room left \u2014 empty houses each '+
+       'number still fits, without taking a <em>roundabout</em></div>'+
+       spotBars()+'</div></div></div><div>';
     /* the same effect tally the solo variant shows, over what is left in the
        three stacks together */
     const pool=st.reduce((a,x)=>a+x.pool,0);
@@ -2383,10 +2535,8 @@ function hints(){
        'three stacks, and what share of the '+pool+' cards still hidden</div>'+
        '<div class="heff">'+Object.keys(EFFECTS).map(e=>{
          const k=tally[e]||0;
-         return '<div class="heffcell">'+glyph(e,"")+
-           '<span class="en">'+EFFECTS[e].short+'<br>'+k+' left</span>'+
-           '<span class="ep">'+(pool&&k?pct(k/pool):"\u2013")+'</span></div>';
-       }).join("")+'</div></div>';
+         return effCell(e, k, (pool&&k)?pct(k/pool):"\u2013");
+       }).join("")+'</div></div></div></div>';
     h+='<div class="hfoot">The effect for next round is already visible in the corners of '+
        'each stack, so only the number is uncertain. Average round <b>'+fmt(avgRound())+'</b>.</div>';
     body.innerHTML=h;
@@ -3434,7 +3584,7 @@ function briefing(){
        :' disabled title="Multiplayer is switched off for now"')+
        '>Multiplayer</button></div>';
   backTo=null;                  /* the briefing is the root of the panel stack */
-  openBox(h, true);
+  openBox(h, true, "mid");     /* wide enough for the title and a full-length name */
   renderCity();
   renderSeed();
   $("go").onclick=startGame;

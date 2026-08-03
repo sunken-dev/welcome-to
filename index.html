@@ -34,7 +34,10 @@
     color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;
     -webkit-text-size-adjust:100%;transition:background-color .35s ease,color .35s ease}
   #bgart{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-  .wrap{max-width:1240px;margin:0 auto;padding:18px 14px 70px;
+  /* The bar at the foot is sticky but sits in flow as the last child, so this
+     padding is simply the space below it. It was 70px, which read as a gap far
+     larger than any between the boxes above. */
+  .wrap{max-width:1240px;margin:0 auto;padding:18px 14px var(--gap);
     display:flex;flex-direction:column;gap:var(--gap)}
   /* the title and the mark share the first line, the figures take the second */
   .mastline{display:flex;align-items:center;justify-content:space-between;gap:var(--gap)}
@@ -71,7 +74,7 @@
   /* and follows the figure when a negative score turns red */
   .readout .v.bad + .unit{color:var(--stamp)}
   #rd-round{min-width:2ch}     /* 1 through 30-odd */
-  #rd-deck {min-width:2ch}     /* 81 down to 0, or an em dash */
+  #rd-deck {min-width:5ch}     /* 81/81 down to 0/81 */
   #rd-built{min-width:5ch}     /* 0/33 through 33/33 */
   #rd-score{min-width:4ch}     /* three digits, and a minus sign early on */
   #rd-best {min-width:4ch}
@@ -196,7 +199,33 @@
     border:1px solid var(--rule);background:var(--card);padding:0}
   .bx.out{background:var(--markbg);color:var(--markfg);border-color:var(--markbg);text-decoration:line-through}
   .bx.live{border-color:var(--park);color:var(--park);font-weight:700}
-  .road{overflow-x:auto;padding-bottom:5px}
+  /* A street wider than its column scrolls sideways. The browser's own bar is
+     hidden until you touch it on most platforms, which leaves no sign there is
+     more street to see, so: a bar that is always visible, a fade at whichever
+     edge has more beyond it, and a button to move along. */
+  .roadwrap{position:relative}
+  .road{overflow-x:auto;padding-bottom:5px;scrollbar-width:thin;
+    scrollbar-color:var(--rule) var(--paper-2)}
+  .road::-webkit-scrollbar{height:9px}
+  .road::-webkit-scrollbar-track{background:var(--paper-2);border-radius:5px}
+  .road::-webkit-scrollbar-thumb{background:var(--rule);border-radius:5px}
+  .road::-webkit-scrollbar-thumb:hover{background:var(--ink-soft)}
+  .roadwrap::before,.roadwrap::after{content:"";position:absolute;top:0;bottom:9px;
+    width:38px;pointer-events:none;opacity:0;transition:opacity .16s;z-index:2}
+  .roadwrap::before{left:0;background:linear-gradient(90deg,var(--card) 30%,transparent)}
+  .roadwrap::after{right:0;background:linear-gradient(270deg,var(--card) 30%,transparent)}
+  .roadwrap.more-l::before,.roadwrap.more-r::after{opacity:1}
+  .roadstep{position:absolute;top:calc(50% - 5px);transform:translateY(-50%);z-index:3;
+    width:24px;height:36px;display:none;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:15px;line-height:1;cursor:pointer;
+    background:var(--card);color:var(--ink);border:1px solid var(--rule);
+    border-radius:calc(var(--rs)*.5);padding:0}
+  .roadstep.l{left:0} .roadstep.r{right:0}
+  .roadwrap.more-l .roadstep.l,.roadwrap.more-r .roadstep.r{display:flex}
+  .roadstep:hover{background:var(--paper-2)}
+  .roadhint{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--ink-soft);margin-top:3px;display:none}
+  .roadwrap.scrolls + .roadhint{display:block}
   .lots{display:flex;align-items:stretch;min-width:max-content}
   .lot{width:var(--lot-w);height:var(--lot-h);flex:0 0 auto;border:1px solid var(--rule);background:transparent;
     font:inherit;color:inherit;padding:0;position:relative;display:flex;align-items:center;
@@ -214,7 +243,8 @@
   .lot.rndpick:hover{background:rgba(122,92,134,.4)}
   .lot.inked{animation:ink .22s ease-out}
   @keyframes ink{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
-  .lot .pt{position:absolute;bottom:3px;right:3px;width:16px;height:10px;border:1px solid var(--pool);border-radius:2px}
+  /* off the very corner: the lot grew and 3px left it wedged against the border */
+  .lot .pt{position:absolute;bottom:6px;right:6px;width:16px;height:10px;border:1px solid var(--pool);border-radius:2px}
   .lot .pt.filled{background:var(--pool)}
   .lot .pt.filled::after{content:"";position:absolute;inset:-3px;border:1.5px solid var(--pool);border-radius:4px}
   .lot.legal{cursor:pointer;background:var(--legal);border-color:var(--flag);border-width:2px}
@@ -1358,11 +1388,13 @@ function newGame(){
     shuffle(bottom);
     G.deck=top.concat(bottom);
     G.hand=[];
+    G.dealt=G.deck.filter(c=>!c.solo).length;   /* the Solo card is not one */
   } else {
     // p4/p5: three equal stacks, house number face up; flipped card shows its effect.
     const cards=makeCards(), per=Math.floor(cards.length/3);
     G.stacks=[cards.slice(0,per),cards.slice(per,2*per),cards.slice(2*per)];
     G.discards=[[],[],[]]; G.shown=[null,null,null];
+    G.dealt=G.stacks.reduce((a,st)=>a+st.length,0);
   }
   /* a shared link records how many times its plans were rerolled; reproduce
      that once, on the sheet the link opens */
@@ -1515,6 +1547,15 @@ function fenceOK(si,gi){
 }
 
 /* --------------------------------------------------------- scoring (p8) */
+/* Construction cards still to come, whichever way they were dealt. The Solo card
+   is not one of them: it is an event shuffled into the deck, and the hints panel
+   already counts without it, so counting it here would put the two readouts one
+   apart on the same screen. */
+function cardsLeft(){
+  if(CFG.mode==="solo") return (G.deck||[]).filter(c=>c&&!c.solo).length;
+  return (G.stacks||[]).reduce((a,st)=>a+st.length,0);
+}
+
 function tempPoints(){
   if(!MP.on) return G.temp>=CFG.soloTempMin ? CFG.soloTempPts : 0;
   if(!mpFinalsIn()) return 0;            /* cannot be ranked until everyone reports */
@@ -2188,7 +2229,10 @@ function render(){
     ? "Three construction cards \u2014 one for its number, another for its effect"
     : "Card stacks";
   $("rd-round").textContent=G.round;
-  $("rd-deck").textContent = CFG.mode==="solo" ? G.deck.length : "\u2014";
+  /* The standard turn deals three stacks rather than one deck, which is why this
+     used to read as an em dash there. Either way it is the cards not yet taken,
+     over however many were dealt. */
+  $("rd-deck").textContent = cardsLeft()+"/"+(G.dealt||cardsLeft());
   $("rd-built").textContent=houses()+"/"+buildable();
   const s=score(), el=$("rd-score");
   el.textContent=s.total; el.classList.toggle("bad",s.total<0);
@@ -2399,6 +2443,37 @@ function boxes(vals,crossed){
   return vals.map((v,k)=>'<span class="bx '+(k<crossed?'out':(k===crossed?'live':''))+'">'+v+'</span>').join("");
 }
 
+/* How far one press of a step button moves: three lots, or the visible width if
+   that is smaller. */
+function roadStep(road){
+  const lot=parseFloat(getComputedStyle(document.documentElement)
+    .getPropertyValue("--lot-w"))||59;
+  return Math.max(40, Math.min((road.clientWidth||0)||120, (lot+2)*3));
+}
+/* Which edges have more street beyond them, and whether it scrolls at all.
+   Called on every scroll, and once for all roads whenever the window resizes. */
+function markRoad(wrap,road){
+  const max=(road.scrollWidth||0)-(road.clientWidth||0);
+  const at=road.scrollLeft||0;
+  wrap.classList.toggle("scrolls", max>1);
+  wrap.classList.toggle("more-l", max>1 && at>1);
+  wrap.classList.toggle("more-r", max>1 && at<max-1);
+}
+let roadsWatched=false;
+function watchRoad(wrap,road){
+  road.addEventListener("scroll",()=>markRoad(wrap,road));
+  road._mark=()=>markRoad(wrap,road);
+  markRoad(wrap,road);
+  /* One resize listener for the page, not one per street per render: streets()
+     rebuilds these elements every round and the listeners would pile up. */
+  if(!roadsWatched && typeof window!=="undefined" && window.addEventListener){
+    roadsWatched=true;
+    window.addEventListener("resize",()=>{
+      (document.querySelectorAll(".road")||[]).forEach(r=>{ if(r._mark) r._mark(); });
+    });
+  }
+}
+
 function streets(){
   const h=$("streets"); h.innerHTML="";
   G.streets.forEach((st,si)=>{
@@ -2448,7 +2523,25 @@ function streets(){
       }
     });
     const e1=document.createElement("span"); e1.className="edge"; lots.appendChild(e1);
-    road.appendChild(lots); w.appendChild(road); h.appendChild(w);
+    road.appendChild(lots);
+    /* the road inside a wrapper, so the fades and buttons can sit over it */
+    const rw=document.createElement("div"); rw.className="roadwrap";
+    rw.appendChild(road);
+    ["l","r"].forEach(side=>{
+      const b=document.createElement("button");
+      b.className="roadstep "+side;
+      b.textContent=(side==="l"?"\u2039":"\u203a");
+      b.title=(side==="l"?"Earlier houses":"Later houses");
+      b.setAttribute("aria-label",b.title);
+      b.onclick=()=>road.scrollBy({left:(side==="l"?-1:1)*roadStep(road),behavior:"smooth"});
+      rw.appendChild(b);
+    });
+    w.appendChild(rw);
+    const hint=document.createElement("div"); hint.className="roadhint";
+    hint.textContent="Scroll sideways to see the whole street";
+    w.appendChild(hint);
+    watchRoad(rw,road);
+    h.appendChild(w);
   });
   G.inked=null;
 }

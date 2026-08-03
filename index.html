@@ -34,6 +34,13 @@
     color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;
     -webkit-text-size-adjust:100%;transition:background-color .35s ease,color .35s ease}
   #bgart{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+  /* The theme's own emblem, resting in the bottom right corner behind everything.
+     Its own layer above the page art and below the interface, and it takes no
+     clicks. Decorative only: aria-hidden, and absent if the file is missing. */
+  #bgcorner{position:fixed;right:0;bottom:0;z-index:-1;pointer-events:none;
+    width:min(46vw,520px);height:min(52vh,520px);
+    background-repeat:no-repeat;background-position:right bottom;background-size:contain}
+  @media (max-width:760px){ #bgcorner{width:min(70vw,320px);height:min(38vh,320px)} }
   /* The bar at the foot is sticky but sits in flow as the last child, so this
      padding is simply the space below it. It was 70px, which read as a gap far
      larger than any between the boxes above. */
@@ -609,6 +616,7 @@
 <style id="themecss"></style>
 
 <div id="bgart" aria-hidden="true"></div>
+<div id="bgcorner" aria-hidden="true"></div>
 
 <div class="wrap">
   <div class="mast">
@@ -752,6 +760,7 @@ function mottle(){
 const THEMES = {
   drafting: {
     name: "Drafting office",
+    corner: {file:"draftingOffice", opacity:".13"},
     qr: {dots:"square", corners:"square", cornerDots:"square"},
     blurb: "Plan paper and stencil numerals. The technical one.",
     swatch: ["#E6EBE2","#1E2A31","#A93A2C","#3D7F98","#4F7237"],
@@ -771,6 +780,7 @@ const THEMES = {
 
   hillside: {
     name: "Hillside",
+    corner: {file:"hillside", opacity:".14"},
     qr: {dots:"classy", corners:"extra-rounded", cornerDots:"dot"},
     blurb: "Soft painterly meadow. Sunlight, sky wash, rolling green.",
     swatch: ["#DCE9E3","#2A3F35","#C4643F","#4E8FA8","#5C8A3E"],
@@ -817,6 +827,7 @@ const THEMES = {
 
   cats: {
     name: "Cat town",
+    corner: {file:"catTown", opacity:".15"},
     qr: {dots:"rounded", corners:"extra-rounded", cornerDots:"dot"},
     blurb: "Peach paper, paw prints, yarn and milk. The very cute one.",
     swatch: ["#FBEFE4","#4A3A33","#D96A7A","#6BAFC4","#7FAE62"],
@@ -882,6 +893,7 @@ const THEMES = {
 
   orbit: {
     name: "Orbit",
+    corner: {file:"orbit", opacity:".22"},
     qr: {dots:"dots", corners:"dot", cornerDots:"dot"},
     blurb: "Night side of the planet. Starfield and instrument glow.",
     swatch: ["#0E1424","#DCE6F5","#FF6B6B","#4FD1E0","#5FE3A1"],
@@ -925,6 +937,7 @@ const THEMES = {
 
   scriptorium: {
     name: "Scriptorium",
+    corner: {file:"scriptorium", opacity:".13"},
     qr: {dots:"classy", corners:"square", cornerDots:"square"},
     blurb: "Vellum, oak-gall ink and vermilion rubrication.",
     swatch: ["#E8DCC0","#3A2A18","#A02A20","#2F6B7A","#B58A2B"],
@@ -966,6 +979,7 @@ const THEMES = {
 
   riso: {
     name: "Risograph",
+    corner: {file:"risograph", opacity:".13"},
     qr: {dots:"square", corners:"extra-rounded", cornerDots:"square"},
     blurb: "Two-ink duplicator print. Halftone dots, a hair of misregistration.",
     swatch: ["#E9E7DE","#173B4A","#FF4E8B","#FFD400","#1F8FB0"],
@@ -1013,6 +1027,12 @@ function applyTheme(id){
   GPATH = Object.assign({}, BASE_GPATH, t.glyphs||{});
   const css=document.getElementById("themecss"); if(css) css.textContent = t.css || "";
   const art=document.getElementById("bgart"); if(art) art.innerHTML = t.bgart || "";
+  const corner=document.getElementById("bgcorner");
+  if(corner){
+    const c=t.corner;
+    corner.style.backgroundImage = c ? 'url("assets/backgrounds/'+c.file+'.webp")' : "none";
+    corner.style.opacity = c ? c.opacity : "0";
+  }
   const mk=document.getElementById("mark");
   if(mk) mk.innerHTML = t.mark
     ? '<svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.7" '+

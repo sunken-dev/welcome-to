@@ -458,19 +458,25 @@
   /* The numbers take the greater part of the width, the card types a narrower
      column of their own beside them, so the two are read side by side rather
      than one after the other. */
-  .hgrid{display:grid;grid-template-columns:72fr 28fr;gap:16px;align-items:start}
-  @media (max-width:900px){ .hgrid{grid-template-columns:minmax(0,1fr)} }
-  /* the two number charts share the left side: how likely, and how much room */
-  .hpair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
-  @media (max-width:1100px){ .hpair{grid-template-columns:minmax(0,1fr)} }
+  /* Three columns, in this order: the effects, then the draw chances, then the
+     per-stack detail. The widths travel with the content, so the effects keep the
+     narrow column they had when they sat on the right. */
+  .hgrid{display:grid;grid-template-columns:28fr 36fr 36fr;gap:16px;align-items:stretch}
+  @media (max-width:1100px){ .hgrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+  @media (max-width:760px){ .hgrid{grid-template-columns:minmax(0,1fr)} }
+  /* Every row in a column takes the same height, so the charts line up across the
+     panel instead of each sitting wherever its own content ends. The columns are
+     stretched to a common height, so equal fractions in one line up with equal
+     fractions in the next. */
+  .hgrid>div{display:grid;grid-auto-rows:1fr;gap:11px;min-width:0}
   /* no room as it stands, but a temp shift would reach some */
   .hcell.rescue .hbar{background:var(--temp)}
   .hcell.rescue .hpct{color:var(--temp);font-weight:700}
   /* no room, and no shift reaches any */
   .hcell.dead .hbar{background:var(--rule)}
   .hcell.dead .hlbl,.hcell.dead .hpct{opacity:.4}
-  .hrow{margin-bottom:11px}
-  .hrow:last-child{margin-bottom:0}
+  /* spacing between rows comes from the grid gap above, not from a margin */
+  .hrow{min-width:0}
   .hcap{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;
     color:var(--ink-soft);margin-bottom:5px}
   .hcap em{font-style:normal;color:var(--ink);font-weight:700}
@@ -498,6 +504,18 @@
   .einfo .ename{font-weight:700}
   .einfo .ecount{color:var(--ink-soft)}
   .einfo .euse{color:var(--park)}
+  /* what it would gain, or cost: a bis reads as a penalty */
+  .einfo .eval{color:var(--ink-soft)}
+  .einfo .eval:first-letter{font-weight:700}
+  /* rows and columns of lots: streets down the side, numbers across */
+  .hmat{display:grid;gap:2px;align-items:center;margin-top:2px}
+  .hmat .hmh{font-family:var(--mono);font-size:8px;color:var(--ink-soft);text-align:center}
+  .hmat .hms{font-family:var(--mono);font-size:8px;color:var(--ink-soft);
+    padding-right:3px;text-align:right}
+  .hmat .hmc{font-family:var(--mono);font-size:9px;text-align:center;
+    background:var(--paper-2);border:1px solid var(--rule-soft);
+    border-radius:calc(var(--rs)*.35);line-height:15px}
+  .hmat .hmc.nil{color:var(--ink-soft);opacity:.45;background:transparent;border-color:transparent}
   .heffcell .ep{font-family:var(--mono);font-size:12px;font-weight:700;
     align-self:stretch;display:flex;align-items:center}
   /* an effect that could do nothing on the sheet as it stands */
@@ -1701,8 +1719,7 @@ function score(){
   const es=estates(); let et=0;
   const perSize=[];
   for(let n=1;n<=6;n++){
-    const col=CFG.estate[n];
-    const v=col[Math.min(G.improve[n],col.length-1)];
+    const v=estateValue(n);
     const c=es.filter(e=>e.size===n).length;
     et+=v*c;
     perSize.push(["Estates of "+n+" ("+c+" \u00d7 "+v+")",v*c,true,null]);
@@ -2402,6 +2419,121 @@ function effectUsable(e){
    The stacks are independent piles and each reveals one card, so this is one
    minus the chance of missing it in all three \u2014 not the sum of the three, which
    would overcount the rounds where it appears twice. */
+/* What one completed estate of a given size is worth, at the column's current
+   height. Shared by the scoresheet and by the hint that asks what a fence would
+   be worth. */
+function estateValue(n){
+  const col=CFG.estate[n];
+  return col[Math.min(G.improve[n],col.length-1)];
+}
+function estatePoints(){
+  return estates().reduce((a,e)=>a+estateValue(e.size),0);
+}
+
+/* What the best available fence would be worth. A fence scores nothing itself:
+   it closes an estate, and closing one can also complete a City Plan. Each legal
+   position is tried by flipping that one fence and measuring, so no board is
+   copied; the flip is undone immediately. */
+function fenceWorth(){
+  const base=estatePoints();
+  const open=G.plans.filter(p=>!p.done && p.req);
+  let best=null;
+  for(let si=0;si<G.streets.length;si++){
+    const st=G.streets[si];
+    for(let gi=0;gi<st.fences.length;gi++){
+      if(!fenceOK(si,gi)) continue;
+      st.fences[gi]=true;
+      const est=estatePoints()-base;
+      let plan=0, planName="";
+      open.forEach(p=>{
+        if(matchPlan(p)){
+          const v=G.approved ? p.lo : p.hi;
+          plan+=v;
+          planName=planName || ("plan n\u00b0"+p.n);
+        }
+      });
+      st.fences[gi]=false;
+      const total=est+plan;
+      if(!best || total>best.total)
+        best={total:total, est:est, plan:plan, planName:planName, si:si, gi:gi};
+    }
+  }
+  return best;
+}
+
+/* Where the room actually is. The chart above counts lots across the whole sheet,
+   which hides the case that matters: six lots all in one street commits you to
+   that street's parks, pools and estates. Rows are streets, columns numbers. */
+function streetMatrix(){
+  const range=numberHist();
+  let h='<div class="hmat" style="grid-template-columns:auto repeat('+
+    (range.hi-range.lo+1)+',minmax(0,1fr))">';
+  h+='<span class="hmh"></span>';
+  for(let n=range.lo;n<=range.hi;n++) h+='<span class="hmh">'+n+'</span>';
+  G.streets.forEach((st,si)=>{
+    h+='<span class="hms">'+(si+1)+'</span>';
+    for(let n=range.lo;n<=range.hi;n++){
+      let k=0;
+      for(let i=0;i<st.slots.length;i++) if(canPlace(si,i,n)) k++;
+      h+='<span class="hmc'+(k===0?" nil":"")+'" title="Street '+(si+1)+', number '+n+
+         ': '+k+(k===1?" lot":" lots")+'">'+(k||"\u00b7")+'</span>';
+    }
+  });
+  return h+'</div>';
+}
+
+/* What an effect would gain as the sheet stands. Several depend on which street
+   or column you pick, so this is the best on offer, not a promise. */
+function effectValue(e){
+  const step=(ladder,at)=> (at+1<ladder.length) ? (ladder[at+1]-ladder[at]) : 0;
+  switch(e){
+    case "pool": {
+      const v=step(CFG.pool,G.pools);
+      return v>0 ? {t:"+"+v, why:"the next pool box is worth "+v} : {t:"\u2014", why:"the pool ladder is full"};
+    }
+    case "landscaper": {
+      let best=0, where=0;
+      G.streets.forEach((st,i)=>{
+        const v=step(CFG.streets[i].parks, st.parks);
+        if(v>best){ best=v; where=i+1; }
+      });
+      return best>0 ? {t:"+"+best, why:"best next park is "+best+", on street "+where}
+                    : {t:"\u2014", why:"every park is crossed"};
+    }
+    case "bis": {
+      const v=step(CFG.bis,G.bisCount);
+      return v>0 ? {t:"\u2212"+v, why:"the next bis costs "+v} : {t:"\u2014", why:"the bis ladder is full"};
+    }
+    case "temp": {
+      if(MP.on) return {t:"?", why:"ranked against the other players at the end"};
+      const need=CFG.soloTempMin-G.temp;
+      if(need<=0) return {t:"\u2014", why:"the threshold is already met"};
+      return need===1 ? {t:"+"+CFG.soloTempPts, why:"one more temp reaches the threshold"}
+                      : {t:need+" more", why:need+" more temps reach the threshold"};
+    }
+    case "agent": {
+      let best=0, size=0;
+      Object.keys(G.improve).forEach(k=>{
+        const v=step(CFG.estate[k], G.improve[k]);
+        if(v>best){ best=v; size=k; }
+      });
+      return best>0 ? {t:"+"+best, why:"best rise is "+best+" a house, on size "+size}
+                    : {t:"\u2014", why:"every column is at its top"};
+    }
+    case "surveyor": {
+      const b=fenceWorth();
+      if(!b) return {t:"\u2014", why:"there is nowhere left to draw a fence"};
+      if(b.total<=0) return {t:"+0", why:"no fence closes an estate yet"};
+      const where="street "+(b.si+1)+", after house "+(b.gi+1);
+      return {t:"+"+b.total, why: b.plan>0
+        ? "best fence closes "+b.est+" of estate and completes "+b.planName+
+          " for "+b.plan+", at "+where
+        : "best fence closes an estate worth "+b.est+", at "+where};
+    }
+  }
+  return {t:"\u2014", why:""};
+}
+
 function anyStackBars(st){
   const range=numberHist();
   const items=[];
@@ -2426,7 +2558,7 @@ function anyStackBars(st){
 }
 
 function effCell(e, left, figure){
-  const ok=effectUsable(e);
+  const ok=effectUsable(e), val=effectValue(e);
   return '<div class="heffcell'+(ok?"":" idle")+'" title="'+
     (ok?"Something on the sheet can take this effect"
        :"Nothing on the sheet can take this effect as it stands")+'">'+
@@ -2435,6 +2567,7 @@ function effCell(e, left, figure){
       '<span class="ename">'+EFFECTS[e].short+'</span>'+
       '<span class="ecount">'+left+' left</span>'+
       '<span class="euse">'+(ok?"usable":"unusable")+'</span>'+
+      '<span class="eval" title="'+esc(val.why)+'">'+val.t+'</span>'+
     '</span>'+
     '<span class="ep">'+figure+'</span></div>';
 }
@@ -2481,27 +2614,26 @@ function hints(){
   box.hidden=!CFG.hints;
   if(!CFG.hints) return;
   const body=$("hintbody");
-  $("hinthead").textContent = !G.started
-    ? "Hints \u2014 the opening deck"
-    : (CFG.mode==="solo"
-        ? "Hints \u2014 exact odds over the cards still in the deck"
-        : "Hints \u2014 what each stack still holds beneath its top card");
+  $("hinthead").textContent = "Hints";
 
   if(CFG.mode==="solo"){
     const st=soloStats();
-    let h='<div class="hgrid"><div class="hpair">'+
-          '<div class="hrow"><div class="hcap">House number \u2014 chance it appears '+
-          'among your next <em>three</em> cards</div>'+
-          bars(st.nums, st.pool, atLeastOneIn3)+'</div>'+
-          '<div class="hrow"><div class="hcap">Room left \u2014 empty houses each number '+
-          'still fits, without taking a <em>roundabout</em></div>'+
-          spotBars()+'</div>'+
-          '</div><div>'+
-          '<div class="hrow"><div class="hcap">Effect \u2014 same, among your next three</div>'+
+    let h='<div class="hgrid">'+
+          '<div><div class="hrow"><div class="hcap">Effects still to come, and what '+
+          'each is worth</div>'+
           '<div class="heff">'+Object.keys(EFFECTS).map(e=>{
             const k=st.effs[e]||0;
             return effCell(e, k, k?pct(atLeastOneIn3(k,st.pool)):"\u2013");
-          }).join("")+'</div></div></div></div>';
+          }).join("")+'</div></div></div>'+
+          '<div><div class="hrow"><div class="hcap">Lots each number still fits '+
+          '(without roundabouts)</div>'+
+          spotBars()+'</div>'+
+          '<div class="hrow"><div class="hcap">Which street those lots are in</div>'+
+          streetMatrix()+'</div></div>'+
+          '<div><div class="hrow"><div class="hcap">House number \u2014 chance it appears '+
+          'among your next <em>three</em> cards</div>'+
+          bars(st.nums, st.pool, atLeastOneIn3)+'</div></div>'+
+          '</div>';
     h+='<div class="hfoot"><b>'+st.pool+'</b> construction cards left. Solo card: '+
        (G.soloSeen
          ? 'already drawn, plans are approved.'
@@ -2512,33 +2644,34 @@ function hints(){
     body.innerHTML=h;
   } else {
     const st=standardStats();
-    let h='<div class="hgrid"><div class="hpair"><div>';
-    st.forEach((s2,i)=>{
-      h+='<div class="hrow"><div class="hcap">Stack '+(i+1)+
-         ' \u2014 chance of each number <em>next</em> round &nbsp;('+s2.pool+
-         ' cards beneath the top)</div>'+
-         bars(s2.nums, s2.pool, (k,pool)=>k/pool)+'</div>';
-    });
-    h+='</div><div>'+
-       '<div class="hrow"><div class="hcap">The chance you draw this number '+
-       '<em>next</em> round, from any of the three stacks</div>'+
-       anyStackBars(st)+'</div>'+
-       '<div class="hrow"><div class="hcap">Room left \u2014 empty houses each '+
-       'number still fits, without taking a <em>roundabout</em></div>'+
-       spotBars()+'</div></div></div><div>';
-    /* the same effect tally the solo variant shows, over what is left in the
-       three stacks together */
     const pool=st.reduce((a,x)=>a+x.pool,0);
     const tally={};
     st.forEach(x=>Object.keys(x.effs).forEach(e=>{ tally[e]=(tally[e]||0)+x.effs[e]; }));
-    h+='<div class="hrow"><div class="hcap">Effect \u2014 how many are left across the '+
-       'three stacks, and what share of the '+pool+' cards still hidden</div>'+
+
+    /* the effects first, then the draw chances, then the stack by stack detail */
+    let h='<div class="hgrid">'+
+       '<div><div class="hrow"><div class="hcap">Effects still to come, and what '+
+       'each is worth</div>'+
        '<div class="heff">'+Object.keys(EFFECTS).map(e=>{
          const k=tally[e]||0;
          return effCell(e, k, (pool&&k)?pct(k/pool):"\u2013");
-       }).join("")+'</div></div></div></div>';
-    h+='<div class="hfoot">The effect for next round is already visible in the corners of '+
-       'each stack, so only the number is uncertain. Average round <b>'+fmt(avgRound())+'</b>.</div>';
+       }).join("")+'</div></div></div>'+
+       '<div>'+
+       '<div class="hrow"><div class="hcap">The chance you draw a number from any '+
+       'of the three stacks</div>'+
+       anyStackBars(st)+'</div>'+
+       '<div class="hrow"><div class="hcap">Lots each number still fits '+
+       '(without roundabouts)</div>'+
+       spotBars()+'</div>'+
+       '<div class="hrow"><div class="hcap">Which street those lots are in</div>'+
+       streetMatrix()+'</div></div>'+
+       '<div>';
+    st.forEach((s2,i)=>{
+      h+='<div class="hrow"><div class="hcap">Stack '+(i+1)+
+         ': chance you draw a number ('+s2.pool+' cards left)</div>'+
+         bars(s2.nums, s2.pool, (k,pool)=>k/pool)+'</div>';
+    });
+    h+='</div></div>';
     body.innerHTML=h;
   }
 }

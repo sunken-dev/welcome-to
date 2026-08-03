@@ -13,7 +13,8 @@
     --face-w:71px;--face-h:104px;  /* card face */
     --cardgap:12px;                /* between the two cards of a combination */
     --gap:16px;                    /* between every box on the page */
-    --bxw:25px;--bxh:23px;         /* one size for every track box */
+    --bxw:32px;--bxh:28px;         /* the track boxes in the section panels */
+    --pkw:26px;--pkh:22px;         /* the park boxes on a street: a fifth smaller */
     --lot-w:59px;--lot-h:86px;     /* building lot, 5% under the card */
     --r:0px;          /* panel and card rounding */
     --rs:0px;         /* small element rounding */
@@ -108,7 +109,7 @@
      enough for ten bis boxes, the pools only two across, and what is left over
      goes to the plans, whose text benefits from every pixel. */
   .row2{grid-column:1/-1;display:grid;
-    grid-template-columns:401fr 205fr 100fr 112fr 330fr;
+    grid-template-columns:458fr 248fr 98fr 134fr 210fr;
     gap:var(--gap);align-items:stretch}
   @media (max-width:1200px){.row2{grid-template-columns:repeat(3,minmax(0,1fr))}}
   @media (max-width:900px){.row2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
@@ -120,7 +121,11 @@
 
   .panel{background:var(--card);border:1px solid var(--rule);padding:12px 13px 14px}
   .panel>h2{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--ink-soft);margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule-soft)}
+    color:var(--ink-soft);margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule-soft);
+    display:flex;align-items:center;gap:6px}
+  .panel>h2 .hi{display:flex;flex:0 0 auto}
+  .panel>h2 .hi svg{width:14px;height:14px}
+  .panel>h2 .hlab{min-width:0}
 
   /* construction cards: on the table these are two separate objects, a
      discard showing its effect and a stack showing the next number */
@@ -225,7 +230,10 @@
   .sh{display:flex;align-items:center;gap:9px;margin-bottom:4px;flex-wrap:wrap;
     font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase}
   .sh .nm{font-weight:700}
+  /* The parks sit in a street heading rather than a panel of their own, beside the
+     street name, so they are drawn a fifth smaller than the section tracks. */
   .track{display:flex;gap:3px;align-items:center}
+  .track .bx{width:var(--pkw);height:var(--pkh);line-height:calc(var(--pkh) - 2px)}
   .track b{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--ink-soft);font-weight:400}
   /* Every box on every track is this size: the estate ladder, the pools, the
      temp tally and the penalties. One rule, so they cannot drift apart. */
@@ -594,9 +602,17 @@
     padding:0 3px 1px;width:min(450px,44vw)}
   .cityinput:focus{outline:none}
   /* the game's title, overarching the dialog's own heading */
+  /* the emblem before the words, as in the masthead, and the fan pushed to the far
+     side of the line */
+  .modal .gametitle .briefmark{display:flex;flex:0 0 auto}
+  .modal .gametitle .briefmark svg{width:25px;height:25px}
+  .brieflogo{height:40px;width:auto;flex:0 0 auto;margin-left:auto}
+  .modal .gametitle .gtwords{display:inline-flex;align-items:center;gap:6px;min-width:0}
+  @media (max-width:640px){ .brieflogo{height:30px} }
   .modal .gametitle{font-family:var(--mono);font-size:22px;font-weight:700;
     letter-spacing:.11em;text-transform:uppercase;line-height:1.15;
-    margin:0 0 13px;padding-bottom:11px;border-bottom:2px solid var(--ink)}
+    margin:0 0 13px;padding-bottom:11px;border-bottom:2px solid var(--ink);
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   /* the dialog sets the title at 22px, so twenty characters need about 347px in
      the widest face; the dialog itself has to be wide enough for that plus the
      words before it */
@@ -692,25 +708,25 @@
   <div class="cols">
     <div>
       <div class="panel">
-        <h2 id="handhead">Card stacks</h2>
+        <h2 id="handhead" data-g="stacks"><i class="hi"></i><span class="hlab">Card stacks</span></h2>
         <div class="hand" id="hand"></div>
       </div>
-      <div class="panel"><h2>Your city</h2><div id="streets"></div></div>
+      <div class="panel"><h2 id="hd-city" data-g="city"><i class="hi"></i><span class="hlab">Your city</span></h2><div id="streets"></div></div>
     </div>
     <div>
-      <div class="panel"><h2>Final scoring</h2><table class="sheet" id="sheet"></table></div>
+      <div class="panel"><h2 id="hd-score" data-g="scoring"><i class="hi"></i><span class="hlab">Final scoring</span></h2><table class="sheet" id="sheet"></table></div>
     </div>
     <div class="row2">
-      <div class="panel"><h2>City plans</h2><div id="plans"></div></div>
-      <div class="panel"><h2>Housing estate values</h2><div class="stair" id="stair"></div></div>
-      <div class="panel"><h2>Pools</h2><div class="tracks" id="tracks"></div></div>
-      <div class="panel"><h2>Temp agency</h2><div class="tracks" id="temps"></div></div>
-      <div class="panel"><h2>Penalties</h2><div class="tracks" id="pens"></div></div>
+      <div class="panel"><h2 id="hd-plans" data-g="plan"><i class="hi"></i><span class="hlab">City plans</span></h2><div id="plans"></div></div>
+      <div class="panel"><h2 id="hd-estates" data-g="agent"><i class="hi"></i><span class="hlab">Housing estate values</span></h2><div class="stair" id="stair"></div></div>
+      <div class="panel"><h2 id="hd-pools" data-g="pool"><i class="hi"></i><span class="hlab">Pools</span></h2><div class="tracks" id="tracks"></div></div>
+      <div class="panel"><h2 id="hd-temp" data-g="temp"><i class="hi"></i><span class="hlab">Temp agency</span></h2><div class="tracks" id="temps"></div></div>
+      <div class="panel"><h2 id="hd-pens" data-g="penalties"><i class="hi"></i><span class="hlab">Penalties</span></h2><div class="tracks" id="pens"></div></div>
     </div>
   </div>
 
   <div class="panel hint" id="hint" hidden>
-    <h2 id="hinthead">Hints &mdash; what is likely to come next</h2>
+    <h2 id="hinthead" data-g="hints"><i class="hi"></i><span class="hlab">Hints</span></h2>
     <div id="hintbody"></div>
   </div>
 
@@ -753,8 +769,21 @@ const GCOLOR = { surveyor:"var(--ink)", agent:"var(--plum)", landscaper:"var(--p
                  pool:"var(--pool)", temp:"var(--temp)", bis:"var(--stamp)",
                  plan:"var(--flag)", roundabout:"var(--ink)", refusal:"var(--stamp)",
                  /* the two headings of the scoresheet */
-                 achievements:"var(--flag)", penalties:"var(--stamp)" };
+                 achievements:"var(--flag)", penalties:"var(--stamp)",
+                 /* the section panels */
+                 stacks:"var(--ink)", city:"var(--ink)",
+                 scoring:"var(--flag)", hints:"var(--pool)" };
+const BRIEF_LOGO='<svg class="brieflogo" viewBox="-189.4 -75.6 378.8 191.8" role="img" aria-labelledby="brieflogottl" xmlns="http://www.w3.org/2000/svg"><title id="brieflogottl">Welcome To</title><g transform="rotate(27.5 110.00 30.00)"><rect x="70.00" y="-25.00" width="86" height="118" rx="0.0" fill="#A4B4BA" opacity=".40"/><rect x="67.00" y="-29.00" width="86" height="118" rx="0.0" fill="#E9E7DE"/><clipPath id="bcriso"><rect x="67.00" y="-29.00" width="86" height="118" rx="0.0"/></clipPath><g clip-path="url(#bcriso)"><defs><pattern id="bht0a" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.9" cy="1.9" r="1.05" fill="#FF4E8B" opacity=".22"/></pattern><pattern id="bht0b" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="4.7" cy="4.7" r="1.05" fill="#1F8FB0" opacity=".20"/></pattern></defs><rect x="67" y="-29" width="86" height="118" fill="url(#bht0a)"/><rect x="67" y="-29" width="86" height="118" fill="url(#bht0b)"/></g><rect x="67.00" y="-29.00" width="86" height="118" rx="0.0" fill="none" stroke="#A4B4BA" stroke-width="2"/><g transform="translate(84.58 5.00) scale(2.0833)" fill="none" stroke="#173B4A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.4"/><circle cx="15.4" cy="15" r="6.4" stroke="#FF4E8B"/></g></g><g transform="rotate(16.5 66.00 10.80)"><rect x="26.00" y="-44.20" width="86" height="118" rx="2.0" fill="#BFA97C" opacity=".40"/><rect x="23.00" y="-48.20" width="86" height="118" rx="2.0" fill="#E8DCC0"/><clipPath id="bcscriptorium"><rect x="23.00" y="-48.20" width="86" height="118" rx="2.0"/></clipPath><g clip-path="url(#bcscriptorium)"><g fill="#3A2A18"><ellipse cx="96.6" cy="10.7" rx="8.1" ry="9.4" opacity="0.09"/><ellipse cx="68.0" cy="5.6" rx="7.3" ry="5.5" opacity="0.11"/><ellipse cx="60.0" cy="-9.3" rx="6.2" ry="9.5" opacity="0.11"/><ellipse cx="59.2" cy="20.4" rx="10.5" ry="4.4" opacity="0.11"/><ellipse cx="48.0" cy="29.5" rx="10.8" ry="3.3" opacity="0.06"/><ellipse cx="57.3" cy="9.5" rx="5.1" ry="8.2" opacity="0.11"/><ellipse cx="75.9" cy="12.1" rx="9.0" ry="6.9" opacity="0.06"/><ellipse cx="38.4" cy="57.2" rx="10.7" ry="6.1" opacity="0.06"/><ellipse cx="53.0" cy="62.4" rx="5.4" ry="3.1" opacity="0.07"/><ellipse cx="103.9" cy="31.3" rx="10.1" ry="9.0" opacity="0.07"/><ellipse cx="106.3" cy="68.5" rx="6.3" ry="8.7" opacity="0.06"/></g></g><rect x="23.00" y="-48.20" width="86" height="118" rx="2.0" fill="none" stroke="#BFA97C" stroke-width="2"/><g transform="translate(34.00 -22.53) scale(2.6667)" fill="none" stroke="#3A2A18" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V5h9l5 5v10z"/><path d="M14 5v5h5"/><path d="M8 13h7M8 16.5h5"/></g></g><g transform="rotate(5.5 22.00 1.20)"><rect x="-18.00" y="-53.80" width="86" height="118" rx="5.0" fill="#37456A" opacity=".40"/><rect x="-21.00" y="-57.80" width="86" height="118" rx="5.0" fill="#0E1424"/><clipPath id="bcorbit"><rect x="-21.00" y="-57.80" width="86" height="118" rx="5.0"/></clipPath><g clip-path="url(#bcorbit)"><g fill="#DCE6F5"><circle cx="58.5" cy="34.5" r="0.84" opacity="0.33"/><circle cx="11.2" cy="18.4" r="0.84" opacity="0.66"/><circle cx="54.5" cy="29.1" r="0.60" opacity="0.53"/><circle cx="-6.6" cy="-13.7" r="0.91" opacity="0.58"/><circle cx="14.3" cy="-21.9" r="0.74" opacity="0.48"/><circle cx="-20.3" cy="24.8" r="0.65" opacity="0.89"/><circle cx="51.1" cy="-45.9" r="0.65" opacity="0.77"/><circle cx="62.3" cy="-19.9" r="0.85" opacity="0.90"/><circle cx="-2.2" cy="10.8" r="0.91" opacity="0.58"/><circle cx="-12.2" cy="-12.3" r="0.45" opacity="0.53"/><circle cx="-18.6" cy="48.8" r="0.72" opacity="0.61"/><circle cx="46.0" cy="46.4" r="0.57" opacity="0.54"/><circle cx="35.8" cy="-16.9" r="0.92" opacity="0.92"/><circle cx="51.0" cy="12.9" r="0.82" opacity="0.85"/><circle cx="42.0" cy="-22.1" r="0.55" opacity="0.70"/><circle cx="25.8" cy="17.5" r="0.41" opacity="0.84"/><circle cx="-3.6" cy="39.4" r="0.94" opacity="0.72"/><circle cx="11.1" cy="0.8" r="0.91" opacity="0.36"/><circle cx="4.9" cy="28.6" r="0.63" opacity="0.62"/><circle cx="30.1" cy="25.9" r="0.40" opacity="0.74"/><circle cx="2.7" cy="-23.0" r="0.63" opacity="0.77"/><circle cx="36.4" cy="-51.4" r="0.66" opacity="0.69"/><circle cx="60.6" cy="-3.5" r="0.36" opacity="0.91"/><circle cx="18.7" cy="-20.2" r="0.44" opacity="0.67"/><circle cx="-13.5" cy="19.9" r="0.67" opacity="0.84"/><circle cx="3.1" cy="16.6" r="0.34" opacity="0.78"/><circle cx="29.0" cy="-39.2" r="0.92" opacity="0.46"/><circle cx="38.6" cy="-16.1" r="0.53" opacity="0.68"/><circle cx="16.8" cy="59.5" r="0.32" opacity="0.44"/><circle cx="-4.4" cy="5.3" r="0.73" opacity="0.81"/><circle cx="30.3" cy="-4.3" r="0.84" opacity="0.49"/><circle cx="35.4" cy="51.9" r="0.32" opacity="0.46"/><circle cx="24.9" cy="-43.1" r="0.93" opacity="0.73"/><circle cx="32.2" cy="10.6" r="0.72" opacity="0.32"/><circle cx="39.7" cy="1.7" r="0.85" opacity="0.67"/><circle cx="10.0" cy="54.8" r="0.62" opacity="0.68"/><circle cx="47.0" cy="-36.7" r="0.83" opacity="0.71"/><circle cx="48.9" cy="19.4" r="0.79" opacity="0.82"/><circle cx="42.7" cy="7.4" r="0.78" opacity="0.49"/><circle cx="1.6" cy="22.8" r="0.32" opacity="0.46"/><circle cx="35.4" cy="-39.7" r="0.90" opacity="0.50"/><circle cx="55.4" cy="-25.1" r="0.59" opacity="0.62"/><circle cx="19.1" cy="-0.0" r="0.42" opacity="0.54"/><circle cx="-13.7" cy="-23.4" r="0.56" opacity="0.60"/><circle cx="15.1" cy="-1.6" r="0.71" opacity="0.72"/><circle cx="32.9" cy="-38.3" r="0.48" opacity="0.79"/><circle cx="13.1" cy="-8.3" r="0.39" opacity="0.66"/><circle cx="32.5" cy="-7.1" r="0.29" opacity="0.43"/><circle cx="-19.0" cy="9.1" r="0.81" opacity="0.60"/><circle cx="4.2" cy="36.0" r="0.38" opacity="0.55"/><circle cx="31.1" cy="-31.9" r="0.35" opacity="0.62"/><circle cx="27.0" cy="35.2" r="0.46" opacity="0.44"/></g></g><rect x="-21.00" y="-57.80" width="86" height="118" rx="5.0" fill="none" stroke="#37456A" stroke-width="2"/><g transform="translate(-1.08 -21.88) scale(1.9231)" fill="none" stroke="#DCE6F5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.6"/><ellipse cx="12" cy="12" rx="10.4" ry="4.1" transform="rotate(-24 12 12)"/></g></g><g transform="rotate(-5.5 -22.00 1.20)"><rect x="-62.00" y="-53.80" width="86" height="118" rx="10.0" fill="#DFC3AE" opacity=".40"/><rect x="-65.00" y="-57.80" width="86" height="118" rx="10.0" fill="#FBEFE4"/><clipPath id="bccats"><rect x="-65.00" y="-57.80" width="86" height="118" rx="10.0"/></clipPath><g clip-path="url(#bccats)"><g fill="#4A3A33" opacity=".17"><g transform="translate(14.5 -43.2) rotate(-18) scale(0.74)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(-50.1 28.5) rotate(4) scale(0.79)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(-30.0 18.7) rotate(-6) scale(0.90)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(10.0 33.6) rotate(-4) scale(0.74)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(-41.4 19.1) rotate(11) scale(0.78)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g></g></g><rect x="-65.00" y="-57.80" width="86" height="118" rx="10.0" fill="none" stroke="#DFC3AE" stroke-width="2"/><g transform="translate(-50.57 -30.23) scale(2.8571)" fill="none" stroke="#4A3A33" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 9.4L6.2 4l3.4 2.6"/><path d="M14.6 9.4L13.8 4l-3.4 2.6"/><circle cx="10" cy="12.4" r="5.6"/><path d="M8.2 12h.01M11.8 12h.01"/><path d="M9 14.6c.7.6 1.3.6 2 0"/></g></g><g transform="rotate(-16.5 -66.00 10.80)"><rect x="-106.00" y="-44.20" width="86" height="118" rx="7.0" fill="#A9C2B4" opacity=".40"/><rect x="-109.00" y="-48.20" width="86" height="118" rx="7.0" fill="#DCE9E3"/><clipPath id="bchillside"><rect x="-109.00" y="-48.20" width="86" height="118" rx="7.0"/></clipPath><g clip-path="url(#bchillside)"><g fill="#5C8A3E"><path opacity=".20" d="M-109.0,46.2 C-97.0,36.8 -86.6,50.9 -72.9,43.8 C-59.1,36.8 -45.4,50.9 -23.0,41.5 L-23.0,69.8 L-109.0,69.8 Z"/><path opacity=".26" d="M-109.0,56.8 C-91.8,49.7 -79.8,62.7 -62.6,55.6 C-47.1,49.7 -35.0,61.5 -23.0,54.5 L-23.0,69.8 L-109.0,69.8 Z"/></g></g><rect x="-109.00" y="-48.20" width="86" height="118" rx="7.0" fill="none" stroke="#A9C2B4" stroke-width="2"/><g transform="translate(-91.00 -17.08) scale(2.5000)" fill="none" stroke="#2A3F35" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17c4-4 7 2 10-2 2-2.6 4 .6 6 1.4"/><circle cx="14" cy="6.5" r="3.2"/><path d="M14 9.7V14"/></g></g><g transform="rotate(-27.5 -110.00 30.00)"><rect x="-150.00" y="-25.00" width="86" height="118" rx="0.0" fill="#AFBBAC" opacity=".40"/><rect x="-153.00" y="-29.00" width="86" height="118" rx="0.0" fill="#E6EBE2"/><clipPath id="bcdrafting"><rect x="-153.00" y="-29.00" width="86" height="118" rx="0.0"/></clipPath><g clip-path="url(#bcdrafting)"><g stroke="#1E2A31" stroke-width=".6" opacity=".16" fill="none"><path d="M-141 -29v118"/><path d="M-129 -29v118"/><path d="M-117 -29v118"/><path d="M-105 -29v118"/><path d="M-93 -29v118"/><path d="M-81 -29v118"/><path d="M-69 -29v118"/><path d="M-153 -17h86"/><path d="M-153 -5h86"/><path d="M-153 7h86"/><path d="M-153 19h86"/><path d="M-153 31h86"/><path d="M-153 43h86"/><path d="M-153 55h86"/><path d="M-153 67h86"/><path d="M-153 79h86"/></g></g><rect x="-153.00" y="-29.00" width="86" height="118" rx="0.0" fill="none" stroke="#AFBBAC" stroke-width="2"/><g transform="translate(-137.50 0.00) scale(2.5000)" fill="none" stroke="#1E2A31" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h16M11 18V6M7 9l4-3 4 3"/></g></g></svg>';
+
 const BASE_GPATH = {
+  /* the section panels: cards to draw from, the sheet itself, the total, the hints */
+  stacks:'<rect x="3.4" y="7.4" width="12.2" height="13.2" rx="1.6"/>'+
+    '<rect x="8.4" y="3.4" width="12.2" height="13.2" rx="1.6"/>',
+  city:'<path d="M2.6 20.4h18.8"/><path d="M5 20.4v-5.8l3-2.6 3 2.6v5.8'+
+    'M13 20.4v-7.8l3-2.6 3 2.6v7.8"/>',
+  scoring:'<path d="M4.6 4.6h14.8L12 12l7.4 7.4H4.6"/>',
+  hints:'<path d="M12 3.4a5.6 5.6 0 00-3.4 10.1v2.1h6.8v-2.1A5.6 5.6 0 0012 3.4z"/>'+
+    '<path d="M10.2 19.2h3.6"/>',
   achievements:'<path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8'+
     'L3.6 9.7l5.8-.8z"/>',
   penalties:'<path d="M12 4.4L21.2 19.8H2.8z"/><path d="M12 10.2v4.2M12 17.2h.01"/>',
@@ -770,6 +799,28 @@ const BASE_GPATH = {
   refusal:   '<circle cx="12" cy="12" r="7.6"/><path d="M6.8 17.2L17.2 6.8"/>'
 };
 let GPATH = BASE_GPATH;   /* replaced per theme by applyTheme */
+/* Each panel heading carries a small glyph. The label lives in its own span so
+   that setting the text cannot wipe the icon out, and the icons are repainted
+   whenever the theme changes, since the shapes come from the theme. */
+const PANEL_HEADS=["handhead","hd-city","hd-score","hd-plans","hd-estates",
+                   "hd-pools","hd-temp","hd-pens","hinthead"];
+function panelLabel(id, text){
+  const h=$(id); if(!h) return;
+  const lab=(h.kids||[]).find(k=>/hlab/.test(k.className||"")) ||
+    (h.querySelector ? h.querySelector(".hlab") : null);
+  if(lab) lab.textContent=text; else h.textContent=text;
+}
+function paintPanelIcons(){
+  PANEL_HEADS.forEach(id=>{
+    const h=$(id); if(!h) return;
+    const key=(h.dataset && h.dataset.g) || h.getAttribute && h.getAttribute("data-g");
+    if(!key) return;
+    const slot=(h.kids||[]).find(k=>/(^| )hi( |$)/.test(k.className||"")) ||
+      (h.querySelector ? h.querySelector(".hi") : null);
+    if(slot) slot.innerHTML=glyph(key,"gi");
+  });
+}
+
 function glyphSet(id){
   return Object.assign({}, BASE_GPATH, (THEMES[id] && THEMES[id].glyphs) || {});
 }
@@ -1100,6 +1151,7 @@ function applyTheme(id){
   const css=document.getElementById("themecss"); if(css) css.textContent = t.css || "";
   const art=document.getElementById("bgart"); if(art) art.innerHTML = t.bgart || "";
   root.style.setProperty("--stat", t.stat || "var(--pool)");
+  paintPanelIcons();
   const corner=document.getElementById("bgcorner");
   if(corner){
     /* Loaded from the folder beside the page rather than carried inside it: the
@@ -1114,9 +1166,16 @@ function applyTheme(id){
     corner.style.filter = (c && c.wash) ? c.wash : "none";
   }
   const mk=document.getElementById("mark");
-  if(mk) mk.innerHTML = t.mark
-    ? '<svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.7" '+
-      'stroke-linecap="round" stroke-linejoin="round">'+t.mark+'</svg>' : "";
+  if(mk) mk.innerHTML = markSvg(id);
+}
+
+/* The theme's own emblem, as it appears beside the title. Built here rather than
+   inline so the masthead and the new-sheet dialog always show the same thing. */
+function markSvg(id){
+  const t=THEMES[id||CFG.theme] || THEMES[THEME_ORDER[0]];
+  if(!t || !t.mark) return "";
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.7" '+
+    'stroke-linecap="round" stroke-linejoin="round">'+t.mark+'</svg>';
 }
 
 /* A miniature of the real interface. Custom properties are set inline on the
@@ -2379,9 +2438,9 @@ function commitCity(v){
 /* ========================================================== RENDER */
 const $=id=>document.getElementById(id);
 function render(){
-  $("handhead").textContent = CFG.mode==="solo"
+  panelLabel("handhead", CFG.mode==="solo"
     ? "Three construction cards \u2014 one for its number, another for its effect"
-    : "Card stacks";
+    : "Card stacks");
   $("rd-round").textContent=G.round;
   /* The standard turn deals three stacks rather than one deck, which is why this
      used to read as an em dash there. Either way it is the cards not yet taken,
@@ -2633,7 +2692,7 @@ function hints(){
   box.hidden=!CFG.hints;
   if(!CFG.hints) return;
   const body=$("hintbody");
-  $("hinthead").textContent = "Hints";
+  panelLabel("hinthead", "Hints");
 
   if(CFG.mode==="solo"){
     const st=soloStats();
@@ -3090,18 +3149,24 @@ function tracks(){
       ' style="grid-template-columns:repeat('+cols+',var(--bxw))">'+g+'</div>';
     tmp.appendChild(d); }
 
-  /* the three penalties keep their own box */
+  /* The three penalties keep their own box. Five boxes to a line at most: the bis
+     ladder is ten long and a single row of them would set the width of the whole
+     column, at the expense of the plans beside it. */
   const pen=$("pens"); pen.innerHTML="";
+  const PEN_PER_LINE=5;
   const addPen=(l,html,off)=>{ const d=document.createElement("div");
     d.className="trow"+(off?" dim":"");
     if(off) d.title="Switched off in Game setup";
     d.innerHTML='<span class="lbl">'+l+'</span>'+html; pen.appendChild(d); };
-  addPen("Bis ("+G.bisCount+")", boxes(CFG.bis,G.bisCount));
+  const penBoxes=(vals,crossed)=>
+    '<div class="bxgrid" style="grid-template-columns:repeat('+
+    Math.min(vals.length,PEN_PER_LINE)+',var(--bxw))">'+boxes(vals,crossed)+'</div>';
+  addPen("Bis ("+G.bisCount+")", penBoxes(CFG.bis,G.bisCount));
   addPen("Roundabouts "+(CFG.roundabouts
         ? "("+G.rounds+" of "+(CFG.roundaboutValues.length-1)+")"
         : "\u2014 off"),
-      boxes(CFG.roundaboutValues,G.rounds), !CFG.roundabouts);
-  addPen("Permit refusal ("+G.refusals+" of 3)", boxes(CFG.refusal,G.refusals));
+      penBoxes(CFG.roundaboutValues,G.rounds), !CFG.roundabouts);
+  addPen("Permit refusal ("+G.refusals+" of 3)", penBoxes(CFG.refusal,G.refusals));
 }
 
 /* icon, section, points \u2014 shared so the side panel and the final scoresheet
@@ -3717,7 +3782,10 @@ function briefing(){
         (mpIsHost()?"you are the host":"the host starts")
       : "solo \u2014 open Multiplayer to play with someone"]
   ];
-  let h='<div class="gametitle">Welcome To <span id="briefcity"></span></div>'+
+  let h='<div class="gametitle">'+
+        '<span class="briefmark">'+markSvg()+'</span>'+
+        '<span class="gtwords">Welcome To <span id="briefcity"></span></span>'+
+        BRIEF_LOGO+'</div>'+
     '<h3>New sheet</h3>'+
     '<p class="lede">The clock starts when you begin. Nothing is dealt until then.</p>'+
     (sharedIn?'<div class="rstatus live">These settings came from a shared link.</div>':'')+

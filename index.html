@@ -2171,7 +2171,8 @@ const STORE=(function(){
        typeof window.storage.get==="function"){
       return { kind:"artifact",
         get:k=>window.storage.get(k),
-        set:(k,v)=>window.storage.set(k,v) };
+        set:(k,v)=>window.storage.set(k,v),
+        del:k=>window.storage.delete(k) };
     }
   }catch(e){}
   return { kind:"localStorage",
@@ -2181,6 +2182,11 @@ const STORE=(function(){
     }),
     set:(k,v)=>new Promise((res,rej)=>{
       try{ localStorage.setItem(k,v); res(); }catch(e){ rej(e); }
+    })
+  ,
+    del:k=>new Promise(res=>{
+      try{ localStorage.removeItem(k); }catch(e){}
+      res();
     })
   };
 })();
@@ -2233,6 +2239,96 @@ async function load(){
       renderCity();
       $("btn-hints").innerHTML=tglLabel("Hints",CFG.hints);
       newGame(); } }catch(e){}
+}
+/* ------------------------------------------------------ resuming a sheet
+   The board is plain data, so a sheet in progress can be written down and picked up
+   again. Two things need care. The clock keeps wall clock timestamps, so it is
+   stored as elapsed time and rebased on the way back in, otherwise a sheet resumed
+   the next morning would show eight hours on it. And the turn in progress is stored
+   too, so closing the tab halfway through choosing an effect leaves you where you
+   were rather than losing the round. */
+const SESSION_KEY="welcome-2018-sheet";
+
+function clockOut(){
+  const now=Date.now();
+  return {
+    rounds: T.rounds.slice(),
+    stopped: !!T.stopped, running: !!T.running,
+    /* elapsed, not a start time */
+    total: !T.running ? 0 : (T.stopped ? T.total : now-T.start),
+    inRound: (T.stopped || T.roundStart===null) ? null : now-T.roundStart
+  };
+}
+function clockIn(c){
+  if(!c) return;
+  const now=Date.now();
+  T.rounds = Array.isArray(c.rounds) ? c.rounds.slice() : [];
+  T.stopped = !!c.stopped;
+  T.running = !!c.running;
+  T.total = c.total||0;
+  T.start = now-(c.total||0);
+  T.roundStart = (c.inRound===null||c.inRound===undefined) ? null : now-c.inRound;
+}
+
+async function saveSheet(){
+  if(!G) return;
+  try{
+    await STORE.set(SESSION_KEY, JSON.stringify({
+      v:1, cfg:CFG, best:best,
+      game:G, sel:sel, snap:snap, clock:clockOut()
+    }));
+  }catch(e){}
+}
+/* render() runs after every change, so that is the hook; a short delay keeps a
+   burst of updates to one write. */
+let saveTimer=null;
+function queueSave(){
+  if(typeof setTimeout!=="function"){ saveSheet(); return; }
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{ saveTimer=null; saveSheet(); }, 400);
+}
+async function clearSheet(){
+  try{ await STORE.del(SESSION_KEY); }
+  catch(e){ try{ await STORE.set(SESSION_KEY,""); }catch(e2){} }
+}
+/* Everything a sheet needs, and nothing that would make a stale save dangerous:
+   a board from an older data version, or one whose shape no longer matches, is
+   refused rather than half restored. */
+function sheetUsable(d){
+  if(!d || d.v!==1 || !d.game) return false;
+  const g=d.game;
+  if(!Array.isArray(g.streets) || g.streets.length!==3) return false;
+  if(!Array.isArray(g.plans) || !g.plans.length) return false;
+  if(g.streets.some(st=>!st || !Array.isArray(st.slots) || !Array.isArray(st.fences)))
+    return false;
+  /* the settings call it lots; the board calls the array slots */
+  const shape=CFG.streets.map(x=>x.lots).join(",");
+  if(g.streets.map(st=>st.slots.length).join(",")!==shape) return false;
+  return true;
+}
+function restoreSheet(d){
+  G=d.game;
+  sel=d.sel||null;
+  snap=d.snap||null;
+  clockIn(d.clock);
+  render();
+}
+
+async function resumeSheet(){
+  try{
+    const r=await STORE.get(SESSION_KEY);
+    if(!r||!r.value) return false;
+    const d=JSON.parse(r.value);
+    if(!sheetUsable(d)) return false;
+    /* the settings the sheet was played under, so the theme, the city and the
+       variants come back with it */
+    if(d.cfg){ CFG=Object.assign(copy(BASE),d.cfg); CFG.dataVersion=BASE.dataVersion; }
+    applyTheme(CFG.theme);
+    renderCity();
+    $("btn-hints").innerHTML=tglLabel("Hints",CFG.hints);
+    restoreSheet(d);
+    return true;
+  }catch(e){ return false; }
 }
 async function save(){
   try{
@@ -2567,6 +2663,7 @@ function render(){
   $("rd-best").textContent=best===null?"\u2014":best;
   hand(); streets(); stair(); plans(); tracks(); sheet(s); hints(); status();
   tickClock();
+  queueSave();          /* after every change, so a closed tab loses nothing */
 }
 
 function pct(p){ return (p*100).toFixed(p>=0.095?0:1)+"%"; }
@@ -4419,12 +4516,15 @@ $("btn-mp").disabled=!MP_ENABLED;
 if(!MP_ENABLED) $("btn-mp").title="Multiplayer is switched off for now";
 $("btn-mp").onclick=()=>{ backTo=null; roomPanel(); };
 $("btn-theme").onclick=()=>{ backTo=null; themePicker(); };
-$("btn-new").onclick=()=>{ if(!G.over&&houses()>0&&!confirm("Start a new sheet?")) return; newGame(); };
+$("btn-new").onclick=()=>{ if(!G.over&&houses()>0&&!confirm("Start a new sheet?")) return;
+  clearSheet(); newGame(); };
 
 applySharedSetup();     /* a link overrides the defaults before anything is dealt */
 applyTheme(CFG.theme);
 renderCity();
 newGame();
 setInterval(tickClock, 500);
-load();
+/* Settings first, then the sheet. A shared link is a deliberate request for those
+   settings, so it deals fresh rather than resuming. */
+load().then(()=>{ if(!sharedIn) return resumeSheet(); });
 </script>

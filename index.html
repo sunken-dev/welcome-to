@@ -6,7 +6,7 @@
      The image has to be a raster: none of them will render an SVG. -->
 <meta name="description" content="Welcome To Your Perfect Home.
 Three streets, three city plans, the standard turn or the official solo variant,
-with the odds worked out for you. No account, nothing saved but your best score.">
+with the odds worked out for you. No account, and nothing leaves your browser.">
 <link rel="canonical" href="https://welcome-to.sunken.dev/">
 <!-- All in one folder. A browser that reads these uses them wherever they sit; the
      root paths are only the fallback for anything that does not parse the page.
@@ -732,10 +732,23 @@ of the six themes">
     background:transparent;color:var(--ink);border:0;border-bottom:1px solid var(--ink);
     padding:0 2px 1px;width:16ch;text-transform:uppercase}
   .seedinput:focus{outline:none}
+  /* One box for both, with the contents centred in it. The refresh is a text mark
+     and the pin a glyph, so left to themselves they take different widths. */
   .seedroll{font-family:var(--mono);font-size:13px;line-height:1;background:transparent;
     color:var(--ink-soft);border:1px solid var(--rule);border-radius:calc(var(--rs)*.5);
-    padding:1px 5px 2px;margin-left:7px;cursor:pointer}
+    padding:0;margin-left:7px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;flex:0 0 auto;vertical-align:middle}
   .seedroll:hover{background:var(--ink);color:var(--card);border-color:var(--ink)}
+  /* the pin sits beside the reroll and matches it; it reads as pressed when the
+     seed is fixed */
+  .seedpin{margin-left:4px}
+  .seedpin svg{width:12px;height:12px}
+  .seedpin.on{background:var(--ink);border-color:var(--ink)}
+  .seedpin.on svg{stroke:var(--card)}
+  /* a section heading with a control on the right of it */
+  .modal h4.withact{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .modal h4.withact .seedroll{margin-left:0}
   .seednote{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
     color:var(--ink-soft);margin-left:8px}
   /* the code carries its own white quiet zone, and the frame keeps it white on
@@ -873,6 +886,7 @@ const GCOLOR = { surveyor:"var(--ink)", agent:"var(--plum)", landscaper:"var(--p
                  /* the two headings of the scoresheet */
                  achievements:"var(--flag)", penalties:"var(--stamp)",
                  /* the section panels */
+                 pin:"var(--ink)",
                  stacks:"var(--ink)", city:"var(--ink)",
                  scoring:"var(--flag)", hints:"var(--pool)" };
 const BRIEF_LOGO='<svg class="brieflogo" viewBox="-189.4 -75.6 378.8 191.8" role="img" aria-labelledby="brieflogottl" xmlns="http://www.w3.org/2000/svg"><title id="brieflogottl">Welcome To</title><g transform="rotate(27.5 110.00 30.00)"><rect x="70.00" y="-25.00" width="86" height="118" rx="0.0" fill="#A4B4BA" opacity=".40"/><rect x="67.00" y="-29.00" width="86" height="118" rx="0.0" fill="#E9E7DE"/><clipPath id="bcriso"><rect x="67.00" y="-29.00" width="86" height="118" rx="0.0"/></clipPath><g clip-path="url(#bcriso)"><defs><pattern id="bht0a" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.9" cy="1.9" r="1.05" fill="#FF4E8B" opacity=".22"/></pattern><pattern id="bht0b" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="4.7" cy="4.7" r="1.05" fill="#1F8FB0" opacity=".20"/></pattern></defs><rect x="67" y="-29" width="86" height="118" fill="url(#bht0a)"/><rect x="67" y="-29" width="86" height="118" fill="url(#bht0b)"/></g><rect x="67.00" y="-29.00" width="86" height="118" rx="0.0" fill="none" stroke="#A4B4BA" stroke-width="2"/><g transform="translate(84.58 5.00) scale(2.0833)" fill="none" stroke="#173B4A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.4"/><circle cx="15.4" cy="15" r="6.4" stroke="#FF4E8B"/></g></g><g transform="rotate(16.5 66.00 10.80)"><rect x="26.00" y="-44.20" width="86" height="118" rx="2.0" fill="#BFA97C" opacity=".40"/><rect x="23.00" y="-48.20" width="86" height="118" rx="2.0" fill="#E8DCC0"/><clipPath id="bcscriptorium"><rect x="23.00" y="-48.20" width="86" height="118" rx="2.0"/></clipPath><g clip-path="url(#bcscriptorium)"><g fill="#3A2A18"><ellipse cx="96.6" cy="10.7" rx="8.1" ry="9.4" opacity="0.09"/><ellipse cx="68.0" cy="5.6" rx="7.3" ry="5.5" opacity="0.11"/><ellipse cx="60.0" cy="-9.3" rx="6.2" ry="9.5" opacity="0.11"/><ellipse cx="59.2" cy="20.4" rx="10.5" ry="4.4" opacity="0.11"/><ellipse cx="48.0" cy="29.5" rx="10.8" ry="3.3" opacity="0.06"/><ellipse cx="57.3" cy="9.5" rx="5.1" ry="8.2" opacity="0.11"/><ellipse cx="75.9" cy="12.1" rx="9.0" ry="6.9" opacity="0.06"/><ellipse cx="38.4" cy="57.2" rx="10.7" ry="6.1" opacity="0.06"/><ellipse cx="53.0" cy="62.4" rx="5.4" ry="3.1" opacity="0.07"/><ellipse cx="103.9" cy="31.3" rx="10.1" ry="9.0" opacity="0.07"/><ellipse cx="106.3" cy="68.5" rx="6.3" ry="8.7" opacity="0.06"/></g></g><rect x="23.00" y="-48.20" width="86" height="118" rx="2.0" fill="none" stroke="#BFA97C" stroke-width="2"/><g transform="translate(34.00 -22.53) scale(2.6667)" fill="none" stroke="#3A2A18" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V5h9l5 5v10z"/><path d="M14 5v5h5"/><path d="M8 13h7M8 16.5h5"/></g></g><g transform="rotate(5.5 22.00 1.20)"><rect x="-18.00" y="-53.80" width="86" height="118" rx="5.0" fill="#37456A" opacity=".40"/><rect x="-21.00" y="-57.80" width="86" height="118" rx="5.0" fill="#0E1424"/><clipPath id="bcorbit"><rect x="-21.00" y="-57.80" width="86" height="118" rx="5.0"/></clipPath><g clip-path="url(#bcorbit)"><g fill="#DCE6F5"><circle cx="58.5" cy="34.5" r="0.84" opacity="0.33"/><circle cx="11.2" cy="18.4" r="0.84" opacity="0.66"/><circle cx="54.5" cy="29.1" r="0.60" opacity="0.53"/><circle cx="-6.6" cy="-13.7" r="0.91" opacity="0.58"/><circle cx="14.3" cy="-21.9" r="0.74" opacity="0.48"/><circle cx="-20.3" cy="24.8" r="0.65" opacity="0.89"/><circle cx="51.1" cy="-45.9" r="0.65" opacity="0.77"/><circle cx="62.3" cy="-19.9" r="0.85" opacity="0.90"/><circle cx="-2.2" cy="10.8" r="0.91" opacity="0.58"/><circle cx="-12.2" cy="-12.3" r="0.45" opacity="0.53"/><circle cx="-18.6" cy="48.8" r="0.72" opacity="0.61"/><circle cx="46.0" cy="46.4" r="0.57" opacity="0.54"/><circle cx="35.8" cy="-16.9" r="0.92" opacity="0.92"/><circle cx="51.0" cy="12.9" r="0.82" opacity="0.85"/><circle cx="42.0" cy="-22.1" r="0.55" opacity="0.70"/><circle cx="25.8" cy="17.5" r="0.41" opacity="0.84"/><circle cx="-3.6" cy="39.4" r="0.94" opacity="0.72"/><circle cx="11.1" cy="0.8" r="0.91" opacity="0.36"/><circle cx="4.9" cy="28.6" r="0.63" opacity="0.62"/><circle cx="30.1" cy="25.9" r="0.40" opacity="0.74"/><circle cx="2.7" cy="-23.0" r="0.63" opacity="0.77"/><circle cx="36.4" cy="-51.4" r="0.66" opacity="0.69"/><circle cx="60.6" cy="-3.5" r="0.36" opacity="0.91"/><circle cx="18.7" cy="-20.2" r="0.44" opacity="0.67"/><circle cx="-13.5" cy="19.9" r="0.67" opacity="0.84"/><circle cx="3.1" cy="16.6" r="0.34" opacity="0.78"/><circle cx="29.0" cy="-39.2" r="0.92" opacity="0.46"/><circle cx="38.6" cy="-16.1" r="0.53" opacity="0.68"/><circle cx="16.8" cy="59.5" r="0.32" opacity="0.44"/><circle cx="-4.4" cy="5.3" r="0.73" opacity="0.81"/><circle cx="30.3" cy="-4.3" r="0.84" opacity="0.49"/><circle cx="35.4" cy="51.9" r="0.32" opacity="0.46"/><circle cx="24.9" cy="-43.1" r="0.93" opacity="0.73"/><circle cx="32.2" cy="10.6" r="0.72" opacity="0.32"/><circle cx="39.7" cy="1.7" r="0.85" opacity="0.67"/><circle cx="10.0" cy="54.8" r="0.62" opacity="0.68"/><circle cx="47.0" cy="-36.7" r="0.83" opacity="0.71"/><circle cx="48.9" cy="19.4" r="0.79" opacity="0.82"/><circle cx="42.7" cy="7.4" r="0.78" opacity="0.49"/><circle cx="1.6" cy="22.8" r="0.32" opacity="0.46"/><circle cx="35.4" cy="-39.7" r="0.90" opacity="0.50"/><circle cx="55.4" cy="-25.1" r="0.59" opacity="0.62"/><circle cx="19.1" cy="-0.0" r="0.42" opacity="0.54"/><circle cx="-13.7" cy="-23.4" r="0.56" opacity="0.60"/><circle cx="15.1" cy="-1.6" r="0.71" opacity="0.72"/><circle cx="32.9" cy="-38.3" r="0.48" opacity="0.79"/><circle cx="13.1" cy="-8.3" r="0.39" opacity="0.66"/><circle cx="32.5" cy="-7.1" r="0.29" opacity="0.43"/><circle cx="-19.0" cy="9.1" r="0.81" opacity="0.60"/><circle cx="4.2" cy="36.0" r="0.38" opacity="0.55"/><circle cx="31.1" cy="-31.9" r="0.35" opacity="0.62"/><circle cx="27.0" cy="35.2" r="0.46" opacity="0.44"/></g></g><rect x="-21.00" y="-57.80" width="86" height="118" rx="5.0" fill="none" stroke="#37456A" stroke-width="2"/><g transform="translate(-1.08 -21.88) scale(1.9231)" fill="none" stroke="#DCE6F5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.6"/><ellipse cx="12" cy="12" rx="10.4" ry="4.1" transform="rotate(-24 12 12)"/></g></g><g transform="rotate(-5.5 -22.00 1.20)"><rect x="-62.00" y="-53.80" width="86" height="118" rx="10.0" fill="#DFC3AE" opacity=".40"/><rect x="-65.00" y="-57.80" width="86" height="118" rx="10.0" fill="#FBEFE4"/><clipPath id="bccats"><rect x="-65.00" y="-57.80" width="86" height="118" rx="10.0"/></clipPath><g clip-path="url(#bccats)"><g fill="#4A3A33" opacity=".17"><g transform="translate(14.5 -43.2) rotate(-18) scale(0.74)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(-50.1 28.5) rotate(4) scale(0.79)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(-30.0 18.7) rotate(-6) scale(0.90)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(10.0 33.6) rotate(-4) scale(0.74)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g><g transform="translate(-41.4 19.1) rotate(11) scale(0.78)"><ellipse cx="0" cy="3.4" rx="3.5" ry="2.7"/><circle cx="-4.2" cy="-1.4" r="1.4"/><circle cx="-1.4" cy="-3.3" r="1.4"/><circle cx="1.7" cy="-3.1" r="1.4"/><circle cx="4.2" cy="-1.0" r="1.2"/></g></g></g><rect x="-65.00" y="-57.80" width="86" height="118" rx="10.0" fill="none" stroke="#DFC3AE" stroke-width="2"/><g transform="translate(-50.57 -30.23) scale(2.8571)" fill="none" stroke="#4A3A33" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 9.4L6.2 4l3.4 2.6"/><path d="M14.6 9.4L13.8 4l-3.4 2.6"/><circle cx="10" cy="12.4" r="5.6"/><path d="M8.2 12h.01M11.8 12h.01"/><path d="M9 14.6c.7.6 1.3.6 2 0"/></g></g><g transform="rotate(-16.5 -66.00 10.80)"><rect x="-106.00" y="-44.20" width="86" height="118" rx="7.0" fill="#A9C2B4" opacity=".40"/><rect x="-109.00" y="-48.20" width="86" height="118" rx="7.0" fill="#DCE9E3"/><clipPath id="bchillside"><rect x="-109.00" y="-48.20" width="86" height="118" rx="7.0"/></clipPath><g clip-path="url(#bchillside)"><g fill="#5C8A3E"><path opacity=".20" d="M-109.0,46.2 C-97.0,36.8 -86.6,50.9 -72.9,43.8 C-59.1,36.8 -45.4,50.9 -23.0,41.5 L-23.0,69.8 L-109.0,69.8 Z"/><path opacity=".26" d="M-109.0,56.8 C-91.8,49.7 -79.8,62.7 -62.6,55.6 C-47.1,49.7 -35.0,61.5 -23.0,54.5 L-23.0,69.8 L-109.0,69.8 Z"/></g></g><rect x="-109.00" y="-48.20" width="86" height="118" rx="7.0" fill="none" stroke="#A9C2B4" stroke-width="2"/><g transform="translate(-91.00 -17.08) scale(2.5000)" fill="none" stroke="#2A3F35" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17c4-4 7 2 10-2 2-2.6 4 .6 6 1.4"/><circle cx="14" cy="6.5" r="3.2"/><path d="M14 9.7V14"/></g></g><g transform="rotate(-27.5 -110.00 30.00)"><rect x="-150.00" y="-25.00" width="86" height="118" rx="0.0" fill="#AFBBAC" opacity=".40"/><rect x="-153.00" y="-29.00" width="86" height="118" rx="0.0" fill="#E6EBE2"/><clipPath id="bcdrafting"><rect x="-153.00" y="-29.00" width="86" height="118" rx="0.0"/></clipPath><g clip-path="url(#bcdrafting)"><g stroke="#1E2A31" stroke-width=".6" opacity=".16" fill="none"><path d="M-141 -29v118"/><path d="M-129 -29v118"/><path d="M-117 -29v118"/><path d="M-105 -29v118"/><path d="M-93 -29v118"/><path d="M-81 -29v118"/><path d="M-69 -29v118"/><path d="M-153 -17h86"/><path d="M-153 -5h86"/><path d="M-153 7h86"/><path d="M-153 19h86"/><path d="M-153 31h86"/><path d="M-153 43h86"/><path d="M-153 55h86"/><path d="M-153 67h86"/><path d="M-153 79h86"/></g></g><rect x="-153.00" y="-29.00" width="86" height="118" rx="0.0" fill="none" stroke="#AFBBAC" stroke-width="2"/><g transform="translate(-137.50 0.00) scale(2.5000)" fill="none" stroke="#1E2A31" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h16M11 18V6M7 9l4-3 4 3"/></g></g></svg>';
@@ -886,6 +900,8 @@ const BASE_GPATH = {
   scoring:'<path d="M4.6 4.6h14.8L12 12l7.4 7.4H4.6"/>',
   hints:'<path d="M12 3.4a5.6 5.6 0 00-3.4 10.1v2.1h6.8v-2.1A5.6 5.6 0 0012 3.4z"/>'+
     '<path d="M10.2 19.2h3.6"/>',
+  pin:'<circle cx="12" cy="7.4" r="3.4"/><path d="M12 10.8V20.4"/>'+
+    '<path d="M8.2 13.2h7.6"/>',
   achievements:'<path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8'+
     'L3.6 9.7l5.8-.8z"/>',
   penalties:'<path d="M12 4.4L21.2 19.8H2.8z"/><path d="M12 10.2v4.2M12 17.2h.01"/>',
@@ -2270,22 +2286,35 @@ function clockIn(c){
   T.roundStart = (c.inRound===null||c.inRound===undefined) ? null : now-c.inRound;
 }
 
+/* Storage is rate limited, and the sheet is a few thousand characters, so this
+   writes as little as it can get away with: nothing before the sheet is dealt,
+   nothing when the state has not actually changed, and one write for a burst of
+   changes rather than one each. */
+let lastWritten=null;
 async function saveSheet(){
-  if(!G) return;
-  try{
-    await STORE.set(SESSION_KEY, JSON.stringify({
-      v:1, cfg:CFG, best:best,
-      game:G, sel:sel, snap:snap, clock:clockOut()
-    }));
-  }catch(e){}
+  if(!G || !G.started) return false;
+  const body=JSON.stringify({
+    v:1, cfg:CFG, best:best,
+    game:G, sel:sel, snap:snap, clock:clockOut()
+  });
+  /* the clock alone is not worth a write: it is rebased from elapsed time anyway */
+  const same=lastWritten && sameBar(lastWritten, body);
+  if(same) return false;
+  lastWritten=body;
+  try{ await STORE.set(SESSION_KEY, body); return true; }catch(e){ return false; }
 }
-/* render() runs after every change, so that is the hook; a short delay keeps a
-   burst of updates to one write. */
+/* two payloads that differ only in the clock are the same as far as writing goes */
+function sameBar(a,b){
+  const strip=x=>x.replace(/"clock":\{[^}]*\}/,"");
+  return strip(a)===strip(b);
+}
+/* render() runs after every change, so that is the hook; the delay keeps a burst
+   of updates to one write. */
 let saveTimer=null;
 function queueSave(){
   if(typeof setTimeout!=="function"){ saveSheet(); return; }
   if(saveTimer) clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{ saveTimer=null; saveSheet(); }, 400);
+  saveTimer=setTimeout(()=>{ saveTimer=null; saveSheet(); }, 900);
 }
 async function clearSheet(){
   try{ await STORE.del(SESSION_KEY); }
@@ -2307,6 +2336,7 @@ function sheetUsable(d){
   return true;
 }
 function restoreSheet(d){
+  lastWritten=null;
   G=d.game;
   sel=d.sel||null;
   snap=d.snap||null;
@@ -2624,10 +2654,20 @@ function renderSeed(){
         'title="Type a seed here to rebuild this exact sheet">'+esc(G.seed)+'</button>'+
       '<button class="seedroll" id="seedroll" title="New random seed" '+
         'aria-label="New random seed">\u21bb</button>'+
+      '<button class="seedroll seedpin'+(fixed?" on":"")+'" id="seedpin" title="'+
+        (fixed?"Let the next sheet roll a new seed":"Keep this seed for the next sheet")+
+        '" aria-pressed="'+(fixed?"true":"false")+'" aria-label="Pin this seed">'+
+        glyph("pin","")+'</button>'+
       '<span class="seednote">'+(fixed?"fixed":"new each sheet")+
       (G.planRoll?" \u00b7 plans rerolled \u00d7"+G.planRoll:"")+'</span>';
     document.getElementById("seedbtn").onclick=()=>{ seedEditing=true; renderSeed(); };
     document.getElementById("seedroll").onclick=()=>{ CFG.seed=""; save(); newGame(); };
+    /* Pinning only decides whether this seed is kept for the next sheet, so it
+       must not deal again: the sheet in front of you stays as it is. */
+    document.getElementById("seedpin").onclick=()=>{
+      CFG.seed = normalizeSeed(CFG.seed) ? "" : G.seed;
+      save(); renderSeed();
+    };
   }
 }
 function commitSeed(v){
@@ -4327,7 +4367,10 @@ function briefing(){
     (sharedIn?'<div class="rstatus live">These settings came from a shared link.</div>':'')+
     '<table class="brief">'+rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join("")+
     '</table>';
-  h+='<h4>City plans on the table</h4><table class="brief plans">'+
+  h+='<h4 class="withact">City plans on the table'+
+     '<button class="seedroll" id="rnd" title="Deal three different plans" '+
+     'aria-label="Deal three different plans">\u21bb</button></h4>'+
+     '<table class="brief plans">'+
      G.plans.map(p=>'<tr><td>n\u00b0'+p.n+(p.sp?' \u2605':'')+
        (p.sp==="parkpoolround"?'<span class="rndmark"></span>':'')+'</td><td>'+p.text+
        '</td><td>'+p.hi+' / '+p.lo+' pts</td></tr>').join("")+'</table>';
@@ -4335,10 +4378,9 @@ function briefing(){
   const guest=MP.on && !mpIsHost();
   h+='<div class="toolbar"><button class="btn primary" id="go"'+(guest?' disabled':'')+'>'+
        (guest?'The host starts':'Start')+'</button>'+
-     '<button class="btn" id="rnd">Randomize plans</button>'+
      '<button class="btn" id="rul">Rules</button>'+
-     '<button class="btn" id="chg">Change setup</button>'+
-     '<button class="btn" id="shr">Share setup</button>'+
+     '<button class="btn" id="chg">Setup</button>'+
+     '<button class="btn" id="shr">Share</button>'+
      '<button class="btn" id="mpb"'+(MP_ENABLED?''
        :' disabled title="Multiplayer is switched off for now"')+
        '>Multiplayer</button></div>';
@@ -4353,8 +4395,12 @@ function briefing(){
   $("rul").onclick=()=>{ backTo=briefing; rulesPanel(); };
   $("mpb").onclick=roomPanel;
 }
-$("scrim").addEventListener("click",e=>{ if(e.target===$("scrim")) closeBox(); });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeBox(); });
+/* Clicking outside a panel, or pressing Escape, does what its own Cancel does:
+   go back to whatever opened it, or to the new sheet dialog if no sheet is running.
+   These used to hide the panel outright, which left an empty board and no way back
+   when the game had not started. */
+$("scrim").addEventListener("click",e=>{ if(e.target===$("scrim")) backOut(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") backOut(); });
 
 function result(why,s){
   let v="Keep practising";
@@ -4464,7 +4510,7 @@ function setup(){
 
   h+='<div class="toolbar"><button class="btn" id="ap">Save and start new sheet</button>'+
      '<button class="btn" id="rs">Restore rulebook values</button>'+
-     '<button class="btn" id="sh">Share setup</button>'+
+     '<button class="btn" id="sh">Share</button>'+
      '<button class="btn" onclick="backOut()">Cancel</button></div>';
 
   openBox(h, false, "mid");

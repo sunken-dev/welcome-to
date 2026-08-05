@@ -749,6 +749,8 @@ of the six themes">
   /* a section heading with a control on the right of it */
   .modal h4.withact{display:flex;align-items:center;justify-content:space-between;gap:10px}
   .modal h4.withact .seedroll{margin-left:0}
+  /* the pair sits together on the right of the heading */
+  .headacts{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
   .seednote{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
     color:var(--ink-soft);margin-left:8px}
   /* the code carries its own white quiet zone, and the frame keeps it white on
@@ -772,6 +774,8 @@ of the six themes">
     background:var(--paper-2);margin:12px 0;border-radius:0 calc(var(--rs)*.5) calc(var(--rs)*.5) 0}
   .rstatus.live{border-left-color:var(--park)}
   .rstatus.bad{border-left-color:var(--stamp);color:var(--stamp)}
+  /* the rules have been changed: worth noticing, but it is a choice, not a fault */
+  .rstatus.warn{border-left-color:var(--flag)}
   .roster{display:flex;flex-direction:column;gap:5px;margin-top:4px}
   .pl{display:flex;align-items:baseline;gap:7px;border:1px solid var(--rule-soft);
     padding:5px 9px;border-radius:calc(var(--rs)*.6);font-size:12.5px}
@@ -851,9 +855,7 @@ of the six themes">
     <button class="btn" id="btn-undo">Undo round</button>
     <button class="btn" id="btn-rules">Rules</button>
     <button class="btn" id="btn-hints">Hints: <span class="tgl">off</span></button>
-    <button class="btn" id="btn-mp">Multiplayer</button>
     <button class="btn" id="btn-theme">Theme</button>
-    <button class="btn" id="btn-setup">Setup</button>
     <button class="btn" id="btn-new">New sheet</button>
   </div>
 </div>
@@ -1311,8 +1313,12 @@ function themePreview(id){
     '</div></div>';
 }
 
+/* said in two places, the theme picker and the setup screen, so it lives in one */
+const THEME_NOTE="A theme changes how the sheet looks and nothing else. The rules, "+
+  "the values and the deck are the same whichever you pick.";
+
 function themePicker(){
-  let h='<h3>Theme</h3><p class="lede">Visual only \u2014 the rules, values and deck never change.</p>'+
+  let h='<h3>Theme</h3><p class="lede">'+THEME_NOTE+'</p>'+
         '<div class="themegrid">';
   THEME_ORDER.forEach(id=>{
     const t=THEMES[id];
@@ -1366,7 +1372,13 @@ const BASE = {
   pool:    [0,3,6,9,13,17,21,26,31,36],
   bis:     [0,1,3,6,9,12,16,20,24,28],
   refusal: [0,0,3,5],
-  roundabouts: false,                  /* the advanced variant, off by default */
+  roundabouts: false,
+  /* the scoring tables and the deck are hidden unless this is on: they are the
+     printed rules, and most sheets should never touch them */
+  custom:false,
+  /* Whether the hints panel may be used on this sheet at all. CFG.hints is the
+     in-game switch; this decides whether that switch exists. */
+  hintsAllowed:true,                  /* the advanced variant, off by default */
   roundaboutValues: [0,3,8],           /* p11: the first costs 3, the second 5 more */
   soloTempMin: 6, soloTempPts: 7,   // p9: 7 points only if at least six temps hired
   tempRanks: [7,4,1],               // p7: most boxes, next, third
@@ -1482,6 +1494,16 @@ function redrawPlans(){
   if(!G||G.started) return false;
   G.planRoll++;
   seedPlans(G.seed,G.planRoll);
+  G.plans=drawPlans();
+  return true;
+}
+/* Back to the three this seed deals first, however many rerolls have happened. The
+   same seed and the same roll count always give the same three, so this is exact
+   rather than another random draw. */
+function resetPlans(){
+  if(!G||G.started||!G.planRoll) return false;
+  G.planRoll=0;
+  seedPlans(G.seed,0);
   G.plans=drawPlans();
   return true;
 }
@@ -2210,13 +2232,69 @@ const STORE=(function(){
 /* Choices that belong to the player, as opposed to facts about the game. When a
    rulebook table is corrected, these are kept and the tables are replaced. */
 const PREF_KEYS=["theme","hints","city","seed","mode","planOff","relay","room",
-                 "roundabouts","advanced"];
+                 "roundabouts","advanced","custom","hintsAllowed"];
+
+/* The ones that stay with the person rather than with the sheet. A shared link says
+   nothing about these, and arriving through one should leave them as they were
+   rather than resetting them to the defaults. */
+const LOCAL_KEYS=["theme","hints","relay","room"];
+
+/* The printed tables, as opposed to the choices that belong to the player. Putting
+   them back is what "not custom" means, so the two live together here. */
+/* Which of the rulebook sections have been changed, by the names the setup screen
+   gives them. A sheet played on altered tables does not compare with one played on
+   the printed values, so the new sheet page says so before you start. */
+function andList(xs){
+  if(xs.length<=1) return xs[0]||"";
+  return xs.slice(0,-1).join(", ")+" and "+xs[xs.length-1];
+}
+function customChanges(){
+  const groups=[
+    ["Streets and parks", ["streets"]],
+    ["Real estate", ["estate"]],
+    ["Other bonuses", ["pool","soloTempMin","soloTempPts","tempRanks","targets"]],
+    ["Penalties", ["bis","roundaboutValues","refusal"]],
+    ["Construction deck", ["deck"]]
+  ];
+  return groups.filter(([,keys])=>keys.some(k=>
+    JSON.stringify(CFG[k])!==JSON.stringify(BASE[k]))).map(g=>g[0]);
+}
+
+function restoreTables(){
+  const keep={};
+  PREF_KEYS.forEach(k=>{ keep[k]=CFG[k]; });
+  CFG=Object.assign(copy(BASE),keep);
+}
+/* the printed value a field stands for, by its dotted path */
+function basePrinted(path){
+  const parts=String(path).split(".");
+  let at=BASE;
+  for(const k of parts){
+    if(at===null||at===undefined) return null;
+    at=at[k];
+  }
+  if(at===null||at===undefined) return null;
+  return Array.isArray(at) ? at.join(",") : at;
+}
+function tablesEdited(){
+  const mine={}, printed={};
+  Object.keys(BASE).forEach(k=>{
+    if(PREF_KEYS.indexOf(k)>=0) return;
+    mine[k]=CFG[k]; printed[k]=BASE[k];
+  });
+  return JSON.stringify(mine)!==JSON.stringify(printed);
+}
 
 async function load(){
   try{ const r=await STORE.get("welcome-2018");
     if(r&&r.value){ const d=JSON.parse(r.value);
       /* A shared link has already set everything; the stored copy must not
          race it back out. The best score is still worth restoring. */
+      /* A link decides the sheet and nothing about the person opening it, so their
+         own look and their own connection are carried across it. */
+      if(d.cfg && sharedIn){
+        LOCAL_KEYS.forEach(k=>{ if(d.cfg[k]!==undefined) CFG[k]=d.cfg[k]; });
+      }
       if(d.cfg && !sharedIn){
         if((d.cfg.dataVersion|0) < BASE.dataVersion){
           /* This save predates a table correction. Take the player's choices
@@ -2253,7 +2331,7 @@ async function load(){
       if(typeof d.best==="number") best=d.best;
       applyTheme(CFG.theme);
       renderCity();
-      $("btn-hints").innerHTML=tglLabel("Hints",CFG.hints);
+      syncHintsButton();
       newGame(); } }catch(e){}
 }
 /* ------------------------------------------------------ resuming a sheet
@@ -2346,8 +2424,13 @@ function restoreSheet(d){
 
 async function resumeSheet(){
   try{
+    /* Reading storage takes a moment, and in that moment the player may already
+       have pressed Start or begun a new sheet. Pulling a stored board out from
+       under them would be worse than not resuming at all. */
+    if(G && G.started) return false;
     const r=await STORE.get(SESSION_KEY);
     if(!r||!r.value) return false;
+    if(G && G.started) return false;
     const d=JSON.parse(r.value);
     if(!sheetUsable(d)) return false;
     /* the settings the sheet was played under, so the theme, the city and the
@@ -2355,7 +2438,7 @@ async function resumeSheet(){
     if(d.cfg){ CFG=Object.assign(copy(BASE),d.cfg); CFG.dataVersion=BASE.dataVersion; }
     applyTheme(CFG.theme);
     renderCity();
-    $("btn-hints").innerHTML=tglLabel("Hints",CFG.hints);
+    syncHintsButton();
     restoreSheet(d);
     return true;
   }catch(e){ return false; }
@@ -2428,6 +2511,10 @@ function standardStats(){
 /* Multiplayer is complete but switched off for now. Set this to true to bring
    the buttons back; nothing else needs changing. */
 const MP_ENABLED=false;
+
+/* The names of the ways to play, in one place: the setup screen offers them and the
+   new sheet page reports them, and the two should not word it differently. */
+const MODE_NAMES={standard:"Standard Turn", solo:"Solo Variant", multiplayer:"Multiplayer"};
 
 const MP={
   on:false, ws:null, status:"offline",   /* offline connecting lobby lost */
@@ -2689,9 +2776,9 @@ function commitCity(v){
 /* ========================================================== RENDER */
 const $=id=>document.getElementById(id);
 function render(){
-  panelLabel("handhead", CFG.mode==="solo"
-    ? "Three construction cards \u2014 one for its number, another for its effect"
-    : "Card stacks");
+  /* the same heading whichever way the sheet is being played: what the cards are for
+     belongs on the cards and in the Rules panel, not in the heading above them */
+  panelLabel("handhead", "Card stacks");
   $("rd-round").textContent=G.round;
   /* The standard turn deals three stacks rather than one deck, which is why this
      used to read as an em dash there. Either way it is the cards not yet taken,
@@ -2941,8 +3028,9 @@ function bars(nums, pool, scoreFn){
 
 function hints(){
   const box=$("hint");
-  box.hidden=!CFG.hints;
-  if(!CFG.hints) return;
+  const showing = CFG.hintsAllowed && CFG.hints;
+  box.hidden=!showing;
+  if(!showing) return;
   const body=$("hintbody");
   panelLabel("hinthead", "Hints");
 
@@ -3751,6 +3839,23 @@ function status(){
 
 /* ========================================================== MODALS */
 let boxSticky=false;
+/* An ask in the app's own frame rather than the browser's. The browser box cannot
+   be styled, ignores the theme, and gives no room to show what is at stake; this one
+   can lay the figures out like any other panel. Clicking outside or pressing Escape
+   is a no, as it is everywhere else. */
+function askBox(o){
+  let h='<h3>'+o.title+'</h3>'+
+        '<p class="lede">'+o.lede+'</p>'+
+        (o.detail||'')+
+        '<div class="toolbar">'+
+        '<button class="btn primary" id="ask-yes">'+o.yes+'</button>'+
+        '<button class="btn" id="ask-no">'+(o.no||"Cancel")+'</button>'+
+        '</div>';
+  openBox(h, false, "mid");
+  $("ask-yes").onclick=()=>{ backTo=null; forceCloseBox(); o.onYes(); };
+  $("ask-no").onclick=()=>{ backOut(); };
+}
+
 function openBox(h,sticky,size){
   roomOpen=false; shareOpen=false;
   const m=$("modal");
@@ -3846,7 +3951,14 @@ function plansPanel(){
    Anything arriving this way is untrusted: every value is whitelisted, type
    checked and clamped before it is allowed near the game. A malformed link
    falls back to the defaults rather than producing a broken sheet.          */
-const SHARE_KEYS=["mode","seed","advanced","roundabouts","planOff","theme",
+/* Every setting that decides what a sheet is, and nothing that decides how it looks
+   or who is playing. The theme is deliberately absent: it is a personal choice about
+   appearance, and a link should not repaint someone else's screen.
+   custom matters more than it looks. Without it a recipient could receive altered
+   tables while their own switch was off, which would hide the very numbers their
+   sheet was being scored on. */
+const SHARE_KEYS=["mode","seed","advanced","roundabouts","planOff","custom",
+  "hintsAllowed","city",
   "streets","estate","pool","bis","refusal","roundaboutValues","tempRanks",
   "soloTempMin","soloTempPts","deck","numMin","numMax","targets"];
 
@@ -3883,7 +3995,8 @@ function shareDiff(){
 const SHARE_LABEL={r:"plan rerolls", sd:"sheet seed", seed:"fixed seed",
   planOff:"plan pool", roundaboutValues:"roundabouts",
   soloTempMin:"temp threshold", soloTempPts:"temp points", tempRanks:"temp ranking",
-  numMin:"lowest number", numMax:"highest number"};
+  numMin:"lowest number", numMax:"highest number",
+  custom:"custom rules", hintsAllowed:"hints", city:"city name"};
 function shareLink(){
   const base=String(location.href).split("#")[0];
   const d=shareDiff();
@@ -3923,7 +4036,15 @@ function sanitizeShared(o){
   if(typeof o.advanced==="boolean") out.advanced=o.advanced;
   { const r=intIn(o.r,0,50); if(r) out.r=r; }
   if(typeof o.roundabouts==="boolean") out.roundabouts=o.roundabouts;
-  if(typeof o.theme==="string" && THEMES[o.theme]) out.theme=o.theme;
+  if(typeof o.custom==="boolean") out.custom=o.custom;
+  if(typeof o.hintsAllowed==="boolean") out.hintsAllowed=o.hintsAllowed;
+  /* the same trimming the name gets when it is typed */
+  if(typeof o.city==="string"){
+    const c=o.city.trim().slice(0,CITY_MAX).trim();
+    if(c) out.city=c;
+  }
+  /* o.theme is ignored on purpose: links from an older version may carry one, and
+     it should not repaint the screen of whoever opens them */
 
   if(o.planOff && typeof o.planOff==="object" && !Array.isArray(o.planOff)){
     const po={};
@@ -4013,7 +4134,10 @@ function applySharedSetup(){
   CFG.dataVersion=BASE.dataVersion;
   ensureCategories();
   sharedIn=true;
-  save();
+  /* No save here. The stored copy still holds the theme and the connection details
+     of whoever opened this, and load() is about to take them across; writing now
+     would overwrite them with the defaults before they could be read. The boot
+     saves once load has settled. */
   /* drop the fragment so a later reload uses what is now stored */
   try{ history.replaceState(null,"",String(location.href).split("#")[0]); }catch(e){}
 }
@@ -4341,8 +4465,10 @@ function rulesPanel(){
 
 function briefing(){
   const rows=[
-    ["Mode", CFG.mode==="solo" ? "Official solo variant \u2014 draw three, one number, one effect"
-                               : "Standard turn \u2014 three number-effect combinations"],
+    /* which of the three ways the sheet is being played; the Players row below says
+       who with, and the Rules panel says what each one means */
+    /* the same names the setup screen offers, so the two agree */
+    ["Mode", MP.on ? MODE_NAMES.multiplayer : (MODE_NAMES[CFG.mode]||CFG.mode)],
     ["City plans", planPool().length+" of "+activePlans().length+" in the pool"+
                    (advancedOn()?", advanced included":", standard only")+
                    (CFG.roundabouts?" \u00b7 roundabouts on":"")],
@@ -4350,13 +4476,16 @@ function briefing(){
              (CFG.mode==="solo" ? " plus the Solo card" : ", in three stacks")],
     ["Streets", CFG.streets.map(x=>x.lots).join(" \u00b7 ")+" houses"],
     ["Theme", THEMES[CFG.theme].name],
-    ["Hints", CFG.hints ? "on" : "off"],
+    /* The setting, not the current state: hints go on and off as you play, so what
+       matters here is whether they are available at all. */
+    ["Hints", CFG.hintsAllowed ? "available" : "not available"],
+    ["Rules", (function(){
+      const changed=CFG.custom ? customChanges() : [];
+      if(!changed.length) return "default";
+      return "<b>custom</b> \u2014 "+andList(changed)+" changed";
+    })()],
     ["Targets", Object.keys(CFG.targets).map(k=>k+" "+CFG.targets[k]+" pts").join(" \u00b7 ")],
-    ["Seed", '<span id="seedslot"></span>'],
-    ["Players", !MP_ENABLED ? "solo" : MP.on
-      ? esc(MP.room)+" \u00b7 "+MP.players.length+" connected \u00b7 "+
-        (mpIsHost()?"you are the host":"the host starts")
-      : "solo \u2014 open Multiplayer to play with someone"]
+    ["Seed", '<span id="seedslot"></span>']
   ];
   let h='<div class="gametitle">'+
         '<span class="briefmark">'+markSvg()+'</span>'+
@@ -4365,11 +4494,30 @@ function briefing(){
     '<h3>New sheet</h3>'+
     '<p class="lede">The clock starts when you begin. Nothing is dealt until then.</p>'+
     (sharedIn?'<div class="rstatus live">These settings came from a shared link.</div>':'')+
+    (CFG.custom && customChanges().length
+      ? (function(){ const c=customChanges();
+          return '<div class="rstatus warn">Custom rules are on and the '+
+            andList(c.map(x=>x.toLowerCase()))+
+            ' '+(c.length===1?"table has":"tables have")+
+            ' been changed, so this sheet will not compare with one played on the '+
+            'printed values. Turn them off in Setup to put the rulebook back.</div>'; })()
+      : '')+
     '<table class="brief">'+rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join("")+
     '</table>';
+  /* Two marks that cannot be mistaken for one another. Rerolling is a circle, which
+     is what the seed's refresh uses too. Going back is an arrow meeting a bar, so it
+     reads as returning to the start. The mirrored circle these two would naturally
+     both want is the same shape twice at this size. */
   h+='<h4 class="withact">City plans on the table'+
+     '<span class="headacts">'+
      '<button class="seedroll" id="rnd" title="Deal three different plans" '+
-     'aria-label="Deal three different plans">\u21bb</button></h4>'+
+     'aria-label="Deal three different plans">\u21bb</button>'+
+     '<button class="seedroll" id="rst"'+(G.planRoll?'':' disabled')+
+     ' title="'+(G.planRoll
+       ? "Back to the three this seed deals first"
+       : "Nothing to go back to yet")+'"'+
+     ' aria-label="Back to the first three plans">\u21e4</button>'+
+     '</span></h4>'+
      '<table class="brief plans">'+
      G.plans.map(p=>'<tr><td>n\u00b0'+p.n+(p.sp?' \u2605':'')+
        (p.sp==="parkpoolround"?'<span class="rndmark"></span>':'')+'</td><td>'+p.text+
@@ -4381,19 +4529,17 @@ function briefing(){
      '<button class="btn" id="rul">Rules</button>'+
      '<button class="btn" id="chg">Setup</button>'+
      '<button class="btn" id="shr">Share</button>'+
-     '<button class="btn" id="mpb"'+(MP_ENABLED?''
-       :' disabled title="Multiplayer is switched off for now"')+
-       '>Multiplayer</button></div>';
+     '</div>';
   backTo=null;                  /* the briefing is the root of the panel stack */
   openBox(h, true, "mid");     /* wide enough for the title and a full-length name */
   renderCity();
   renderSeed();
   $("go").onclick=startGame;
   $("rnd").onclick=()=>{ redrawPlans(); briefing(); render(); };
+  $("rst").onclick=()=>{ if(resetPlans()){ briefing(); render(); } };
   $("chg").onclick=setup;
   $("shr").onclick=()=>{ backTo=null; sharePanel(); };
   $("rul").onclick=()=>{ backTo=briefing; rulesPanel(); };
-  $("mpb").onclick=roomPanel;
 }
 /* Clicking outside a panel, or pressing Escape, does what its own Cancel does:
    go back to whatever opened it, or to the new sheet dialog if no sheet is running.
@@ -4446,32 +4592,78 @@ function mpStandings(){
 }
 
 function setup(){
-  const f=(p,l,v)=>'<label><span class="lbl">'+l+'</span><input data-p="'+p+'" value="'+v+'"></label>';
+  /* Every field here is either one number or a list of them, so say which: the
+     keyboard on a phone should offer digits, and a stray letter should not be
+     typeable into a scoring table at all. */
+  const f=(p,l,v)=>{
+    const list=String(v).indexOf(",")!==-1;
+    return '<label><span class="lbl">'+l+'</span>'+
+      '<input data-p="'+p+'" value="'+v+'" data-kind="'+(list?"list":"num")+'"'+
+      ' inputmode="numeric" spellcheck="false"'+
+      ' pattern="'+(list?"[0-9, -]*":"-?[0-9]*")+'"></label>';
+  };
   let h='<h3>Game setup</h3>'+
     '<p class="lede">Modes, variants and the scoring tables.</p>';
 
   h+='<h4>Game mode</h4><div class="toolbar">'+
-     '<button class="btn'+(CFG.mode==="standard"?" on":"")+'" data-mode="standard">Standard Turn</button>'+
-     '<button class="btn'+(CFG.mode==="solo"?" on":"")+'" data-mode="solo">Solo Variant</button>'+
+     '<button class="btn'+(CFG.mode==="standard"?" on":"")+'" data-mode="standard">'+
+       MODE_NAMES.standard+'</button>'+
+     '<button class="btn'+(CFG.mode==="solo"?" on":"")+'" data-mode="solo">'+
+       MODE_NAMES.solo+'</button>'+
+     /* Playing with someone is a third way to play, so it belongs here. No data-mode
+        while it is switched off: nothing should be able to set a mode the game cannot
+        deal for. */
+     '<button class="btn" id="mpmode"'+(MP_ENABLED?' data-mode="multiplayer"'
+       :' disabled title="Multiplayer is switched off for now"')+
+       '>'+MODE_NAMES.multiplayer+'</button>'+
      '</div>'+
      '<p class="note">'+
      'The standard turn flips one card per stack and pairs.<br>'+
      'The solo variant draws three cards and uses one for its number and a different one '+
-       'for its effect.</p>'+
+       'for its effect.<br>'+
+     'Multiplayer is not finished yet.</p>'+
      '<h4>Advanced variant</h4><div class="toolbar">'+
-     '<button class="btn'+(advancedOn()?" on":"")+'" id="adv">'+
-       tglLabel("Advanced plans",advancedOn())+'</button>'+
      '<button class="btn'+(CFG.roundabouts?" on":"")+'" id="rnd2">'+
        tglLabel("Roundabouts",CFG.roundabouts)+'</button>'+
+     '<button class="btn'+(advancedOn()?" on":"")+'" id="adv">'+
+       tglLabel("Advanced plans",advancedOn())+'</button>'+
      '<button class="btn" id="pick">Available plans</button>'+
      '</div>'+
-     '<p class="note">Advanced plans adds the nine starred City Plans. Roundabouts lets you '+
-     'replace an empty house with a Roundabout.</p>';
+     '<p class="note">Roundabouts lets you replace an empty house with a Roundabout.<br>'+
+     'Advanced plans adds the nine starred City Plans.</p>'+
+     '<h4>Hints</h4><div class="toolbar">'+
+     '<button class="btn'+(CFG.hintsAllowed?" on":"")+'" id="hnt">'+
+       'Hints: <span class="tgl">'+
+       (CFG.hintsAllowed?"available":"not available")+'</span></button>'+
+     '</div>'+
+     '<p class="note">The hints panel can be turned on and off from the bar at the '+
+     'foot while you play.<br>'+
+     'Switch this off to keep it out of reach for the whole sheet.</p>';
 
   h+='<h4>Appearance</h4><div class="toolbar">'+
      '<button class="btn" id="themebtn">Theme: '+esc(THEMES[CFG.theme].name)+'</button>'+
-     '</div>';
+     '</div>'+
+     '<p class="note">'+THEME_NOTE+'</p>';
 
+  h+='<h4>Custom rules</h4><div class="toolbar">'+
+     '<button class="btn'+(CFG.custom?" on":"")+'" id="cus">'+
+       tglLabel("Custom rules",CFG.custom)+'</button>'+
+     /* Putting the tables back belongs beside the switch that governs them. There is
+        nothing to put back unless something has actually been changed, and with the
+        switch off the tables are the printed ones by definition. */
+     '<button class="btn" id="rs"'+(tablesEdited()?''
+       :' disabled title="Nothing to restore: the tables are already the printed ones"')+
+       '>Restore rulebook values</button>'+
+     '</div>'+
+     '<p class="note">'+(CFG.custom
+       ? "The scoring tables and the deck are yours to change below. Turning this off "+
+         "puts the printed values back."
+       : "The scoring tables and the deck are the printed ones. Turn this on to change "+
+         "them.")+'</p>';
+
+  /* Everything below is the printed rulebook. It stays out of the way unless asked
+     for, so a sheet cannot end up running on numbers nobody meant to change. */
+  if(CFG.custom){
   h+='<h4>Streets and parks</h4>';
   CFG.streets.forEach((s,i)=>{
     h+='<div class="substack"><span class="subh">Street '+(i+1)+'</span>'+
@@ -4504,29 +4696,105 @@ function setup(){
   Object.keys(CFG.deck).forEach(e=>{
     h+='<label><span class="lbl" id="dl-'+e+'"></span>'+
        '<input data-p="deck.'+e+'" id="di-'+e+'" value="'+
-       esc(CFG.deck[e].join(","))+'" spellcheck="false"></label>';
+       esc(CFG.deck[e].join(","))+'" data-kind="list" inputmode="numeric"'+
+       ' pattern="[0-9, -]*" spellcheck="false"></label>';
   });
   h+='</div>';
+  }   /* end of the custom tables */
 
   h+='<div class="toolbar"><button class="btn" id="ap">Save and start new sheet</button>'+
-     '<button class="btn" id="rs">Restore rulebook values</button>'+
      '<button class="btn" id="sh">Share</button>'+
      '<button class="btn" onclick="backOut()">Cancel</button></div>';
 
   openBox(h, false, "mid");
-  Object.keys(CFG.deck).forEach(e=>{
-    const inp=$("di-"+e);
-    if(inp) inp.oninput=refreshDeckCounts;
+  /* Keep the fields to digits as they are typed, and let the restore button follow
+     the form rather than waiting for a save: a single changed character is enough to
+     have something to put back. */
+  const clean=inp=>{
+    const list=inp.dataset.kind!=="num";
+    const before=inp.value;
+    const after=list ? before.replace(/[^0-9,\s-]/g,"")
+                     : before.replace(/[^0-9-]/g,"");
+    if(after!==before) inp.value=after;
+  };
+  const fields=()=>$("modal").querySelectorAll("input[data-p]");
+  const formEdited=()=>{
+    let changed=false;
+    fields().forEach(inp=>{
+      const printed=basePrinted(inp.dataset.p);
+      if(printed===null) return;
+      if(String(inp.value).replace(/\s+/g,"")!==String(printed).replace(/\s+/g,""))
+        changed=true;
+    });
+    return changed;
+  };
+  const syncRestore=()=>{
+    const b=$("rs");
+    if(!b) return;
+    const live=formEdited()||tablesEdited();
+    b.disabled=!live;
+    b.title=live?"":"Nothing to restore: the tables are already the printed ones";
+  };
+  fields().forEach(inp=>{
+    inp.oninput=()=>{
+      clean(inp);
+      if(/^deck\./.test(inp.dataset.p)) refreshDeckCounts();
+      syncRestore();
+    };
   });
+  syncRestore();      /* so the button and the markup cannot disagree on opening */
   refreshDeckCounts();          /* fills the heading and every label */
   $("modal").querySelectorAll("button[data-mode]").forEach(b=>{
-    b.onclick=()=>{ CFG.mode=b.dataset.mode; save(); closeBox(); newGame(); };
+    if(b.dataset.mode==="multiplayer"){ b.onclick=()=>{ backTo=setup; roomPanel(); }; return; }
+    b.onclick=()=>{
+      if(CFG.mode===b.dataset.mode) return;
+      CFG.mode=b.dataset.mode;
+      save();
+      /* The deck is dealt by mode, so the sheet has to be dealt again for the choice
+         to mean anything. Setup stays open over it: nothing here commits until Save
+         and start new sheet. */
+      newGame();
+      setup();
+    };
   });
   $("adv").onclick=()=>{ setAdvanced(!advancedOn());
     if(G && !G.started){ setup(); render(); } else { closeBox(); newGame(); } };
   $("pick").onclick=()=>{ backTo=setup; plansPanel(); };
   $("rnd2").onclick=()=>{ CFG.roundabouts=!CFG.roundabouts; ensureCategories(); reconcilePlans();
     save(); if(G && !G.started){ setup(); render(); } else { closeBox(); newGame(); } };
+  /* Off means the printed rules, always: leaving edited tables in force while
+     hiding them would run the sheet on numbers you cannot see. */
+  $("cus").onclick=()=>{
+    const flip=()=>{
+      CFG.custom=!CFG.custom;
+      if(!CFG.custom) restoreTables();
+      save();
+      if(G && !G.started){ setup(); render(); } else { closeBox(); newGame(); }
+    };
+    if(CFG.custom && tablesEdited()){
+      const changed=customChanges();
+      backTo=setup;                 /* saying no comes back here */
+      askBox({
+        title:"Turn off custom rules?",
+        lede:"The tables you changed go back to the printed values.",
+        detail:'<table class="brief"><tr><td>Changed</td><td>'+
+          andList(changed)+'</td></tr></table>',
+        yes:"Restore the printed values",
+        no:"Keep my changes",
+        onYes:flip
+      });
+      return;
+    }
+    flip();
+  };
+  $("hnt").onclick=()=>{
+    CFG.hintsAllowed=!CFG.hintsAllowed;
+    /* leaving it on while unreachable would show the panel again the moment hints
+       came back, which is not what turning them off means */
+    if(!CFG.hintsAllowed) CFG.hints=false;
+    save(); syncHintsButton();
+    if(G && !G.started){ setup(); render(); } else { closeBox(); render(); }
+  };
   $("themebtn").onclick=()=>{ backTo=setup; themePicker(); };
   $("sh").onclick=()=>{ backTo=setup; sharePanel(); };
   $("ap").onclick=()=>{
@@ -4543,34 +4811,70 @@ function setup(){
     });
     CFG=next; save(); closeBox(); newGame();
   };
+  /* Put the values back and stay put: it is one change among the several this screen
+     offers, and nothing here is settled until Save and start new sheet.
+
+     The guard has to be the same condition that lights the button up. Typing into a
+     field does not touch the settings, so a guard that only looked at the settings
+     would refuse the click on a button it had just enabled. */
   $("rs").onclick=()=>{
-    const keep={};
-    PREF_KEYS.forEach(k=>{ keep[k]=CFG[k]; });   /* tables back, choices kept */
-    CFG=Object.assign(copy(BASE),keep);
-    save(); closeBox(); newGame(); };
+    if(!formEdited() && !tablesEdited()) return;
+    restoreTables();
+    save();
+    setup();          /* redraws the fields from the printed values */
+  };
 }
 
 $("btn-undo").onclick=undo;
 $("btn-rules").onclick=rulesPanel;
 $("btn-hints").onclick=()=>{
+  if(!CFG.hintsAllowed) return;
   CFG.hints=!CFG.hints;
-  $("btn-hints").innerHTML=tglLabel("Hints",CFG.hints);
+  syncHintsButton();
   save(); render();
 };
-$("btn-setup").onclick=()=>{ backTo=null; setup(); };
-$("btn-mp").disabled=!MP_ENABLED;
-if(!MP_ENABLED) $("btn-mp").title="Multiplayer is switched off for now";
-$("btn-mp").onclick=()=>{ backTo=null; roomPanel(); };
+/* With hints switched off for the sheet the button stays where it is and goes dead,
+   rather than leaving a gap in the bar and moving everything along. */
+function syncHintsButton(){
+  const b=$("btn-hints");
+  if(!b) return;
+  b.disabled=!CFG.hintsAllowed;
+  b.title=CFG.hintsAllowed ? "" : "Hints are switched off for this sheet in Setup";
+  b.innerHTML=tglLabel("Hints",CFG.hintsAllowed && CFG.hints);
+}
 $("btn-theme").onclick=()=>{ backTo=null; themePicker(); };
-$("btn-new").onclick=()=>{ if(!G.over&&houses()>0&&!confirm("Start a new sheet?")) return;
-  clearSheet(); newGame(); };
+$("btn-new").onclick=()=>{
+  /* Any sheet under way is worth asking about, even before the first house goes in:
+     it is saved between visits now, so starting a new one throws away something
+     that would otherwise have been waiting. A finished sheet has nothing to lose. */
+  if(!(G.started && !G.over)){ clearSheet(); newGame(); return; }
+  const n=houses();
+  askBox({
+    title:"Start a new sheet?",
+    lede:"The sheet in progress will be discarded. It cannot be brought back.",
+    detail:'<table class="brief">'+
+      '<tr><td>Round</td><td>'+G.round+' of '+CITY_MAX+'</td></tr>'+
+      '<tr><td>Built</td><td>'+n+' house'+(n===1?'':'s')+'</td></tr>'+
+      '<tr><td>Score</td><td>'+score().total+' points</td></tr>'+
+      '</table>',
+    yes:"Discard and start new",
+    no:"Keep playing",
+    onYes:()=>{ clearSheet(); newGame(); }
+  });
+};
 
 applySharedSetup();     /* a link overrides the defaults before anything is dealt */
 applyTheme(CFG.theme);
+syncHintsButton();      /* the bar shows a Hints button only if hints are allowed */
 renderCity();
 newGame();
 setInterval(tickClock, 500);
 /* Settings first, then the sheet. A shared link is a deliberate request for those
    settings, so it deals fresh rather than resuming. */
-load().then(()=>{ if(!sharedIn) return resumeSheet(); });
+load().then(()=>{
+  /* a link arriving is worth storing, but only once their own choices have been
+     merged back in by load */
+  if(sharedIn){ save(); return; }
+  return resumeSheet();
+});
 </script>

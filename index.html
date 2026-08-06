@@ -1318,6 +1318,7 @@ const THEME_NOTE="A theme changes how the sheet looks and nothing else. The rule
   "the values and the deck are the same whichever you pick.";
 
 function themePicker(){
+  openPanel=themePicker;
   let h='<h3>Theme</h3><p class="lede">'+THEME_NOTE+'</p>'+
         '<div class="themegrid">';
   THEME_ORDER.forEach(id=>{
@@ -2292,10 +2293,13 @@ async function load(){
          race it back out. The best score is still worth restoring. */
       /* A link decides the sheet and nothing about the person opening it, so their
          own look and their own connection are carried across it. */
-      if(d.cfg && sharedIn){
+      /* Their own choice this session beats what was stored: the read can land after
+         the page is interactive, and overwriting a setting they just changed would
+         undo it in front of them. */
+      if(d.cfg && sharedIn && !userSaved){
         LOCAL_KEYS.forEach(k=>{ if(d.cfg[k]!==undefined) CFG[k]=d.cfg[k]; });
       }
-      if(d.cfg && !sharedIn){
+      if(d.cfg && !sharedIn && !userSaved){
         if((d.cfg.dataVersion|0) < BASE.dataVersion){
           /* This save predates a table correction. Take the player's choices
              across and let the corrected values through, rather than leaving a
@@ -2332,7 +2336,12 @@ async function load(){
       applyTheme(CFG.theme);
       renderCity();
       syncHintsButton();
-      newGame(); } }catch(e){}
+      /* Dealing again opens the new sheet page. If the player has opened something
+         else while the settings were on their way, put them back on it. */
+      const was=openPanel;
+      newGame();
+      if(was && was!==briefing) was();
+      } }catch(e){}
 }
 /* ------------------------------------------------------ resuming a sheet
    The board is plain data, so a sheet in progress can be written down and picked up
@@ -2420,6 +2429,10 @@ function restoreSheet(d){
   snap=d.snap||null;
   clockIn(d.clock);
   render();
+  /* The new sheet page is up when the page loads. A resumed sheet is already under
+     way, so get it out of the way rather than making the player dismiss a dialog
+     about dealing a sheet they are in the middle of. */
+  if(G.started) forceCloseBox();
 }
 
 async function resumeSheet(){
@@ -2443,7 +2456,11 @@ async function resumeSheet(){
     return true;
   }catch(e){ return false; }
 }
+/* Set once the player changes a setting. The stored settings arrive after the page is
+   interactive, and applying them over a choice just made would undo it. */
+let userSaved=false;
 async function save(){
+  userSaved=true;
   try{
     /* the id list lets a later version tell a newly added plan apart from one
        the player deliberately switched on */
@@ -3856,6 +3873,12 @@ function askBox(o){
   $("ask-no").onclick=()=>{ backOut(); };
 }
 
+/* Which panel the player is looking at. The settings arrive from storage after the
+   page is already up and interactive, and restoring them deals a new sheet, which
+   opens the new sheet page. Without this the player would be thrown out of whatever
+   they had opened in the meantime, which is exactly what happened on the first click
+   after a load. */
+let openPanel=null;
 function openBox(h,sticky,size){
   roomOpen=false; shareOpen=false;
   const m=$("modal");
@@ -3879,6 +3902,7 @@ function backOut(){
 /* A panel of its own rather than a section of Setup, so that toggling a plan
    cannot discard half-typed edits in the scoring fields. */
 function plansPanel(){
+  openPanel=plansPanel;
   const off=CFG.planOff||{};
   const live=activePlans();
   const all=BASIC_PLANS.concat(ADV_PLANS);
@@ -4254,6 +4278,7 @@ function qrPaint(el,text){
 }
 
 function sharePanel(){
+  openPanel=sharePanel;
   const link=shareLink();
   const plain=shareDiff();
   const n=Object.keys(plain).length;
@@ -4296,6 +4321,7 @@ function sharePanel(){
 }
 
 function roomPanel(){
+  openPanel=roomPanel;
   if(!MP_ENABLED) return;
   const st=MP.status, n=MP.players.length;
   let msg, cls="";
@@ -4364,6 +4390,7 @@ function renderRoom(){ if(roomOpen) roomPanel(); }
    are the same glyphs the sheet draws, so a rule and the thing it governs look
    alike. */
 function rulesPanel(){
+  openPanel=rulesPanel;
   const g=(k)=>glyph(k,"gi");
   const eff=k=>'<div class="rrow">'+g(k)+'<div><b>'+EFFECTS[k].label+'</b>'+
     '<span>'+EFFECTS[k].hint+'</span></div></div>';
@@ -4464,6 +4491,7 @@ function rulesPanel(){
 }
 
 function briefing(){
+  openPanel=briefing;
   const rows=[
     /* which of the three ways the sheet is being played; the Players row below says
        who with, and the Rules panel says what each one means */
@@ -4592,6 +4620,7 @@ function mpStandings(){
 }
 
 function setup(){
+  openPanel=setup;
   /* Every field here is either one number or a list of them, so say which: the
      keyboard on a phone should offer digits, and a stray letter should not be
      typeable into a scoring table at all. */

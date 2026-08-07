@@ -642,6 +642,28 @@ of the six themes">
   /* wide enough for the number, a star and the roundabout mark on one line: at
      46px the mark wrapped and pushed the row open */
   .brief.plans td:first-child{width:64px;white-space:nowrap}
+  /* The first column here holds city names rather than short labels, and 92px broke the
+     longer ones over two lines. Letting it take what it needs instead made the table
+     size to its contents rather than to the panel, so it grew wider than the panel and
+     the grid carrying it overflowed, cutting the names off at the left. Fixed layout
+     keeps the table exactly as wide as the panel and shares it out: most of it to the
+     names, which is more than any of them need. */
+  /* what is chosen, as rows rather than a table: no columns to size, nothing to clip */
+  .picklist{font-size:12.5px}
+  .pickhead{font-family:var(--mono);font-size:9px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink-soft);padding:12px 0 4px;
+    border-bottom:1px solid var(--rule-soft);margin-bottom:2px}
+  .pickrow{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+    padding:4px 0;border-bottom:1px dotted var(--rule-soft)}
+  .pickrow:last-child{border-bottom:0}
+  /* the name takes whatever is left, and breaks only if it truly cannot fit */
+  .pk{min-width:0;flex:1 1 auto;font-family:var(--mono);font-size:8.5px;
+    letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft);
+    overflow-wrap:anywhere}
+  /* a city name is a name, not a label, so it reads as one */
+  .pk.name{font-family:inherit;font-size:12.5px;letter-spacing:0;text-transform:none;
+    color:var(--ink)}
+  .pv{flex:0 0 auto;text-align:right;white-space:nowrap}
   .brief.plans td:last-child{text-align:right;font-family:var(--mono);font-weight:700;
     white-space:nowrap;width:1px;padding-left:12px}
   .modal .btn.primary{background:var(--ink);color:var(--card)}
@@ -776,6 +798,65 @@ of the six themes">
   .rstatus.bad{border-left-color:var(--stamp);color:var(--stamp)}
   /* the rules have been changed: worth noticing, but it is a choice, not a fault */
   .rstatus.warn{border-left-color:var(--flag)}
+  /* the list of sheets on the left, what is known about one on the right */
+  /* One size whatever is in it: the screen is the first thing a visit shows, and it
+     should not change shape between one sheet and ten, or jump as one is deleted.
+     Both columns scroll inside a fixed frame. */
+  /* The frame carries the height of the whole panel: everything else around it is a
+     heading, a line of text, the controls and the buttons. It gives way on a short
+     screen: the panel caps at 88vh, and the heading, the line of text, the controls
+     and the buttons take about 220px of that whatever the screen, so taking those off
+     keeps the whole thing inside one scrollbar rather than two. */
+  .sheets{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;
+    align-items:stretch;height:min(505px,calc(88vh - 220px))}
+  @media (max-width:640px){.sheets{grid-template-columns:1fr;height:auto}}
+  .sheetlist{display:flex;flex-direction:column;gap:6px;height:100%;
+    overflow-y:auto;scrollbar-width:thin;
+    scrollbar-color:var(--rule) var(--paper-2)}
+  .sheetrow{display:grid;gap:1px;text-align:left;background:var(--paper-2);
+    border:1px solid var(--rule-soft);border-radius:calc(var(--rs)*.6);
+    padding:8px 10px;cursor:pointer;font:inherit;color:var(--ink)}
+  .sheetrow:hover{background:var(--card)}
+  .sheetrow.on{border-color:var(--ink);background:var(--card)}
+  .srname{font-size:13px;font-weight:700}
+  /* No name given shows the same ellipsis the masthead does, and it is set exactly as a
+     name would be: same family, weight and size, whatever the place it appears in. The
+     class stays as a marker for the nameless case, and deliberately styles nothing. */
+  .srwhen,.srstate{font-family:var(--mono);font-size:9px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-soft)}
+  /* a finished sheet is kept for a week, and says so */
+  .sheetrow.done .srname{color:var(--ink-soft)}
+  .sheetrow.done .srstate{color:var(--stamp)}
+  /* how to look at the list: two small groups above it */
+  .sheetctls{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 10px}
+  .ctlgroup{display:inline-flex;align-items:center;gap:4px}
+  .ctllabel{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink-soft);margin-right:2px}
+  .sheetctl{font-family:var(--mono);font-size:9px;letter-spacing:.08em;
+    text-transform:uppercase;background:transparent;color:var(--ink-soft);
+    border:1px solid var(--rule-soft);border-radius:calc(var(--rs)*.5);
+    padding:3px 7px;cursor:pointer}
+  .sheetctl:hover{background:var(--paper-2)}
+  .sheetctl.on{background:var(--ink);border-color:var(--ink);color:var(--card)}
+  /* the last group takes whatever the others leave, and the box inside it fills that */
+  .ctlgroup.grow{flex:1 1 150px;min-width:0}
+  .sheetfind{font-family:var(--mono);font-size:9px;letter-spacing:.06em;
+    flex:1 1 auto;width:auto;min-width:60px;
+    background:var(--card);color:var(--ink);border:1px solid var(--rule-soft);
+    border-radius:calc(var(--rs)*.5);padding:3px 6px}
+  .sheetfind::placeholder{color:var(--ink-soft);text-transform:uppercase}
+  /* nothing to list: the two halves make way for one middle */
+  .sheets.bare{grid-template-columns:minmax(0,1fr);height:auto;min-height:230px}
+  .sheets.bare .sheetlist{display:none}
+  .nosheets{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;height:100%;padding:26px 20px}
+  .nosheets svg{width:56px;height:56px;opacity:.35;margin-bottom:12px}
+  .nosheets p{margin:0;font-size:13px}
+  .nosheets .quiet{color:var(--ink-soft);font-size:12.5px;max-width:40ch;margin-top:7px}
+  .sheetfacts{min-width:0;height:100%;overflow-y:auto;scrollbar-width:thin;
+    scrollbar-color:var(--rule) var(--paper-2)}
+  .sheetfacts .sechead td{font-family:var(--mono);font-size:9px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink-soft);padding-top:10px}
   .roster{display:flex;flex-direction:column;gap:5px;margin-top:4px}
   .pl{display:flex;align-items:baseline;gap:7px;border:1px solid var(--rule-soft);
     padding:5px 9px;border-radius:calc(var(--rs)*.6);font-size:12.5px}
@@ -2299,7 +2380,9 @@ async function load(){
       if(d.cfg && sharedIn && !userSaved){
         LOCAL_KEYS.forEach(k=>{ if(d.cfg[k]!==undefined) CFG[k]=d.cfg[k]; });
       }
+      let applied=false;
       if(d.cfg && !sharedIn && !userSaved){
+        applied=true;
         if((d.cfg.dataVersion|0) < BASE.dataVersion){
           /* This save predates a table correction. Take the player's choices
              across and let the corrected values through, rather than leaving a
@@ -2338,9 +2421,13 @@ async function load(){
       syncHintsButton();
       /* Dealing again opens the new sheet page. If the player has opened something
          else while the settings were on their way, put them back on it. */
-      const was=openPanel;
-      newGame();
-      if(was && was!==briefing) was();
+      /* Dealing again is only for when stored settings were actually applied, and
+         never over a sheet already being played: it resets the board. */
+      if(applied && !(G && G.started)){
+        const was=openPanel;
+        newGame();
+        if(was && was!==briefing) was();
+      }
       } }catch(e){}
 }
 /* ------------------------------------------------------ resuming a sheet
@@ -2350,7 +2437,45 @@ async function load(){
    the next morning would show eight hours on it. And the turn in progress is stored
    too, so closing the tab halfway through choosing an effect leaves you where you
    were rather than losing the round. */
-const SESSION_KEY="welcome-2018-sheet";
+/* Many sheets, not one. Each is stored whole, with the settings it was played under,
+   so it can be described and resumed exactly as it was left. */
+const SHEETS_KEY="welcome-to-sheets";
+const KEEP_RUNNING=10;              /* the ten most recent sheets still in progress */
+const KEEP_FINISHED_DAYS=7;         /* a finished sheet is worth looking at for a week */
+const DAY=86400000;
+
+function newSheetId(){
+  return "s"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+}
+/* Throw away what nobody would want: finished sheets past their week, and running
+   sheets beyond the ten most recent. The most recently played survive. */
+function pruneSheets(list){
+  const now=Date.now();
+  const kept=list.filter(x=>{
+    if(!x || !x.game) return false;
+    if(!x.finished) return true;
+    return (now-(x.lastPlayed||x.created||now)) < KEEP_FINISHED_DAYS*DAY;
+  });
+  const running=kept.filter(x=>!x.finished)
+    .sort((a,b)=>(b.lastPlayed||0)-(a.lastPlayed||0));
+  const drop=new Set(running.slice(KEEP_RUNNING).map(x=>x.id));
+  return kept.filter(x=>!drop.has(x.id))
+    .sort((a,b)=>(b.lastPlayed||0)-(a.lastPlayed||0));
+}
+async function loadSheets(){
+  try{
+    const r=await STORE.get(SHEETS_KEY);
+    if(!r||!r.value) return [];
+    const d=JSON.parse(r.value);
+    if(!d || d.v!==1 || !Array.isArray(d.sheets)) return [];
+    return pruneSheets(d.sheets);
+  }catch(e){ return []; }
+}
+async function putSheets(list){
+  try{ await STORE.set(SHEETS_KEY, JSON.stringify({v:1, sheets:pruneSheets(list)}));
+       return true; }
+  catch(e){ return false; }
+}
 
 function clockOut(){
   const now=Date.now();
@@ -2380,19 +2505,32 @@ function clockIn(c){
 let lastWritten=null;
 async function saveSheet(){
   if(!G || !G.started) return false;
-  const body=JSON.stringify({
-    v:1, cfg:CFG, best:best,
-    game:G, sel:sel, snap:snap, clock:clockOut()
-  });
-  /* the clock alone is not worth a write: it is rebased from elapsed time anyway */
+  if(!G.id){ G.id=newSheetId(); G.created=Date.now(); }
+  const entry={
+    id:G.id, created:G.created||Date.now(), lastPlayed:Date.now(),
+    finished:!!G.over,
+    /* what it scored, so a finished sheet can be listed without rebuilding it */
+    total:score().total,
+    cfg:CFG, game:G, sel:sel, snap:snap, clock:clockOut()
+  };
+  const body=JSON.stringify(entry);
+  /* neither the clock nor the moment of writing is worth a write of its own */
   const same=lastWritten && sameBar(lastWritten, body);
   if(same) return false;
   lastWritten=body;
-  try{ await STORE.set(SESSION_KEY, body); return true; }catch(e){ return false; }
+  const list=await loadSheets();
+  const at=list.findIndex(x=>x.id===G.id);
+  if(at>=0) list[at]=entry; else list.push(entry);
+  const ok=await putSheets(list);
+  /* what the screens believe is stored, so the way back to the overview appears the
+     moment the first sheet is written rather than only on the next visit */
+  if(ok) sheetsList=pruneSheets(list);
+  return ok;
 }
 /* two payloads that differ only in the clock are the same as far as writing goes */
 function sameBar(a,b){
-  const strip=x=>x.replace(/"clock":\{[^}]*\}/,"");
+  const strip=x=>x.replace(/"clock":\{[^}]*\}/,"")
+                  .replace(/"lastPlayed":\d+/,"");
   return strip(a)===strip(b);
 }
 /* render() runs after every change, so that is the hook; the delay keeps a burst
@@ -2403,22 +2541,32 @@ function queueSave(){
   if(saveTimer) clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{ saveTimer=null; saveSheet(); }, 900);
 }
-async function clearSheet(){
-  try{ await STORE.del(SESSION_KEY); }
-  catch(e){ try{ await STORE.set(SESSION_KEY,""); }catch(e2){} }
+/* Forget sheets by id. Several go in one read and one write: doing them one at a time
+   meant four calls each reading the same list and writing back their own copy of it,
+   and the last write won, so most of the deletions were lost. */
+async function deleteSheets(ids){
+  const gone=[].concat(ids);
+  if(!gone.length) return false;
+  const list=await loadSheets();
+  return putSheets(list.filter(x=>gone.indexOf(x.id)<0));
 }
+function deleteSheet(id){ return deleteSheets([id]); }
 /* Everything a sheet needs, and nothing that would make a stale save dangerous:
    a board from an older data version, or one whose shape no longer matches, is
    refused rather than half restored. */
 function sheetUsable(d){
-  if(!d || d.v!==1 || !d.game) return false;
+  /* the version lives on the list that holds these, not on each entry */
+  if(!d || !d.game) return false;
   const g=d.game;
   if(!Array.isArray(g.streets) || g.streets.length!==3) return false;
   if(!Array.isArray(g.plans) || !g.plans.length) return false;
   if(g.streets.some(st=>!st || !Array.isArray(st.slots) || !Array.isArray(st.fences)))
     return false;
-  /* the settings call it lots; the board calls the array slots */
-  const shape=CFG.streets.map(x=>x.lots).join(",");
+  /* Its own settings, not the ones in force: a sheet played with custom street
+     lengths must still be resumable when the current settings differ. The settings
+     call it lots; the board calls the array slots. */
+  const own=(d.cfg&&d.cfg.streets)||CFG.streets;
+  const shape=own.map(x=>x.lots).join(",");
   if(g.streets.map(st=>st.slots.length).join(",")!==shape) return false;
   return true;
 }
@@ -2435,26 +2583,28 @@ function restoreSheet(d){
   if(G.started) forceCloseBox();
 }
 
-async function resumeSheet(){
-  try{
-    /* Reading storage takes a moment, and in that moment the player may already
-       have pressed Start or begun a new sheet. Pulling a stored board out from
-       under them would be worse than not resuming at all. */
-    if(G && G.started) return false;
-    const r=await STORE.get(SESSION_KEY);
-    if(!r||!r.value) return false;
-    if(G && G.started) return false;
-    const d=JSON.parse(r.value);
-    if(!sheetUsable(d)) return false;
-    /* the settings the sheet was played under, so the theme, the city and the
-       variants come back with it */
-    if(d.cfg){ CFG=Object.assign(copy(BASE),d.cfg); CFG.dataVersion=BASE.dataVersion; }
-    applyTheme(CFG.theme);
-    renderCity();
-    syncHintsButton();
-    restoreSheet(d);
-    return true;
-  }catch(e){ return false; }
+/* Pick a stored sheet up, settings and all, so the theme, the city name and the
+   variants come back with the board. */
+function resumeStored(d){
+  if(!sheetUsable(d)) return false;
+  if(d.cfg){ CFG=Object.assign(copy(BASE),d.cfg); CFG.dataVersion=BASE.dataVersion; }
+  /* a theme that has since been removed would leave the page half painted */
+  if(!THEMES[CFG.theme]) CFG.theme=BASE.theme;
+  applyTheme(CFG.theme);
+  renderCity();
+  syncHintsButton();
+  restoreSheet(d);
+  return true;
+}
+/* On loading: if anything is in progress, offer the sheets rather than dealing over
+   them. Reading takes a moment, so it yields to anything begun in the meantime. */
+async function offerSheets(){
+  if(G && G.started) return false;
+  let list=await loadSheets();
+  if(G && G.started) return false;
+  if(!list.length) return false;
+  activeSheets(list);
+  return true;
 }
 /* Set once the player changes a setting. The stored settings arrive after the page is
    interactive, and applying them over a choice just made would undo it. */
@@ -3861,15 +4011,22 @@ let boxSticky=false;
    can lay the figures out like any other panel. Clicking outside or pressing Escape
    is a no, as it is everywhere else. */
 function askBox(o){
+  /* A question is not one of the screens, so the rule that keeps the sheets screen
+     put must not hold it open too: saying no goes back by whatever set backTo. */
+  openPanel=null;
+  /* An optional third way out, for questions where there are two things a player
+     might want to do as well as changing their mind. */
   let h='<h3>'+o.title+'</h3>'+
         '<p class="lede">'+o.lede+'</p>'+
         (o.detail||'')+
         '<div class="toolbar">'+
+        (o.alt?'<button class="btn" id="ask-alt">'+o.alt+'</button>':'')+
         '<button class="btn primary" id="ask-yes">'+o.yes+'</button>'+
         '<button class="btn" id="ask-no">'+(o.no||"Cancel")+'</button>'+
         '</div>';
   openBox(h, false, "mid");
   $("ask-yes").onclick=()=>{ backTo=null; forceCloseBox(); o.onYes(); };
+  if(o.alt) $("ask-alt").onclick=()=>{ backTo=null; forceCloseBox(); o.onAlt(); };
   $("ask-no").onclick=()=>{ backOut(); };
 }
 
@@ -3894,6 +4051,9 @@ function forceCloseBox(){ boxSticky=false; roomOpen=false; $("scrim").hidden=tru
    briefing. */
 let backTo=null;
 function backOut(){
+  /* Where a visit starts there is nowhere behind it, so stay put. Reached from the
+     new sheet page there is, and backTo says so. */
+  if(openPanel===sheetsPanel && !backTo) return;
   const via=backTo; backTo=null;
   if(via){ via(); return; }
   if(G && !G.started) briefing(); else forceCloseBox();
@@ -4490,31 +4650,364 @@ function rulesPanel(){
   $("rules-done").onclick=backOut;
 }
 
+/* What a sheet was set up to be, in one place: the new sheet page describes the one
+   about to be dealt and the active sheets screen describes a stored one, and the two
+   should not word the same thing differently. Reads a settings object rather than the
+   live one so a stored sheet can be described as it was played. */
+function sheetRows(c, seedCell){
+  const savedCFG=CFG;
+  CFG=c;                        /* the helpers below read the live settings */
+  try{
+    return [
+      ["Mode", MODE_NAMES[c.mode]||c.mode],
+      ["City plans", planPool().length+" of "+activePlans().length+" in the pool"+
+                     (advancedOn()?", advanced included":", standard only")+
+                     (c.roundabouts?" \u00b7 roundabouts on":"")],
+      ["Deck", deckTotal()+" construction cards"+
+               (c.mode==="solo" ? " plus the Solo card" : ", in three stacks")],
+      ["Streets", c.streets.map(x=>x.lots).join(" \u00b7 ")+" houses"],
+      ["Theme", THEMES[c.theme] ? THEMES[c.theme].name
+                                : THEMES[BASE.theme].name+" (its own is gone)"],
+      ["Hints", c.hintsAllowed ? "available" : "not available"],
+      ["Rules", (function(){
+        const changed=c.custom ? customChanges() : [];
+        return changed.length ? "<b>custom</b> \u2014 "+andList(changed)+" changed"
+                              : "default";
+      })()],
+      ["Targets", Object.keys(c.targets).map(k=>k+" "+c.targets[k]+" pts").join(" \u00b7 ")],
+      ["Seed", seedCell]
+    ];
+  } finally { CFG=savedCFG; }
+}
+
+/* ---------------------------------------------------- active sheets
+   Sheets in progress, and finished ones for a week. The list on the left, everything
+   known about the chosen one on the right: how it was set up, using the same
+   description the new sheet page uses, and where it had got to. */
+let sheetsList=[], sheetsPick=null;
+/* More than one can be chosen, which is only for deleting several at once: shift for a
+   run, ctrl or cmd to pick them off one by one. The anchor is where a shift range
+   starts from. */
+let sheetsPicked=[], sheetsAnchor=null;
+/* How the list is ordered and what it leaves out. Both are choices about looking at
+   the list, not about the sheets, so they are not stored. */
+let sheetsSort="date", sheetsShow="all", sheetsWhen="any", sheetsName="";
+const SHEET_SORTS={date:"date", name:"name", state:"state"};
+const SHEET_SHOWS={all:"all", running:"in progress", finished:"finished"};
+/* the same three things can be filtered on as can be sorted on: what it is called,
+   when it was last played, and whether it is finished */
+const SHEET_WHENS={any:"any time", today:"today", week:"this week"};
+
+/* midnight, so "today" means today rather than the last 24 hours */
+function startOfToday(){
+  const d=new Date(); d.setHours(0,0,0,0); return d.getTime();
+}
+function sheetsInView(){
+  let out=sheetsList.slice();
+  if(sheetsShow==="running") out=out.filter(x=>!x.finished);
+  else if(sheetsShow==="finished") out=out.filter(x=>x.finished);
+  if(sheetsWhen!=="any"){
+    const now=Date.now();
+    const since=sheetsWhen==="today" ? startOfToday() : now-7*DAY;
+    out=out.filter(x=>(x.lastPlayed||0)>=since);
+  }
+  const want=sheetsName.trim().toLowerCase();
+  if(want) out=out.filter(x=>
+    (((x.cfg&&x.cfg.city)||"").toLowerCase().indexOf(want)>=0));
+  const name=x=>((x.cfg&&x.cfg.city)||"").trim().toLowerCase();
+  if(sheetsSort==="name"){
+    /* nameless ones last, rather than sorting under an empty string */
+    out.sort((a,b)=>{
+      const an=name(a), bn=name(b);
+      if(!an!==!bn) return an?-1:1;
+      return an.localeCompare(bn) || (b.lastPlayed||0)-(a.lastPlayed||0);
+    });
+  } else if(sheetsSort==="state"){
+    out.sort((a,b)=>(a.finished?1:0)-(b.finished?1:0) ||
+                    (b.lastPlayed||0)-(a.lastPlayed||0));
+  } else {
+    out.sort((a,b)=>(b.lastPlayed||0)-(a.lastPlayed||0));
+  }
+  return out;
+}
+
+function sheetWhen(ms){
+  if(!ms) return "\u2014";
+  const d=new Date(ms), now=new Date();
+  const day=d.toLocaleDateString(undefined,{day:"numeric",month:"short"});
+  const time=d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+  const sameDay=d.toDateString()===now.toDateString();
+  const yesterday=new Date(now.getTime()-DAY).toDateString()===d.toDateString();
+  return sameDay ? "today "+time : yesterday ? "yesterday "+time : day+" "+time;
+}
+/* A finished sheet is kept for a week, so say how much of it is left rather than
+   letting it disappear without warning. */
+function sheetDaysLeft(x){
+  if(!x || !x.finished) return null;
+  const used=(Date.now()-(x.lastPlayed||x.created||Date.now()))/DAY;
+  return Math.max(0, Math.ceil(KEEP_FINISHED_DAYS-used));
+}
+function sheetGoesIn(x){
+  const d=sheetDaysLeft(x);
+  if(d===null) return "";
+  return d<=0 ? "goes today" : d===1 ? "1 day left" : d+" days left";
+}
+function sheetHouses(g){
+  let n=0;
+  (g.streets||[]).forEach(st=>(st.slots||[]).forEach(x=>{ if(x.v!==null) n++; }));
+  return n;
+}
+/* An unnamed sheet reads the same here as everywhere else: the masthead, the new
+   sheet page and the page title all show an ellipsis for a city with no name. */
+function sheetTitle(x){
+  const city=((x.cfg&&x.cfg.city)||"").trim();
+  return city ? esc(city) : '<span class="noname">\u2026</span>';
+}
+
+
+const sheetsPanel=()=>activeSheets(sheetsList);
+/* Which sheets a click leaves chosen. Plain takes one, shift takes the run between it
+   and the anchor as the list is currently ordered, ctrl or cmd adds or removes one. */
+function pickSheet(id, ev){
+  const view=sheetsInView().map(x=>x.id);
+  const shift=!!(ev && ev.shiftKey);
+  const meta=!!(ev && (ev.ctrlKey || ev.metaKey));
+  if(shift && sheetsAnchor && view.indexOf(sheetsAnchor)>=0){
+    const a=view.indexOf(sheetsAnchor), b=view.indexOf(id);
+    const lo=Math.min(a,b), hi=Math.max(a,b);
+    sheetsPicked=view.slice(lo,hi+1);
+  } else if(meta){
+    sheetsPicked = sheetsPicked.indexOf(id)>=0
+      ? sheetsPicked.filter(x=>x!==id)
+      : sheetsPicked.concat([id]);
+    sheetsAnchor=id;
+  } else {
+    sheetsPicked=[id];
+    sheetsAnchor=id;
+  }
+  /* keep them in the order they are shown, so a range reads as a range */
+  sheetsPicked=view.filter(x=>sheetsPicked.indexOf(x)>=0);
+  sheetsPick=sheetsPicked.length===1 ? sheetsPicked[0] : null;
+}
+function activeSheets(list){
+  openPanel=sheetsPanel;
+  sheetsList=pruneSheets(list||sheetsList);
+  const empty=!sheetsList.length;
+  /* the chosen one has to be one the filter is showing, or the description would
+     describe a sheet that is not in the list */
+  const showing=empty ? [] : sheetsInView();
+  const ids=showing.map(x=>x.id);
+  /* only sheets the filters are showing can be chosen, or the panel would describe
+     something absent from the list */
+  sheetsPicked=sheetsPicked.filter(id=>ids.indexOf(id)>=0);
+  if(!empty && showing.length && !sheetsPicked.length){
+    sheetsPicked=[showing[0].id]; sheetsAnchor=showing[0].id;
+  }
+  sheetsPick=sheetsPicked.length===1 ? sheetsPicked[0] : null;
+  const many=sheetsPicked.length>1;
+  const chosen=showing.filter(x=>sheetsPicked.indexOf(x.id)>=0);
+  const pick=many ? null : (showing.find(x=>x.id===sheetsPick) || null);
+
+  const view=empty ? [] : sheetsInView();
+  let h='<h3>Your sheets</h3>'+
+    '<p class="lede">'+(empty
+      ? 'A clean desk, three empty streets and a sharpened pencil. Somebody has to '+
+        'build this town.'
+      : (view.length===sheetsList.length
+          ? sheetsList.length+' sheet'+(sheetsList.length===1?'':'s')
+          : view.length+' of '+sheetsList.length+' sheets')+
+        ' waiting. Pick one up where you left it, or start something new.')+'</p>';
+  /* how to look at the list, rather than anything about the sheets themselves */
+  if(!empty){
+    h+='<div class="sheetctls">'+
+       '<span class="ctlgroup"><span class="ctllabel">Sort</span>';
+    Object.keys(SHEET_SORTS).forEach(k=>{
+      h+='<button class="sheetctl'+(sheetsSort===k?" on":"")+'" data-sort="'+k+'">'+
+         SHEET_SORTS[k]+'</button>';
+    });
+    h+='</span><span class="ctlgroup"><span class="ctllabel">Show</span>';
+    Object.keys(SHEET_SHOWS).forEach(k=>{
+      h+='<button class="sheetctl'+(sheetsShow===k?" on":"")+'" data-show="'+k+'">'+
+         SHEET_SHOWS[k]+'</button>';
+    });
+    h+='</span><span class="ctlgroup"><span class="ctllabel">Played</span>';
+    Object.keys(SHEET_WHENS).forEach(k=>{
+      h+='<button class="sheetctl'+(sheetsWhen===k?" on":"")+'" data-when="'+k+'">'+
+         SHEET_WHENS[k]+'</button>';
+    });
+    h+='</span><span class="ctlgroup grow"><span class="ctllabel">Name</span>'+
+       '<input class="sheetfind" id="sheetfind" value="'+esc(sheetsName)+'"'+
+       ' placeholder="any" spellcheck="false" aria-label="Filter by city name">'+
+       (sheetsName?'<button class="sheetctl" id="sheetfindclear" '+
+         'title="Show every name" aria-label="Clear the name filter">\u00d7</button>':'')+
+       '</span></div>';
+  }
+  h+='<div class="sheets'+(empty?' bare':'')+'">'+
+    '<div class="sheetlist" role="listbox">';
+  if(!empty && !view.length){
+    const why=[];
+    if(sheetsShow!=="all") why.push(SHEET_SHOWS[sheetsShow]);
+    if(sheetsWhen!=="any") why.push("played "+SHEET_WHENS[sheetsWhen]);
+    if(sheetsName.trim()) why.push('named like \u201c'+esc(sheetsName.trim())+'\u201d');
+    h+='<p class="note">No sheets '+(why.length?andList(why):"to show")+'.</p>';
+  }
+  view.forEach(x=>{
+    const taken=sheetsPicked.indexOf(x.id)>=0;
+    h+='<button class="sheetrow'+(taken?' on':'')+
+       (x.finished?' done':'')+'" data-sheet="'+x.id+'" role="option"'+
+       ' aria-selected="'+(taken?'true':'false')+'">'+
+       '<span class="srname">'+sheetTitle(x)+'</span>'+
+       '<span class="srwhen">'+sheetWhen(x.lastPlayed)+'</span>'+
+       '<span class="srstate">'+(x.finished
+         ? 'finished \u00b7 '+x.total+' pts \u00b7 '+sheetGoesIn(x)
+         : 'round '+(x.game.round||1)+' \u00b7 '+sheetHouses(x.game)+' built')+
+       '</span></button>';
+  });
+  h+='</div><div class="sheetfacts">';
+  if(empty){
+    /* An empty screen with an empty half beside it reads as something broken, so it gets
+       the sheet's own emblem and a line of its own. */
+    h+='<div class="nosheets">'+glyph("city","")+
+       '<p>Nothing here yet.</p>'+
+       '<p class="quiet">Whatever you build is kept here, so you can put a sheet down '+
+       'halfway through and pick it up another day.</p></div>';
+  }
+  if(many){
+    /* Nothing to describe when several are chosen, so the space says what they are.
+       Choosing more than one is only for getting rid of them together. */
+    const fin=chosen.filter(x=>x.finished).length;
+    /* Rows rather than a table. A table sizes its own columns, and with a heading that
+       spans both of them there was no arrangement of widths, colgroups or fixed layout
+       that stopped the names being cut off at the left. A row that puts the name against
+       the value has no column algorithm to fight: the value takes what it needs and the
+       name takes the rest. */
+    const prow=(k,v)=>'<div class="pickrow"><span class="pk">'+k+
+      '</span><span class="pv">'+v+'</span></div>';
+    h+='<div class="picklist">'+
+       '<div class="pickhead">'+sheetsPicked.length+' sheets selected</div>'+
+       prow("In progress", chosen.length-fin)+
+       prow("Finished", fin)+
+       prow("Oldest", sheetWhen(Math.min.apply(null, chosen.map(x=>x.lastPlayed||0))))+
+       prow("Newest", sheetWhen(Math.max.apply(null, chosen.map(x=>x.lastPlayed||0))))+
+       '<div class="pickhead">Which ones</div>';
+    chosen.forEach(x=>{
+      h+='<div class="pickrow"><span class="pk name">'+sheetTitle(x)+'</span>'+
+         '<span class="pv">'+(x.finished ? 'finished \u00b7 '+x.total+' pts'
+           : 'round '+(x.game.round||1))+'</span></div>';
+    });
+    h+='</div>';
+  }
+  if(pick){
+    const c=Object.assign(copy(BASE), pick.cfg||{});
+    const g=pick.game;
+    h+='<table class="brief"><tr class="sechead"><td colspan="2">Where it stands</td></tr>';
+    const state=[
+      ["State", pick.finished
+        ? "<b>finished</b> \u00b7 "+sheetGoesIn(pick)
+        : "in progress"],
+      ["Round", (g.round||1)+" of "+CITY_MAX],
+      ["Built", sheetHouses(g)+" house"+(sheetHouses(g)===1?"":"s")],
+      ["Score", pick.total+" points"],
+      ["Time played", fmt2((pick.clock&&pick.clock.total)||0)],
+      ["Started", sheetWhen(pick.created)],
+      ["Last played", sheetWhen(pick.lastPlayed)]
+    ];
+    state.forEach(r=>{ h+='<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>'; });
+    h+='<tr class="sechead"><td colspan="2">How it was set up</td></tr>';
+    sheetRows(c, esc(g.seed||"\u2014")).forEach(r=>{
+      h+='<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';
+    });
+    h+='</table>';
+  }
+  h+='</div></div>'+
+     '<div class="toolbar">'+
+     '<button class="btn'+((empty||many)?'':' primary')+'" id="sh-resume"'+
+       (empty ? ' disabled title="There is nothing to resume yet"'
+        : many ? ' disabled title="Only one sheet can be picked up at a time"' : '')+
+       '>Resume this sheet</button>'+
+     '<button class="btn'+(empty?' primary':'')+'" id="sh-new">Start a new sheet</button>'+
+     '<button class="btn" id="sh-del"'+
+       (empty?' disabled title="There is nothing to delete"':'')+
+       '>'+(many?'Delete '+sheetsPicked.length:'Delete')+'</button>'+
+     '</div>';
+  openBox(h, true, "wide");
+
+  $("modal").querySelectorAll("button[data-sheet]").forEach(b=>{
+    b.onclick=ev=>{ pickSheet(b.dataset.sheet, ev); activeSheets(sheetsList); };
+  });
+  $("modal").querySelectorAll("button[data-sort]").forEach(b=>{
+    b.onclick=()=>{ sheetsSort=b.dataset.sort; activeSheets(sheetsList); };
+  });
+  $("modal").querySelectorAll("button[data-show]").forEach(b=>{
+    b.onclick=()=>{ sheetsShow=b.dataset.show; activeSheets(sheetsList); };
+  });
+  $("modal").querySelectorAll("button[data-when]").forEach(b=>{
+    b.onclick=()=>{ sheetsWhen=b.dataset.when; activeSheets(sheetsList); };
+  });
+  if($("sheetfindclear")) $("sheetfindclear").onclick=()=>{
+    sheetsName=""; activeSheets(sheetsList);
+  };
+  if($("sheetfind")){
+    $("sheetfind").oninput=()=>{
+      sheetsName=$("sheetfind").value||"";
+      activeSheets(sheetsList);
+      /* the panel is drawn again on every keystroke, so put the cursor back where it
+         was or the box would lose focus after one letter */
+      const box=$("sheetfind");
+      if(box && typeof box.focus==="function"){
+        box.focus();
+        if(typeof box.setSelectionRange==="function")
+          box.setSelectionRange(box.value.length, box.value.length);
+      }
+    };
+  }
+  $("sh-resume").onclick=()=>{
+    if(sheetsPicked.length!==1) return;      /* one at a time, and the button says so */
+    const x=sheetsList.find(y=>y.id===sheetsPicked[0]);
+    if(!x) return;
+    lastWritten=null;
+    if(resumeStored(x)) forceCloseBox();
+  };
+  $("sh-new").onclick=()=>{ forceCloseBox(); newGame(); };
+  $("sh-del").onclick=()=>{
+    const going=sheetsList.filter(y=>sheetsPicked.indexOf(y.id)>=0);
+    if(!going.length) return;
+    const one=going.length===1;
+    askBox({
+      title: one ? "Delete this sheet?" : "Delete these "+going.length+" sheets?",
+      lede:"It cannot be brought back.",
+      detail:'<table class="brief">'+
+        (one
+          ? '<tr><td>Sheet</td><td>'+sheetTitle(going[0])+'</td></tr>'+
+            '<tr><td>Last played</td><td>'+sheetWhen(going[0].lastPlayed)+'</td></tr>'+
+            '<tr><td>Where</td><td>'+(going[0].finished
+              ? "finished, "+going[0].total+" points"
+              : "round "+(going[0].game.round||1)+", "+
+                sheetHouses(going[0].game)+" built")+'</td></tr>'
+          /* name every one, so nothing goes without being seen */
+          : going.map(x=>'<tr><td>'+sheetTitle(x)+'</td><td>'+
+              (x.finished?"finished":"round "+(x.game.round||1))+' \u00b7 '+
+              sheetWhen(x.lastPlayed)+'</td></tr>').join(""))+
+        '</table>',
+      yes: one ? "Delete it" : "Delete all "+going.length,
+      no: one ? "Keep it" : "Keep them",
+      onYes:()=>{
+        const gone=going.map(x=>x.id);
+        deleteSheets(gone);
+        sheetsList=sheetsList.filter(y=>gone.indexOf(y.id)<0);
+        sheetsPicked=[]; sheetsPick=null; sheetsAnchor=null;
+        if(sheetsList.length) activeSheets(sheetsList); else { forceCloseBox(); briefing(); }
+      }
+    });
+    /* saying no comes back to the list */
+    backTo=()=>activeSheets(sheetsList);
+  };
+}
+
 function briefing(){
   openPanel=briefing;
-  const rows=[
-    /* which of the three ways the sheet is being played; the Players row below says
-       who with, and the Rules panel says what each one means */
-    /* the same names the setup screen offers, so the two agree */
-    ["Mode", MP.on ? MODE_NAMES.multiplayer : (MODE_NAMES[CFG.mode]||CFG.mode)],
-    ["City plans", planPool().length+" of "+activePlans().length+" in the pool"+
-                   (advancedOn()?", advanced included":", standard only")+
-                   (CFG.roundabouts?" \u00b7 roundabouts on":"")],
-    ["Deck", deckTotal()+" construction cards"+
-             (CFG.mode==="solo" ? " plus the Solo card" : ", in three stacks")],
-    ["Streets", CFG.streets.map(x=>x.lots).join(" \u00b7 ")+" houses"],
-    ["Theme", THEMES[CFG.theme].name],
-    /* The setting, not the current state: hints go on and off as you play, so what
-       matters here is whether they are available at all. */
-    ["Hints", CFG.hintsAllowed ? "available" : "not available"],
-    ["Rules", (function(){
-      const changed=CFG.custom ? customChanges() : [];
-      if(!changed.length) return "default";
-      return "<b>custom</b> \u2014 "+andList(changed)+" changed";
-    })()],
-    ["Targets", Object.keys(CFG.targets).map(k=>k+" "+CFG.targets[k]+" pts").join(" \u00b7 ")],
-    ["Seed", '<span id="seedslot"></span>']
-  ];
+  const rows=sheetRows(CFG, '<span id="seedslot"></span>');
+  if(MP.on) rows[0]=["Mode", MODE_NAMES.multiplayer];
   let h='<div class="gametitle">'+
         '<span class="briefmark">'+markSvg()+'</span>'+
         '<span class="gtwords">Welcome To <span id="briefcity"></span></span>'+
@@ -4554,6 +5047,7 @@ function briefing(){
   const guest=MP.on && !mpIsHost();
   h+='<div class="toolbar"><button class="btn primary" id="go"'+(guest?' disabled':'')+'>'+
        (guest?'The host starts':'Start')+'</button>'+
+     '<button class="btn" id="mysheets">Your sheets</button>'+
      '<button class="btn" id="rul">Rules</button>'+
      '<button class="btn" id="chg">Setup</button>'+
      '<button class="btn" id="shr">Share</button>'+
@@ -4567,6 +5061,15 @@ function briefing(){
   $("rst").onclick=()=>{ if(resetPlans()){ briefing(); render(); } };
   $("chg").onclick=setup;
   $("shr").onclick=()=>{ backTo=null; sharePanel(); };
+  /* reached from here, so clicking outside the list comes back here */
+  if($("mysheets")) $("mysheets").onclick=()=>{ backTo=briefing; activeSheets(sheetsList); };
+  /* Another tab may have stored one since, so ask; redraw only if that changes
+     whether there is anywhere to go back to. */
+  loadSheets().then(l=>{
+    const had=sheetsList.length>0;
+    sheetsList=l;
+    if(had!==(l.length>0) && openPanel===briefing) briefing();
+  });
   $("rul").onclick=()=>{ backTo=briefing; rulesPanel(); };
 }
 /* Clicking outside a panel, or pressing Escape, does what its own Cancel does:
@@ -4876,19 +5379,25 @@ $("btn-new").onclick=()=>{
   /* Any sheet under way is worth asking about, even before the first house goes in:
      it is saved between visits now, so starting a new one throws away something
      that would otherwise have been waiting. A finished sheet has nothing to lose. */
-  if(!(G.started && !G.over)){ clearSheet(); newGame(); return; }
+  if(!(G.started && !G.over)){ newGame(); return; }
   const n=houses();
+  const mine=G.id;
   askBox({
     title:"Start a new sheet?",
-    lede:"The sheet in progress will be discarded. It cannot be brought back.",
+    lede:"The sheet in progress is kept with your others unless you throw it away.",
     detail:'<table class="brief">'+
       '<tr><td>Round</td><td>'+G.round+' of '+CITY_MAX+'</td></tr>'+
       '<tr><td>Built</td><td>'+n+' house'+(n===1?'':'s')+'</td></tr>'+
       '<tr><td>Score</td><td>'+score().total+' points</td></tr>'+
       '</table>',
-    yes:"Discard and start new",
-    no:"Keep playing",
-    onYes:()=>{ clearSheet(); newGame(); }
+    /* Throwing it away is the destructive one, so it is not the primary action even
+       though it is named first. */
+    alt:"Discard and start new",
+    onAlt:()=>{ if(mine) deleteSheet(mine); lastWritten=null; newGame(); },
+    yes:"Save and start new",
+    /* it is already written down; this just stops the next save overwriting it */
+    onYes:()=>{ lastWritten=null; newGame(); },
+    no:"Keep playing"
   });
 };
 
@@ -4904,6 +5413,6 @@ load().then(()=>{
   /* a link arriving is worth storing, but only once their own choices have been
      merged back in by load */
   if(sharedIn){ save(); return; }
-  return resumeSheet();
+  return offerSheets();
 });
 </script>

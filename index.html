@@ -827,8 +827,9 @@ of the six themes">
   /* a finished sheet is kept for a week, and says so */
   .sheetrow.done .srname{color:var(--ink-soft)}
   .sheetrow.done .srstate{color:var(--stamp)}
-  /* how to look at the list: two small groups above it */
-  .sheetctls{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 10px}
+  /* How to look at the list: two small groups above it. The row keeps its height with
+     nothing in it, so the screen is the same size whether there are sheets or not. */
+  .sheetctls{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 10px;min-height:24px}
   .ctlgroup{display:inline-flex;align-items:center;gap:4px}
   .ctllabel{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;
     text-transform:uppercase;color:var(--ink-soft);margin-right:2px}
@@ -845,8 +846,10 @@ of the six themes">
     background:var(--card);color:var(--ink);border:1px solid var(--rule-soft);
     border-radius:calc(var(--rs)*.5);padding:3px 6px}
   .sheetfind::placeholder{color:var(--ink-soft);text-transform:uppercase}
-  /* nothing to list: the two halves make way for one middle */
-  .sheets.bare{grid-template-columns:minmax(0,1fr);height:auto;min-height:230px}
+  /* Nothing to list: the two halves make way for one middle, at the same height as
+     ever. Letting it shrink to its contents made the screen jump about as the last
+     sheet went. */
+  .sheets.bare{grid-template-columns:minmax(0,1fr)}
   .sheets.bare .sheetlist{display:none}
   .nosheets{display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;height:100%;padding:26px 20px}
@@ -4817,7 +4820,9 @@ function activeSheets(list){
           ? sheetsList.length+' sheet'+(sheetsList.length===1?'':'s')
           : view.length+' of '+sheetsList.length+' sheets')+
         ' waiting. Pick one up where you left it, or start something new.')+'</p>';
-  /* how to look at the list, rather than anything about the sheets themselves */
+  /* How to look at the list, rather than anything about the sheets themselves. The row
+     is drawn either way so the screen keeps its height with nothing in it. */
+  if(empty) h+='<div class="sheetctls"></div>';
   if(!empty){
     h+='<div class="sheetctls">'+
        '<span class="ctlgroup"><span class="ctllabel">Sort</span>';

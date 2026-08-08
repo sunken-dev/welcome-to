@@ -24,6 +24,7 @@ jobs:
           filters: |
             worker:
               - 'worker.js'
+              - 'wrangler.jsonc'
 
   deploy-worker-if-changed:
     needs: check-changes

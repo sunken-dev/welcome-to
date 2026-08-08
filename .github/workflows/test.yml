@@ -27,12 +27,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
       - name: Set up devenv
         uses: ./.github/actions/devenv
-
-      # Passed through the environment rather than interpolated into the command,
-      # so a dispatch input cannot become part of the shell line.
       - name: Run tests
         env:
           SCRIPT: ${{ inputs.script || 'test' }}

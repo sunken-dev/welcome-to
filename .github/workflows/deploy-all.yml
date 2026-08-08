@@ -9,10 +9,6 @@ permissions:
   pages: write
   id-token: write
 
-# Two independent chains: test then deploy, once for each half. They share
-# nothing but the change detection, so a red or slow relay cannot hold back a
-# change to the sheet, and the two deployments run side by side. A job whose
-# half was not touched is simply skipped.
 jobs:
   check-changes:
     runs-on: ubuntu-latest
@@ -38,8 +34,6 @@ jobs:
               - 'package-lock.json'
               - 'vitest.config.js'
 
-  # ---- the sheet ----------------------------------------------------------
-
   test-frontend:
     needs: check-changes
     if: needs.check-changes.outputs.frontend == 'true' || needs.check-changes.outputs.harness == 'true'
@@ -55,8 +49,6 @@ jobs:
       pages: write
       id-token: write
     uses: ./.github/workflows/deploy-frontend.yml
-
-  # ---- the relay ----------------------------------------------------------
 
   test-backend:
     needs: check-changes

@@ -1,0 +1,25 @@
+name: Set up devenv
+description: >
+  Installs Nix and devenv so a job runs in the same shell as a developer's,
+  pinned by devenv.lock. Kept in one place so the toolchain versions are not
+  spread across the workflows.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: cachix/install-nix-action@v31
+
+    # devenv's own public cache; reads need no authentication.
+    - name: Use the devenv binary cache
+      uses: cachix/cachix-action@v17
+      with:
+        name: devenv
+
+    - name: Install devenv
+      shell: bash
+      run: nix profile add nixpkgs#devenv
+
+    - name: Install project dependencies
+      shell: bash
+      run: devenv shell -- npm ci

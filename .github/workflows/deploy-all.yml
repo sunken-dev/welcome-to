@@ -15,6 +15,7 @@ jobs:
     outputs:
       backend_changed: ${{ steps.filter.outputs.backend }}
       frontend_changed: ${{ steps.filter.outputs.frontend }}
+      harness_changed: ${{ steps.filter.outputs.harness }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -27,15 +28,36 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/**'
+            harness:
+              - 'tests/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'vitest.config.js'
+
+  # Each half is gated by its own tests: a red relay must not hold back a change
+  # to the sheet, and the reverse. A change to the harness itself runs both.
+  test-frontend:
+    needs: check-changes
+    if: needs.check-changes.outputs.frontend_changed == 'true' || needs.check-changes.outputs.harness_changed == 'true'
+    uses: ./.github/workflows/test.yml
+    with:
+      script: test:frontend
+
+  test-backend:
+    needs: check-changes
+    if: needs.check-changes.outputs.backend_changed == 'true' || needs.check-changes.outputs.harness_changed == 'true'
+    uses: ./.github/workflows/test.yml
+    with:
+      script: test:backend
 
   deploy-worker-if-changed:
-    needs: check-changes
-    if: needs.check-changes.outputs.backend_changed == 'true'
+    needs: [check-changes, test-backend]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure') && needs.check-changes.outputs.backend_changed == 'true'
     uses: ./.github/workflows/deploy-worker.yml
     secrets: inherit
 
   deploy-pages-if-changed:
-    needs: [check-changes, deploy-worker-if-changed]
+    needs: [check-changes, test-frontend, deploy-worker-if-changed]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure') && needs.check-changes.outputs.frontend_changed == 'true'
     permissions:
       contents: read

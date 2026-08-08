@@ -1,0 +1,39 @@
+name: 🧪 Run Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: Which npm test script to run
+        type: choice
+        default: test
+        options:
+          - test
+          - test:frontend
+          - test:backend
+  workflow_call:
+    inputs:
+      script:
+        description: Which npm test script to run
+        type: string
+        default: test
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up devenv
+        uses: ./.github/actions/devenv
+
+      # Passed through the environment rather than interpolated into the command,
+      # so a dispatch input cannot become part of the shell line.
+      - name: Run tests
+        env:
+          SCRIPT: ${{ inputs.script || 'test' }}
+        run: devenv shell -- npm run "$SCRIPT"

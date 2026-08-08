@@ -204,6 +204,13 @@ npm run test:backend:storage      #   what a room holds, and for how long
 npm run test:watch                # re-run on change
 ```
 
+CI runs each half against its own changes: a push touching `frontend/` runs the
+sheet's tests before publishing to Pages, one touching `backend/` runs the
+relay's before deploying the Worker, and a change to the harness runs both. A
+failure in one half never blocks the other. CI uses the same devenv shell, and
+deploys the Worker with the wrangler pinned in `package-lock.json` — the same
+one the tests run against.
+
 ## Credits and legal
 
 *Welcome To Your Perfect Home* is designed by **Benoît Turpin**, illustrated by

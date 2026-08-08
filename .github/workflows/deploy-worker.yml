@@ -9,6 +9,9 @@ on:
       CLOUDFLARE_ACCOUNT_ID:
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   deploy-worker:
     runs-on: ubuntu-latest
@@ -16,10 +19,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Set up devenv
+        uses: ./.github/actions/devenv
+
+      # Deployed with the wrangler pinned in package-lock.json, the same one the
+      # tests run against, rather than whichever version an action would fetch.
+      # wrangler reads both of these from the environment by name.
       - name: Deploy Worker to Cloudflare
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: backend
-          command: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: devenv shell -- npx wrangler deploy --config backend/wrangler.jsonc

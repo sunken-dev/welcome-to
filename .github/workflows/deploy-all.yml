@@ -1,0 +1,42 @@
+name: 🚀 Orchestrated Main Deployment
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      worker_changed: ${{ steps.filter.outputs.worker }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Check path changes
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            worker:
+              - 'worker.js'
+
+  deploy-worker-if-changed:
+    needs: check-changes
+    if: needs.check-changes.outputs.worker_changed == 'true'
+    uses: ./.github/workflows/deploy-worker.yml
+    secrets: inherit
+
+  deploy-pages:
+    needs: [check-changes, deploy-worker-if-changed]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml
+    secrets: inherit

@@ -1,0 +1,98 @@
+name: 🏗️ CI
+
+# Tests every change, and deploys the ones that land on main.
+#
+# Two independent chains, one per half of the repository: the changed half is
+# tested, and only then deployed. They share nothing but the change detection,
+# so a red or slow relay cannot hold back a change to the sheet, and the two
+# deployments run side by side.
+#
+#   frontend/**  ->  test-frontend  ->  deploy-frontend   (GitHub Pages)
+#   backend/**   ->  test-backend   ->  deploy-backend    (Cloudflare Workers)
+#
+# On a pull request, or when started by hand on any branch, it tests and stops
+# there. Deploying happens only on a push to main, and only for the half that
+# changed. A change to the harness or the toolchain runs both suites and
+# deploys nothing.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+# Read-only by default. Only deploy-frontend needs more, and asks for it.
+permissions:
+  contents: read
+
+# One run per branch. Superseded pull request runs are cancelled, since nothing
+# is deployed from them; runs on main are left alone so a deployment already
+# under way is never cut off half done.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      harness: ${{ steps.filter.outputs.harness }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Check path changes
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            backend:
+              - 'backend/**'
+            harness:
+              - 'tests/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'vitest.config.js'
+              - 'devenv.nix'
+              - 'devenv.lock'
+              - 'devenv.yaml'
+              - '.github/**'
+
+  test-frontend:
+    needs: check-changes
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      needs.check-changes.outputs.frontend == 'true' ||
+      needs.check-changes.outputs.harness == 'true'
+    uses: ./.github/workflows/test.yml
+    with:
+      script: test:frontend
+
+  deploy-frontend:
+    needs: [check-changes, test-frontend]
+    if: github.event_name == 'push' && needs.check-changes.outputs.frontend == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-frontend.yml
+
+  test-backend:
+    needs: check-changes
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      needs.check-changes.outputs.backend == 'true' ||
+      needs.check-changes.outputs.harness == 'true'
+    uses: ./.github/workflows/test.yml
+    with:
+      script: test:backend
+
+  deploy-backend:
+    needs: [check-changes, test-backend]
+    if: github.event_name == 'push' && needs.check-changes.outputs.backend == 'true'
+    uses: ./.github/workflows/deploy-backend.yml
+    secrets: inherit

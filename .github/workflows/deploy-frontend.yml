@@ -1,5 +1,15 @@
 name: 🚀 Deploy Frontend
 
+# Publishes the sheet to GitHub Pages.
+#
+# frontend/ is the published root, so CNAME sits beside index.html and nothing
+# outside it -- the relay, the harness, node_modules -- is ever uploaded.
+#
+# Called by CI when frontend/ changed, and available on its own from the Actions
+# tab. Only ever deploys main: started from any other ref the job is skipped and
+# the run reports success without having published anything. Note that running
+# it by hand does not run the tests first.
+
 on:
   workflow_dispatch:
   workflow_call:
@@ -15,10 +25,12 @@ concurrency:
 
 jobs:
   deploy-frontend:
+    if: github.ref == 'refs/heads/main'
     environment:
       name: frontend
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7

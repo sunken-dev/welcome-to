@@ -1,12 +1,27 @@
 name: 🚀 Deploy Backend
 
+# Deploys the exchange relay to Cloudflare Workers.
+#
+# Uses the wrangler pinned in package-lock.json, the same one the tests run
+# against, rather than whichever version an action would fetch. wrangler reads
+# both secrets from the environment under exactly these names.
+#
+# Called by CI when backend/ changed, and available on its own from the Actions
+# tab. Only ever deploys main: started from any other ref the job is skipped and
+# the run reports success without having deployed anything. Note that running it
+# by hand does not run the tests first.
+
 on:
   workflow_dispatch:
   workflow_call:
     secrets:
       CLOUDFLARE_API_TOKEN:
+        description: >
+          Cloudflare API token with Workers Scripts edit, plus DNS and Workers
+          Routes edit on the zone, which the custom domain needs.
         required: true
       CLOUDFLARE_ACCOUNT_ID:
+        description: Cloudflare account the Worker belongs to.
         required: true
 
 permissions:
@@ -18,7 +33,9 @@ concurrency:
 
 jobs:
   deploy-backend:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: backend
       url: https://exchange.welcome-to.sunken.dev/

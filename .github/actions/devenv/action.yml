@@ -1,8 +1,8 @@
-name: Set up devenv
+name: ⚙️ Set up devenv
 description: >
   Installs Nix and devenv so a job runs in the same shell as a developer's,
-  pinned by devenv.lock. Kept in one place so the toolchain versions are not
-  spread across the workflows.
+  pinned by devenv.lock, then installs the project's dependencies. Kept in one
+  place so the toolchain versions are not spread across the workflows.
 
 runs:
   using: composite
@@ -16,6 +16,15 @@ runs:
     - name: Install devenv
       shell: bash
       run: nix profile add nixpkgs#devenv
+    # Keyed on the lockfile, so an unchanged dependency set is never downloaded
+    # twice. The prefix key still gives a warm cache when the lockfile moves.
+    - name: Cache npm downloads
+      uses: actions/cache@v6
+      with:
+        path: ~/.npm
+        key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          npm-${{ runner.os }}-
     - name: Install project dependencies
       shell: bash
       run: devenv shell -- npm ci

@@ -1,8 +1,17 @@
-name: 🚀 Orchestrated Main Deployment
+name: 🚀 Deploy All
+
+# Deploys both halves by hand, in parallel, regardless of what changed.
+#
+# For putting the deployed state back in step with the branch: after a failed
+# deploy, or after a change that CI's path filters did not consider a reason to
+# deploy. Ordinary deployment is CI's job, on push.
+#
+# Note this runs no tests. Like the workflows it calls, it only ever deploys
+# main; started from any other ref both jobs skip and the run reports success
+# without having deployed anything.
 
 on:
-  push:
-    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,55 +19,13 @@ permissions:
   id-token: write
 
 jobs:
-  check-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      frontend: ${{ steps.filter.outputs.frontend }}
-      backend: ${{ steps.filter.outputs.backend }}
-      harness: ${{ steps.filter.outputs.harness }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Check path changes
-        id: filter
-        uses: dorny/paths-filter@v4
-        with:
-          filters: |
-            frontend:
-              - 'frontend/**'
-            backend:
-              - 'backend/**'
-            harness:
-              - 'tests/**'
-              - 'package.json'
-              - 'package-lock.json'
-              - 'vitest.config.js'
-
-  test-frontend:
-    needs: check-changes
-    if: needs.check-changes.outputs.frontend == 'true' || needs.check-changes.outputs.harness == 'true'
-    uses: ./.github/workflows/test.yml
-    with:
-      script: test:frontend
-
   deploy-frontend:
-    needs: [check-changes, test-frontend]
-    if: needs.check-changes.outputs.frontend == 'true'
     permissions:
       contents: read
       pages: write
       id-token: write
     uses: ./.github/workflows/deploy-frontend.yml
 
-  test-backend:
-    needs: check-changes
-    if: needs.check-changes.outputs.backend == 'true' || needs.check-changes.outputs.harness == 'true'
-    uses: ./.github/workflows/test.yml
-    with:
-      script: test:backend
-
   deploy-backend:
-    needs: [check-changes, test-backend]
-    if: needs.check-changes.outputs.backend == 'true'
     uses: ./.github/workflows/deploy-backend.yml
     secrets: inherit

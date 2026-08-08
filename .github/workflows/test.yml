@@ -1,4 +1,10 @@
-name: 🧪 Run Tests
+name: 🧪 Test
+
+# Runs the harness, or one half of it, in the same devenv shell a developer
+# uses, so a green run here and a green run locally mean the same thing.
+#
+# Called by CI with the suite for the half that changed, and available on its
+# own from the Actions tab for running either half by hand.
 
 on:
   workflow_dispatch:
@@ -24,6 +30,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7

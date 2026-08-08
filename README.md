@@ -80,7 +80,7 @@ plan, which needs all the parks, all the pools and a roundabout in one street.
   palette and checked for contrast so it stays scannable.
 - Game clock, per-round clock and average round time.
 - Curate the pool of City Plans; one has to stay on in each category.
-- Name your city by clicking the ellipsis in the title, up to 15 characters.
+- Name your city by clicking the ellipsis in the title, up to 20 characters.
 - One-round undo, and every scoring table is editable.
 - **Share setup**, on the briefing and in Game setup, produces a link carrying
   the whole setup — mode, variants, plan pool, scoring tables, theme, the seed of
@@ -120,17 +120,17 @@ off a physical deck, and reproduces the rulebook's distribution exactly.
 There is a useful internal check on the pool positions: there are nine of them,
 and the pool ladder has exactly nine crossable boxes.
 
-### Inferred — one thing only
+### Nothing is inferred any more
 
-- **The basic City Plans.** The rulebook prints the ten advanced plans in full
-  but not the eighteen standard ones, so the twelve standard combinations here
-  are invented, using the point pairs visible on the card photographs.
+The eighteen standard City Plans were once guesswork, since the rulebook prints
+the ten advanced plans in full but not the standard ones. They have since been
+read off the cards, and all eighteen are now the printed ones.
 
-Everything else comes from the rulebook or from a deck read card by card,
-including the number printed on the back of each effect card. If your printing
-differs anywhere, correct it in **Game setup** — the values are saved, and a
-correction to a table in a later version replaces the stored one while keeping
-your own preferences.
+Everything comes from the rulebook or from a deck read card by card, including
+the number printed on the back of each effect card. If your printing differs
+anywhere, correct it in **Game setup** — the values are saved, and a correction
+to a table in a later version replaces the stored one while keeping your own
+preferences.
 
 ### Not available yet
 

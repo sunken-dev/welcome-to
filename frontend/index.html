@@ -4517,8 +4517,10 @@ function plansPanel(){
    custom matters more than it looks. Without it a recipient could receive altered
    tables while their own switch was off, which would hide the very numbers their
    sheet was being scored on. */
+/* The city name is deliberately absent: a link carries the setup, not who made
+   it. Nor is the best score here, for the same reason. */
 const SHARE_KEYS=["mode","seed","advanced","roundabouts","planOff","custom",
-  "hintsAllowed","undo","city",
+  "hintsAllowed","undo",
   "streets","estate","pool","bis","refusal","roundaboutValues","tempRanks",
   "soloTempMin","soloTempPts","deck","numMin","numMax","targets"];
 
@@ -4556,7 +4558,7 @@ const SHARE_LABEL={r:"plan rerolls", sd:"sheet seed", seed:"fixed seed",
   planOff:"plan pool", roundaboutValues:"roundabouts",
   soloTempMin:"temp threshold", soloTempPts:"temp points", tempRanks:"temp ranking",
   numMin:"lowest number", numMax:"highest number",
-  custom:"custom rules", hintsAllowed:"hints", city:"city name"};
+  custom:"custom rules", hintsAllowed:"hints"};
 function shareLink(){
   const base=String(location.href).split("#")[0];
   const d=shareDiff();
@@ -4603,13 +4605,11 @@ function sanitizeShared(o){
      link would arrive claiming to switch undo off. */
   if(o.undo==="all") out.undo="all";
   else if(typeof o.undo==="number" && UNDO_STOPS.indexOf(o.undo)>=0) out.undo=o.undo;
-  /* the same trimming the name gets when it is typed */
-  if(typeof o.city==="string"){
-    const c=o.city.trim().slice(0,CITY_MAX).trim();
-    if(c) out.city=c;
-  }
-  /* o.theme is ignored on purpose: links from an older version may carry one, and
-     it should not repaint the screen of whoever opens them */
+  /* o.city is ignored for the same reason it is never sent: the name belongs to
+     whoever typed it. Links made before it was dropped may still carry one, and
+     it should not rename the city of whoever opens them.
+     o.theme is ignored on purpose too: links from an older version may carry one,
+     and it should not repaint the screen of whoever opens them */
 
   if(o.planOff && typeof o.planOff==="object" && !Array.isArray(o.planOff)){
     const po={};
@@ -5307,7 +5307,9 @@ function activeSheets(list){
       ["State", pick.finished
         ? "<b>finished</b> \u00b7 "+sheetGoesIn(pick)
         : "in progress"],
-      ["Round", (g.round||1)+" of "+CITY_MAX],
+      /* No denominator: a sheet runs until the city is full or the cards run
+         out, so there is no round to count towards. */
+      ["Round", String(g.round||1)],
       ["Built", sheetHouses(g)+" house"+(sheetHouses(g)===1?"":"s")],
       ["Score", pick.total+" points"],
       ["Time played", fmt2((pick.clock&&pick.clock.total)||0)],
@@ -5816,7 +5818,9 @@ $("btn-new").onclick=()=>{
     title:"Start a new sheet?",
     lede:"The sheet in progress is kept with your others unless you throw it away.",
     detail:'<table class="brief">'+
-      '<tr><td>Round</td><td>'+G.round+' of '+CITY_MAX+'</td></tr>'+
+      /* No denominator: the sheet runs until the city is full or the cards run
+         out, so there is no round to count towards. */
+      '<tr><td>Round</td><td>'+G.round+'</td></tr>'+
       '<tr><td>Built</td><td>'+n+' house'+(n===1?'':'s')+'</td></tr>'+
       '<tr><td>Score</td><td>'+score().total+' points</td></tr>'+
       '</table>',

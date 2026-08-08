@@ -13,7 +13,8 @@ jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      worker_changed: ${{ steps.filter.outputs.worker }}
+      backend_changed: ${{ steps.filter.outputs.backend }}
+      frontend_changed: ${{ steps.filter.outputs.frontend }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -22,18 +23,20 @@ jobs:
         uses: dorny/paths-filter@v4
         with:
           filters: |
-            worker:
+            backend:
               - 'backend/**'
+            frontend:
+              - 'frontend/**'
 
   deploy-worker-if-changed:
     needs: check-changes
-    if: needs.check-changes.outputs.worker_changed == 'true'
+    if: needs.check-changes.outputs.backend_changed == 'true'
     uses: ./.github/workflows/deploy-worker.yml
     secrets: inherit
 
-  deploy-pages:
+  deploy-pages-if-changed:
     needs: [check-changes, deploy-worker-if-changed]
-    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure') && needs.check-changes.outputs.frontend_changed == 'true'
     permissions:
       contents: read
       pages: write

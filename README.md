@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="Welcome To Logo" width="500">
+  <img src="frontend/assets/logo.svg" alt="Welcome To Logo" width="500">
 </p>
 
 # Welcome To

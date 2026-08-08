@@ -9,13 +9,17 @@ permissions:
   pages: write
   id-token: write
 
+# Two independent chains: test then deploy, once for each half. They share
+# nothing but the change detection, so a red or slow relay cannot hold back a
+# change to the sheet, and the two deployments run side by side. A job whose
+# half was not touched is simply skipped.
 jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      backend_changed: ${{ steps.filter.outputs.backend }}
-      frontend_changed: ${{ steps.filter.outputs.frontend }}
-      harness_changed: ${{ steps.filter.outputs.harness }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      harness: ${{ steps.filter.outputs.harness }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -24,44 +28,45 @@ jobs:
         uses: dorny/paths-filter@v4
         with:
           filters: |
-            backend:
-              - 'backend/**'
             frontend:
               - 'frontend/**'
+            backend:
+              - 'backend/**'
             harness:
               - 'tests/**'
               - 'package.json'
               - 'package-lock.json'
               - 'vitest.config.js'
 
-  # Each half is gated by its own tests: a red relay must not hold back a change
-  # to the sheet, and the reverse. A change to the harness itself runs both.
+  # ---- the sheet ----------------------------------------------------------
+
   test-frontend:
     needs: check-changes
-    if: needs.check-changes.outputs.frontend_changed == 'true' || needs.check-changes.outputs.harness_changed == 'true'
+    if: needs.check-changes.outputs.frontend == 'true' || needs.check-changes.outputs.harness == 'true'
     uses: ./.github/workflows/test.yml
     with:
       script: test:frontend
 
-  test-backend:
-    needs: check-changes
-    if: needs.check-changes.outputs.backend_changed == 'true' || needs.check-changes.outputs.harness_changed == 'true'
-    uses: ./.github/workflows/test.yml
-    with:
-      script: test:backend
-
-  deploy-worker-if-changed:
-    needs: [check-changes, test-backend]
-    if: always() && !cancelled() && !contains(needs.*.result, 'failure') && needs.check-changes.outputs.backend_changed == 'true'
-    uses: ./.github/workflows/deploy-worker.yml
-    secrets: inherit
-
-  deploy-pages-if-changed:
-    needs: [check-changes, test-frontend, deploy-worker-if-changed]
-    if: always() && !cancelled() && !contains(needs.*.result, 'failure') && needs.check-changes.outputs.frontend_changed == 'true'
+  deploy-frontend:
+    needs: [check-changes, test-frontend]
+    if: needs.check-changes.outputs.frontend == 'true'
     permissions:
       contents: read
       pages: write
       id-token: write
-    uses: ./.github/workflows/deploy-pages.yml
+    uses: ./.github/workflows/deploy-frontend.yml
+
+  # ---- the relay ----------------------------------------------------------
+
+  test-backend:
+    needs: check-changes
+    if: needs.check-changes.outputs.backend == 'true' || needs.check-changes.outputs.harness == 'true'
+    uses: ./.github/workflows/test.yml
+    with:
+      script: test:backend
+
+  deploy-backend:
+    needs: [check-changes, test-backend]
+    if: needs.check-changes.outputs.backend == 'true'
+    uses: ./.github/workflows/deploy-backend.yml
     secrets: inherit

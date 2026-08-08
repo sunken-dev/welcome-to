@@ -1,4 +1,4 @@
-name: 🚀 Deploy Static Content to Pages
+name: 🚀 Deploy Frontend
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-pages:
+  deploy-frontend:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -24,6 +24,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Setup Pages
         uses: actions/configure-pages@v6
+      # frontend/ is the published root, so CNAME sits beside index.html and
+      # nothing outside it -- the relay, the harness, node_modules -- is uploaded.
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:

@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import { loadSheet, installFakeSocket } from "../harness.js";
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const readRepoFile = (path) => readFileSync(resolve(ROOT, path), "utf8");
 
 /**
  * Connecting to the relay, and coming apart from it again.
@@ -191,5 +197,37 @@ describe("sending", () => {
 describe("the switch itself", () => {
   it("is off, so the sheet offers no multiplayer buttons yet", () => {
     expect(sheet.eval("MP_ENABLED")).toBe(false);
+  });
+});
+
+/**
+ * The relay's address is written down in three places that cannot see each
+ * other: the sheet dials it, wrangler deploys to it, and the workflow links to
+ * it from the Actions tab. They are compared here rather than derived from one
+ * another, so a change to any one of them fails loudly instead of leaving the
+ * sheet talking to an address nothing answers on.
+ */
+describe("one address, written three times", () => {
+  it("is the custom domain the Worker is deployed to", () => {
+    const config = readRepoFile("backend/wrangler.jsonc");
+    const pattern = /"pattern"\s*:\s*"([^"]+)"/.exec(config)?.[1];
+
+    expect(pattern).toBeTruthy();
+    expect(sheet.eval("EXCHANGE")).toBe(`https://${pattern}/`);
+  });
+
+  it("is the address the deploy workflow links to", () => {
+    const workflow = readRepoFile(".github/workflows/deploy-backend.yml");
+
+    expect(workflow).toContain(`url: ${sheet.eval("EXCHANGE")}`);
+  });
+
+  it("is dialled over a websocket on that same host", () => {
+    const config = readRepoFile("backend/wrangler.jsonc");
+    const pattern = /"pattern"\s*:\s*"([^"]+)"/.exec(config)[1];
+
+    sheet.call("mpConnect", "ABCD");
+
+    expect(relay.url()).toMatch(new RegExp(`^wss://${pattern.replace(/\./g, "\\.")}/room/`));
   });
 });

@@ -798,6 +798,32 @@ of the six themes">
   .rstatus.bad{border-left-color:var(--stamp);color:var(--stamp)}
   /* the rules have been changed: worth noticing, but it is a choice, not a fault */
   .rstatus.warn{border-left-color:var(--flag)}
+  code.plain{font-family:var(--mono);font-size:10px;letter-spacing:.02em;
+    background:var(--paper-2);border:1px solid var(--rule-soft);
+    border-radius:calc(var(--rs)*.4);padding:1px 5px;user-select:all}
+  /* The first slider in the app, so it is drawn from the theme's own ink and paper
+     rather than left to the browser, which would ignore the theme entirely. */
+  .sliderow{align-items:center;gap:12px}
+  .slider{-webkit-appearance:none;appearance:none;width:210px;height:22px;
+    background:transparent;cursor:pointer}
+  .slider:focus{outline:none}
+  .slider::-webkit-slider-runnable-track{height:2px;background:var(--rule);border-radius:2px}
+  .slider::-moz-range-track{height:2px;background:var(--rule);border-radius:2px}
+  .slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;margin-top:-6px;border-radius:50%;
+    background:var(--card);border:2px solid var(--ink)}
+  .slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:var(--card);border:2px solid var(--ink)}
+  .slider:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--rule-soft)}
+  .slidernow{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--ink-soft);min-width:27ch}
+  /* the count, in a slot two digits wide so the button keeps its size */
+  .bar .ct{font-family:var(--mono);font-variant-numeric:tabular-nums;
+    letter-spacing:.06em;opacity:.75}
+  /* the report nobody should ever see */
+  .rp-dump{width:100%;font-family:var(--mono);font-size:9.5px;line-height:1.45;
+    background:var(--paper-2);color:var(--ink);border:1px solid var(--rule-soft);
+    border-radius:calc(var(--rs)*.5);padding:8px;margin:10px 0 0;resize:vertical}
   /* the list of sheets on the left, what is known about one on the right */
   /* One size whatever is in it: the screen is the first thing a visit shows, and it
      should not change shape between one sheet and ten, or jump as one is deleted.
@@ -807,8 +833,13 @@ of the six themes">
      screen: the panel caps at 88vh, and the heading, the line of text, the controls
      and the buttons take about 220px of that whatever the screen, so taking those off
      keeps the whole thing inside one scrollbar rather than two. */
+  /* Both pages a visit can start on stand the same height. 713px is the overview with a
+     full frame; below that the panel scrolls as it always has. */
+  /* both pages a visit can start on stand at least this tall */
+  .modal.tallpage{min-height:min(600px,88vh)}
   .sheets{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;
-    align-items:stretch;height:min(505px,calc(88vh - 220px))}
+    align-items:stretch;min-height:min(520px,calc(88vh - 220px));
+    height:min(520px,calc(88vh - 220px))}
   @media (max-width:640px){.sheets{grid-template-columns:1fr;height:auto}}
   .sheetlist{display:flex;flex-direction:column;gap:6px;height:100%;
     overflow-y:auto;scrollbar-width:thin;
@@ -936,7 +967,8 @@ of the six themes">
   <div class="status">
     <div class="msg" id="msg">Choose a card for its number.</div>
     <div class="chips" id="chips"></div>
-    <button class="btn" id="btn-undo">Undo round</button>
+    <button class="btn" id="btn-undo">Undo Round <span class="ct">&middot;&nbsp;&nbsp;0</span></button>
+    <button class="btn" id="btn-redo">Redo Round <span class="ct">&middot;&nbsp;&nbsp;0</span></button>
     <button class="btn" id="btn-rules">Rules</button>
     <button class="btn" id="btn-hints">Hints: <span class="tgl">off</span></button>
     <button class="btn" id="btn-theme">Theme</button>
@@ -1439,7 +1471,6 @@ const BASE = {
   dataVersion: 3,   // bump when a rulebook table is corrected, see load()
   advanced: false,  // gate for the starred plans, like roundabouts
   theme: "drafting",
-  relay: "",     // your Cloudflare Worker, e.g. https://welcome-to-relay.you.workers.dev
   room: "",
   seed: "",      // blank means a fresh random seed per sheet
   city: "",      // written into the masthead, like the printed sheet
@@ -1463,7 +1494,10 @@ const BASE = {
   custom:false,
   /* Whether the hints panel may be used on this sheet at all. CFG.hints is the
      in-game switch; this decides whether that switch exists. */
-  hintsAllowed:true,                  /* the advanced variant, off by default */
+  hintsAllowed:true,
+  /* How far back a round may be taken: 0 forbids it, a number allows that many, "all"
+     goes to the start. The log is recorded either way. */
+  undo:5,                  /* the advanced variant, off by default */
   roundaboutValues: [0,3,8],           /* p11: the first costs 3, the second 5 more */
   soloTempMin: 6, soloTempPts: 7,   // p9: 7 points only if at least six temps hired
   tempRanks: [7,4,1],               // p7: most boxes, next, third
@@ -1813,6 +1847,8 @@ function newGame(){
   while(pendingRoll>0){ pendingRoll--; redrawPlans(); }
   resetClock();
   sel=null; snap=null;
+  G.history={at:0, rounds:[]};
+  if(replaying) return;        /* a replay deals in the background */
   render();
   briefing();
 }
@@ -2072,6 +2108,7 @@ function validatePlan(pi){
     const slot=G.streets[e.si].slots[i];
     slot.locked=true; slot.lockedBy=p.n;
   }));
+  if(!replaying) pendingPlans.push(p.id);
   p.done=true;
   if(MP.on){
     /* p8: whoever gets there first in a round takes the higher amount, and so
@@ -2088,6 +2125,269 @@ function validatePlan(pi){
 }
 
 /* --------------------------------------------------------- the round */
+/* ------------------------------------------------- taking a round back
+   A round is stored as the decisions that made it, not as a copy of the board: the deck
+   comes from the seed, so replaying those decisions from a fresh deal reproduces the
+   board exactly. Taking a round back means dealing again and replaying one fewer.
+
+   That is only as sound as the turn logic is deterministic, so every entry carries a
+   fingerprint of the board it produced. After a replay the fingerprints are checked; if
+   one disagrees the board would be one that never existed, and the undo is refused rather
+   than quietly handing over a lie. */
+/* The stops the slider offers, and the only values a link may carry. */
+const UNDO_STOPS=[0,1,3,5,7,10];
+const UNDO_ALL="all";
+/* the stops in the order the slider offers them */
+function undoStops(){ return UNDO_STOPS.concat([UNDO_ALL]); }
+function undoIndex(v){
+  const i=undoStops().indexOf(v);
+  return i<0 ? undoStops().indexOf(BASE.undo) : i;
+}
+function undoLabel(v){
+  if(v===UNDO_ALL) return "everything";
+  if(!v) return "off";
+  return v+" round"+(v===1?"":"s");
+}
+/* what the slider says, in full, since it stands on its own beside the handle */
+function undoSentence(v){
+  if(v===UNDO_ALL) return "all rounds can be taken back";
+  if(!v) return "no round can be taken back";
+  return v+" round"+(v===1?"":"s")+" can be taken back";
+}
+let replaying=false;          /* suppresses drawing, saving and the briefing */
+let turnLog=null;             /* the decisions of the round being played */
+/* A roundabout and a validated plan are free actions: neither closes a round, so both
+   wait here and are written into the round they were played during. */
+let pendingPlans=[], pendingRound=null;
+/* The fingerprint a replay produced. Taken by logRound itself, so the original and the
+   replay are measured at exactly the same point in the turn rather than at two moments I
+   have reasoned are equivalent: the round counter, the game being over and the clock all
+   move within a few lines of each other as a round closes. */
+let replayPrint=null;
+
+/* Short digest of the board. Not a security hash, just something that changes when the
+   board does. */
+function fingerprint(g){
+  const flat=JSON.stringify([
+    g.round, g.pools, g.temp, g.bisCount, g.refusals, g.rounds, g.over, g.approved,
+    g.improve,
+    g.streets.map(st=>[st.parks, st.fences.map(f=>f?1:0),
+      st.slots.map(x=>[x.v, x.bis?1:0, x.round?1:0, x.pool?1:0, x.locked?1:0])]),
+    g.plans.map(p=>[p.id, p.done?1:0, p.scored])
+  ]);
+  let a=0x811c9dc5;
+  for(let i=0;i<flat.length;i++){
+    a^=flat.charCodeAt(i);
+    a=(a*0x01000193)>>>0;
+  }
+  return ("0000000"+a.toString(16)).slice(-8);
+}
+
+function historyOf(g){
+  if(!g.history) g.history={at:0, rounds:[]};
+  return g.history;
+}
+/* how far back this sheet allows going */
+function undoDepth(){
+  const u=CFG.undo;
+  if(u==="all") return Infinity;
+  return Math.max(0, u|0);
+}
+function undoAvailable(){
+  if(!G || !G.started) return 0;
+  const h=historyOf(G);
+  return Math.min(h.at, undoDepth());
+}
+function redoAvailable(){
+  if(!G || !G.started) return 0;
+  const h=historyOf(G);
+  return Math.max(0, h.rounds.length - h.at);
+}
+
+/* Called as each round closes. Whatever the round did not involve is left out. */
+function logRound(entry){
+  if(replaying){ replayPrint=fingerprint(G); return; }
+  if(!G || !G.started) return;
+  const h=historyOf(G);
+  /* playing on after taking rounds back throws away what was ahead */
+  if(h.at<h.rounds.length) h.rounds.length=h.at;
+  const now=clockOut();
+  const e=Object.assign({}, entry);
+  if(pendingPlans.length){ e.planValidated=pendingPlans[0]; pendingPlans=[]; }
+  if(pendingRound){ e.roundabout=pendingRound; pendingRound=null; }
+  /* the time in the round just closed, taken from the clock rather than from the list of
+     round times, which is not written until the next round begins */
+  e.ms=Math.max(0,(now.inRound||0)|0);
+  e.clockAt=Math.max(0,(now.total||0)-e.ms);
+  e.fingerprint=fingerprint(G);
+  h.rounds.push(e);
+  h.at=h.rounds.length;
+}
+
+/* Replay the decisions of one round through the game's own functions, which is what makes
+   the result trustworthy: nothing here reimplements a rule. */
+function applyRound(r){
+  /* a roundabout was played during this round, before the card was taken */
+  if(r.roundabout){ sel={phase:"roundabout"}; doRoundabout(r.roundabout[0], r.roundabout[1]); }
+  if(r.refusal){ refuse(); return; }
+  if(CFG.mode==="solo"){
+    chooseNumber(r.cardTaken);
+    if(r.effectCardTaken!==undefined && r.effectCardTaken!==null) chooseEffect(r.effectCardTaken);
+    else takeNoEffect();
+  } else {
+    takeCombination(r.cardTaken);
+  }
+  if(sel && sel.phase==="temp"){
+    if(r.tempShift!==undefined) setTemp(r.tempShift); else declineTemp();
+  }
+  if(sel && sel.phase==="place" && r.house) place(r.house[0], r.house[1]);
+  if(sel) switch(sel.phase){
+    case "pool":  doPool(!!r.poolBuilt); break;
+    case "park":  doPark(!!r.parkCrossed); break;
+    case "fence": r.fence ? doFence(r.fence[0], r.fence[1]) : skipEffect(); break;
+    case "agent": r.estateColumn ? doAgent(r.estateColumn) : skipEffect(); break;
+    case "bis":   r.bis ? doBis(r.bis[0], r.bis[1], bisValueAt(r.bis[0], r.bis[1])) : skipEffect(); break;
+  }
+  if(r.planValidated){
+    const pi=G.plans.findIndex(p=>p.id===r.planValidated);
+    if(pi>=0) validatePlan(pi);
+  }
+  if(sel && sel.phase==="ready") confirmTurn();
+  else if(sel) sel=null;
+}
+/* the number a bis at this spot copies, taken from the board rather than stored */
+function bisValueAt(si,i){
+  const t=bisTargets().find(x=>x.si===si && x.i===i);
+  return t ? t.vals[0] : null;
+}
+
+/* Deal again and replay the first n rounds. Returns an error to report rather than
+   throwing, so the caller can refuse the undo and leave the sheet alone. */
+function replayTo(n){
+  const log=historyOf(G);
+  const rounds=log.rounds.slice();
+  const keepCfg=CFG;
+  replaying=true;
+  try{
+    newGame();
+    startGame();
+    G.history={at:0, rounds:rounds};
+    for(let i=0;i<n;i++){
+      replayPrint=null;
+      applyRound(rounds[i]);
+      G.history.at=i+1;
+      const want=rounds[i].fingerprint;
+      if(want && replayPrint && replayPrint!==want)
+        return {error:"mismatch", round:i+1, want:want, got:replayPrint};
+      if(want && !replayPrint)
+        return {error:"no round closed", round:i+1, want:want};
+    }
+    return {ok:true};
+  }catch(e){
+    return {error:"threw", round:n, message:String(e&&e.message||e)};
+  } finally {
+    replaying=false;
+    CFG=keepCfg;
+  }
+}
+
+/* The clock as it stood after n rounds. Rolled back from what each round recorded rather
+   than by summing the round times, which would lose the pauses between rounds and hand
+   back a sheet that looks quicker than it was. */
+function clockToStep(n){
+  const done=historyOf(G).rounds.slice(0,n);
+  const last=done[done.length-1];
+  clockIn({
+    total: last ? (last.clockAt||0)+(last.ms||0) : 0,
+    rounds: done.map(x=>x.ms|0),
+    stopped: !!G.over,
+    running: true,
+    inRound: 0
+  });
+}
+
+/* Move the board to a position in the log. Deals again and replays, so nothing here
+   reimplements a rule. Returns null on success, or what went wrong. */
+function goToStep(n){
+  const h=historyOf(G);
+  if(n<0 || n>h.rounds.length) return {error:"out of range"};
+  /* Replaying deals a fresh board before it can discover a disagreement, so the sheet has
+     already been replaced by the time one is found. Keep it and put it back: the panel
+     tells the player their sheet is untouched, and that has to be true. */
+  const before={game:copy(G), sel:sel, snap:snap, clock:clockOut()};
+  const res=replayTo(n);
+  if(res && res.error){
+    G=before.game; sel=before.sel; snap=before.snap;
+    clockIn(before.clock);
+    render();
+    return res;
+  }
+  historyOf(G).at=n;
+  clockToStep(n);
+  sel=null; snap=null; turnLog=null;
+  pendingPlans=[]; pendingRound=null;
+  lastWritten=null;               /* the sheet changed shape, so it is worth writing */
+  render();
+  return null;
+}
+
+function undoRound(){
+  if(!G || !G.started) return;
+  if(sel) return;                 /* a turn is open: the way out of that is another card */
+  if(!undoAvailable()) return;
+  const to=historyOf(G).at-1;
+  const bad=goToStep(to);
+  if(bad) reportReplay(bad, to);
+}
+function redoRound(){
+  if(!G || !G.started) return;
+  if(sel) return;
+  if(!redoAvailable()) return;
+  const to=historyOf(G).at+1;
+  const bad=goToStep(to);
+  if(bad) reportReplay(bad, to);
+}
+
+/* This should never happen: the board a replay produces is checked against the fingerprint
+   the round recorded, and they have never disagreed in testing. If they ever do, the sheet
+   is left exactly as it was and the whole thing is offered for reporting rather than
+   quietly handing over a board that never existed. */
+function reportReplay(bad, wanted){
+  const dump={
+    complaint:"replay did not reproduce the board",
+    detail:bad,
+    wantedStep:wanted,
+    version:BASE.dataVersion,
+    settings:CFG,
+    history:historyOf(G),
+    board:G
+  };
+  const text=JSON.stringify(dump,null,2);
+  openBox('<h3>Something went wrong</h3>'+
+    '<p class="lede">That round could not be taken back. The sheet has been left exactly '+
+    'as it was, so you can carry on playing.</p>'+
+    '<p class="note">This is not supposed to happen. Sending the report below to the '+
+    'developer is what lets it be found and fixed.</p>'+
+    '<table class="brief">'+
+      '<tr><td>Round</td><td>'+esc(String(wanted))+'</td></tr>'+
+      '<tr><td>What happened</td><td>'+esc(String(bad.error||"unknown"))+'</td></tr>'+
+      (bad.want?'<tr><td>Expected</td><td>'+esc(bad.want)+'</td></tr>':'')+
+      (bad.got?'<tr><td>Got</td><td>'+esc(bad.got)+'</td></tr>':'')+
+    '</table>'+
+    '<textarea id="rp-text" class="rp-dump" readonly rows="10">'+esc(text)+'</textarea>'+
+    '<div class="toolbar">'+
+    '<button class="btn primary" id="rp-copy">Copy the report</button>'+
+    '<button class="btn" onclick="forceCloseBox()">Carry on playing</button>'+
+    '</div>', false, "mid");
+  $("rp-copy").onclick=()=>{
+    const box=$("rp-text");
+    if(box && typeof box.select==="function") box.select();
+    if(navigator && navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(text);
+    $("rp-copy").textContent="Copied";
+  };
+}
+
 function keep(){ snap={G:copy(G)}; }
 
 /* No move is legal before the sheet begins or after it closes. The buttons are
@@ -2099,7 +2399,8 @@ function locked(){ return !G || !G.started || G.over || mpIAmWaiting(); }
 function chooseNumber(i){
   if(locked()) return;
   if(sel && sel.phase!=="choose") return;
-  if(!sel){ keep(); sel={numCard:null, effCard:null, phase:"choose", n:null, usedEffect:false}; }
+  if(!sel){ keep(); turnLog={}; sel={numCard:null, effCard:null, phase:"choose", n:null, usedEffect:false}; }
+  if(turnLog) turnLog.cardTaken=i;
   sel.numCard=i;
   if(sel.effCard===sel.numCard) sel.effCard=null;
   render();
@@ -2110,6 +2411,7 @@ function chooseEffect(i){
   if(locked()||!sel||sel.phase!=="choose") return;
   if(sel.numCard===null || sel.numCard===i) return;
   sel.effCard=i;
+  if(turnLog) turnLog.effectCardTaken=i;
   confirmChoice();
 }
 function takeNoEffect(){
@@ -2120,6 +2422,7 @@ function takeNoEffect(){
 function takeCombination(i){
   if(locked()||(sel&&sel.phase!=="choose")) return;
   keep();                              /* so backing out undoes the whole turn */
+  turnLog={cardTaken:i};
   sel={numCard:i, effCard:i, phase:"choose", n:null, usedEffect:false};
   confirmChoice();
 }
@@ -2152,6 +2455,7 @@ function confirmChoice(){
 function setTemp(d){
   const n=cardAt(sel.numCard).n+d;
   if(n<CFG.numMin||n>CFG.numMax) return;
+  if(turnLog) turnLog.tempShift=d;
   sel.n=n; sel.usedEffect=true; sel.phase="place"; render();
 }
 function declineTemp(){ sel.n=cardAt(sel.numCard).n; sel.eff=null; sel.usedEffect=false;
@@ -2162,6 +2466,7 @@ function place(si,idx){
   const st=G.streets[si];
   st.slots[idx].v=sel.n;
   G.inked=si+":"+idx; sel.street=si; sel.idx=idx;
+  if(turnLog) turnLog.house=[si,idx];
 
   if(sel.eff==="temp" && sel.usedEffect) G.temp++;
   if(sel.eff==="pool"){ sel.phase="pool"; render(); return; }
@@ -2177,24 +2482,29 @@ function doPool(yes){
     const s=G.streets[sel.street].slots[sel.idx];
     if(s.isPool && !s.pool && G.pools<CFG.pool.length-1){ s.pool=true; G.pools++; }
   }
+  if(turnLog && yes) turnLog.poolBuilt=true;
   sel.used=yes; awaitConfirm();
 }
 function doPark(yes){
   if(!sel) return;
   if(yes){ const st=G.streets[sel.street];
     if(st.parks < CFG.streets[sel.street].parks.length-1) st.parks++; }
+  if(turnLog && yes) turnLog.parkCrossed=true;
   sel.used=yes; awaitConfirm();
 }
 function doFence(si,gi){ if(!sel||sel.phase!=="fence"||!fenceOK(si,gi)) return;
   G.streets[si].fences[gi]=true;
+  if(turnLog) turnLog.fence=[si,gi];
   sel.used=true; sel.at="fence "+(si+1)+":"+(gi+1); awaitConfirm(); }
 function doAgent(n){ if(!sel||sel.phase!=="agent") return;
   if(G.improve[n]>=CFG.estate[n].length-1) return; G.improve[n]++;
+  if(turnLog) turnLog.estateColumn=n;
   sel.used=true; sel.at="size "+(n+1); awaitConfirm(); }
 function doBis(si,i,v){
   if(!sel) return;
   const s=G.streets[si].slots[i];
   s.v=v; s.bis=true; G.bisCount++; G.inked=si+":"+i;
+  if(turnLog) turnLog.bis=[si,i];
   sel.used=true; sel.at="street "+(si+1)+", house "+(i+1); awaitConfirm();
 }
 /* leaving an effect unused is a choice like any other, so it lands in the same
@@ -2230,6 +2540,7 @@ function doRoundabout(si,i){
   if(i<st.fences.length) st.fences[i]=true;
   G.rounds++;
   G.inked=si+":"+i;
+  if(!replaying) pendingRound=[si,i];
   sel=null;
   if(checkEnd()) return;
   render();
@@ -2245,13 +2556,19 @@ function askRefusal(){
 function refuse(){
   if(locked()||mustBuild()) return;
   keep();
+  turnLog={refusal:true};
   sel=null;
   G.refusals++;
-  if(G.refusals>=CFG.refusal.length-1){ endGame("Third building permit refusal."); return; }
+  if(G.refusals>=CFG.refusal.length-1){
+    /* the third one closes the sheet without going through endRound, so log it here */
+    logRound(turnLog); turnLog=null;
+    endGame("Third building permit refusal."); return;
+  }
   endRound();
 }
 function endRound(){
   sel=null;
+  if(turnLog){ logRound(turnLog); turnLog=null; }
   if(checkEnd()) return;
   if(MP.on){
     MP.ready[MP.me]=G.round;
@@ -2269,7 +2586,6 @@ function checkEnd(){
   if(allBuilt()){ endGame("Every house on all three streets is built."); return true; }
   return false;
 }
-function undo(){ if(locked()||!snap) return; G=copy(snap.G); snap=null; sel=null; render(); }
 function endGame(why,fromPeer){
   G.over=true; sel=null; G.why=why;
   stopClock();
@@ -2317,12 +2633,12 @@ const STORE=(function(){
 /* Choices that belong to the player, as opposed to facts about the game. When a
    rulebook table is corrected, these are kept and the tables are replaced. */
 const PREF_KEYS=["theme","hints","city","seed","mode","planOff","relay","room",
-                 "roundabouts","advanced","custom","hintsAllowed"];
+                 "roundabouts","advanced","custom","hintsAllowed","undo"];
 
 /* The ones that stay with the person rather than with the sheet. A shared link says
    nothing about these, and arriving through one should leave them as they were
    rather than resetting them to the defaults. */
-const LOCAL_KEYS=["theme","hints","relay","room"];
+const LOCAL_KEYS=["theme","hints","room"];
 
 /* The printed tables, as opposed to the choices that belong to the player. Putting
    them back is what "not custom" means, so the two live together here. */
@@ -2508,7 +2824,7 @@ function clockIn(c){
 let lastWritten=null;
 async function saveSheet(){
   if(!G || !G.started) return false;
-  if(!G.id){ G.id=newSheetId(); G.created=Date.now(); }
+  if(!G.id || buried[G.id]){ G.id=newSheetId(); G.created=Date.now(); }
   const entry={
     id:G.id, created:G.created||Date.now(), lastPlayed:Date.now(),
     finished:!!G.over,
@@ -2521,6 +2837,7 @@ async function saveSheet(){
   const same=lastWritten && sameBar(lastWritten, body);
   if(same) return false;
   lastWritten=body;
+  if(buried[G.id]) return false;      /* it was deleted while this save was in flight */
   const list=await loadSheets();
   const at=list.findIndex(x=>x.id===G.id);
   if(at>=0) list[at]=entry; else list.push(entry);
@@ -2540,6 +2857,7 @@ function sameBar(a,b){
    of updates to one write. */
 let saveTimer=null;
 function queueSave(){
+  if(replaying) return;
   if(typeof setTimeout!=="function"){ saveSheet(); return; }
   if(saveTimer) clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{ saveTimer=null; saveSheet(); }, 900);
@@ -2547,9 +2865,14 @@ function queueSave(){
 /* Forget sheets by id. Several go in one read and one write: doing them one at a time
    meant four calls each reading the same list and writing back their own copy of it,
    and the last write won, so most of the deletions were lost. */
+/* Ids that have been deleted. A save queued before the deletion can land after it, and
+   would write the sheet straight back: every change queues a save, so deleting the sheet
+   you are playing is exactly when one is most likely to be in flight. */
+const buried=Object.create(null);
 async function deleteSheets(ids){
   const gone=[].concat(ids);
   if(!gone.length) return false;
+  gone.forEach(id=>{ buried[id]=true; });
   const list=await loadSheets();
   return putSheets(list.filter(x=>gone.indexOf(x.id)<0));
 }
@@ -2682,6 +3005,34 @@ function standardStats(){
    the buttons back; nothing else needs changing. */
 const MP_ENABLED=false;
 
+/* Where players would meet. Fixed rather than a setting: nobody should have to know an
+   address to play with somebody, and a box to type one into is a box to get one wrong. */
+const EXCHANGE="https://exchange.welcome-to.sunken.dev/";
+/* What the last enquiry found. Multiplayer is offered only if it answered. */
+let exchangeInfo={asked:false, up:false, ms:null, version:null};
+
+/* Ask whether it is there, and how long it took to say so. Never throws: a sheet must not
+   care whether anything is listening. */
+async function askExchange(){
+  const began=(typeof performance==="object"&&performance.now)?performance.now():Date.now();
+  const now=()=>((typeof performance==="object"&&performance.now)?performance.now():Date.now());
+  try{
+    if(typeof fetch!=="function") throw new Error("no fetch");
+    const ctl=(typeof AbortController==="function") ? new AbortController() : null;
+    const bell=ctl && typeof setTimeout==="function"
+      ? setTimeout(()=>ctl.abort(), 4000) : null;
+    const r=await fetch(EXCHANGE, ctl?{signal:ctl.signal}:undefined);
+    if(bell && typeof clearTimeout==="function") clearTimeout(bell);
+    const ms=Math.round(now()-began);
+    if(!r || !r.ok) throw new Error("no answer");
+    const d=await r.json();
+    exchangeInfo={asked:true, up:!!(d&&d.ok), ms:ms, version:(d&&d.version)||null};
+  }catch(e){
+    exchangeInfo={asked:true, up:false, ms:null, version:null};
+  }
+  return exchangeInfo;
+}
+
 /* The names of the ways to play, in one place: the setup screen offers them and the
    new sheet page reports them, and the two should not word it differently. */
 const MODE_NAMES={standard:"Standard Turn", solo:"Solo Variant", multiplayer:"Multiplayer"};
@@ -2720,7 +3071,7 @@ function mpIAmWaiting(){
 }
 
 function mpConnect(room){
-  const base=(CFG.relay||"").trim().replace(/\/+$/,"");
+  const base=EXCHANGE.replace(/\/+$/,"");
   if(!base){ MP.error="Enter the relay address first."; return renderRoom(); }
   room=String(room||"").toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,16);
   if(room.length<4){ MP.error="Room codes need at least four characters."; return renderRoom(); }
@@ -3912,20 +4263,42 @@ function scoreRows(s){
 }
 function sheet(s){ $("sheet").innerHTML=scoreRows(s); }
 
+/* Both buttons say how many rounds are there to take, in a slot two digits wide so the
+   bar does not shuffle as the number changes. Greyed when there is nothing to take from
+   where the board stands, and while a turn is open, since the way out of an unfinished
+   turn is another card rather than an undo. */
+function syncUndoButtons(){
+  const u=$("btn-undo"), r=$("btn-redo");
+  if(!u||!r) return;
+  const open=!!sel;
+  const nu=undoAvailable(), nr=redoAvailable();
+  const put=(b,label,n,live,why)=>{
+    b.innerHTML=label+' <span class="ct">\u00b7&nbsp;'+
+      (n>=10?String(n):"&nbsp;"+n)+'</span>';
+    b.disabled=!live;
+    b.title=live?"":why;
+  };
+  put(u,"Undo Round",nu, nu>0 && !open,
+      open ? "Finish or leave the round first"
+           : undoDepth()===0 ? "Taking rounds back is switched off for this sheet"
+           : "There is nothing to take back");
+  put(r,"Redo Round",nr, nr>0 && !open,
+      open ? "Finish or leave the round first" : "There is nothing to put back");
+}
 function status(){
   const m=$("msg"), c=$("chips"); c.innerHTML="";
-  $("btn-undo").disabled=!snap||G.over;
+  syncUndoButtons();
   const chip=(t,fn,g)=>{ const b=document.createElement("button");
     b.className="chip"+(g?" ghosty":""); b.textContent=t; b.onclick=fn; c.appendChild(b); };
 
   if(!G.started){
-    $("btn-undo").disabled=true;
+    $("btn-undo").disabled=true; $("btn-redo").disabled=true;
     m.innerHTML="Sheet ready. Press <b>Start</b> to deal the first cards.";
     return;
   }
   if(mpIAmWaiting()){
     const w=mpWaitingFor();
-    $("btn-undo").disabled=true;
+    $("btn-undo").disabled=true; $("btn-redo").disabled=true;
     m.innerHTML="Round "+G.round+" committed. Waiting for <b>"+
       esc(w.join(", ")||"the other players")+"</b>.";
     return;
@@ -4145,7 +4518,7 @@ function plansPanel(){
    tables while their own switch was off, which would hide the very numbers their
    sheet was being scored on. */
 const SHARE_KEYS=["mode","seed","advanced","roundabouts","planOff","custom",
-  "hintsAllowed","city",
+  "hintsAllowed","undo","city",
   "streets","estate","pool","bis","refusal","roundaboutValues","tempRanks",
   "soloTempMin","soloTempPts","deck","numMin","numMax","targets"];
 
@@ -4225,6 +4598,11 @@ function sanitizeShared(o){
   if(typeof o.roundabouts==="boolean") out.roundabouts=o.roundabouts;
   if(typeof o.custom==="boolean") out.custom=o.custom;
   if(typeof o.hintsAllowed==="boolean") out.hintsAllowed=o.hintsAllowed;
+  /* How far back a round may be taken: one of the offered stops, or everything. It has to
+     be a number to count as one, or anything at all would coerce to zero and an empty
+     link would arrive claiming to switch undo off. */
+  if(o.undo==="all") out.undo="all";
+  else if(typeof o.undo==="number" && UNDO_STOPS.indexOf(o.undo)>=0) out.undo=o.undo;
   /* the same trimming the name gets when it is typed */
   if(typeof o.city==="string"){
     const c=o.city.trim().slice(0,CITY_MAX).trim();
@@ -4483,6 +4861,23 @@ function sharePanel(){
   };
 }
 
+/* Multiplayer is not finished. What can honestly be shown is that the exchange is there,
+   how quickly it answered and what it is running, so this says exactly that and no more. */
+function exchangePanel(){
+  openPanel=exchangePanel;
+  const i=exchangeInfo;
+  openBox('<h3>Multiplayer</h3>'+
+    '<p class="lede">Playing with somebody else is still to come. The exchange that will '+
+    'carry it is up and answering, which is as far as it goes for now.</p>'+
+    '<table class="brief">'+
+      '<tr><td>Exchange</td><td><code class="plain">'+esc(EXCHANGE)+'</code></td></tr>'+
+      '<tr><td>Answered in</td><td>'+(i.ms===null?"\u2014":i.ms+" ms")+'</td></tr>'+
+      '<tr><td>Running</td><td>'+(i.version?esc(i.version):"\u2014")+'</td></tr>'+
+    '</table>'+
+    '<div class="toolbar"><button class="btn primary" onclick="backOut()">Close</button>'+
+    '<button class="btn" id="ex-again">Ask again</button></div>', false, "mid");
+  $("ex-again").onclick=()=>{ askExchange().then(()=>exchangePanel()); };
+}
 function roomPanel(){
   openPanel=roomPanel;
   if(!MP_ENABLED) return;
@@ -4509,8 +4904,7 @@ function roomPanel(){
     'seed and plan pool apply to everyone.</p>';
 
   h+='<div class="rfield"><label>Relay address</label>'+
-     '<input id="rl-url" value="'+esc(CFG.relay||"")+'" spellcheck="false" '+
-     'placeholder="https://welcome-to-relay.you.workers.dev"></div>';
+     '<code class="plain">'+esc(EXCHANGE)+'</code></div>';
   h+='<div class="rfield"><label>Room code</label>'+
      '<input id="rl-room" value="'+esc(MP.room||CFG.room||"")+'" spellcheck="false" '+
      'maxlength="16" placeholder="e.g. LYON42"></div>';
@@ -4536,14 +4930,13 @@ function roomPanel(){
   }
 
   h+='<p class="note">Your city name is what the others see, so set it before connecting. '+
-     'The relay is a small Cloudflare Worker \u2014 see the README for deploying one.</p>';
+     'Both sheets talk through the exchange, which keeps nothing once the room empties.</p>';
   h+='<div class="toolbar"><button class="btn" onclick="backOut()">Done</button></div>';
 
   openBox(h);
   roomOpen=true;
-  const url=$("rl-url"), room=$("rl-room");
-  url.onchange=()=>{ CFG.relay=url.value.trim(); save(); };
-  if($("rl-on")) $("rl-on").onclick=()=>{ CFG.relay=url.value.trim(); save(); mpConnect(room.value); };
+  const room=$("rl-room");
+  if($("rl-on")) $("rl-on").onclick=()=>{ mpConnect(room.value); };
   if($("rl-off")) $("rl-off").onclick=()=>mpDisconnect();
   $("rl-gen").onclick=()=>{ room.value=randomSeed(); };
 }
@@ -4672,6 +5065,7 @@ function sheetRows(c, seedCell){
       ["Theme", THEMES[c.theme] ? THEMES[c.theme].name
                                 : THEMES[BASE.theme].name+" (its own is gone)"],
       ["Hints", c.hintsAllowed ? "available" : "not available"],
+      ["Undo", undoLabel(c.undo===undefined?BASE.undo:c.undo)],
       ["Rules", (function(){
         const changed=c.custom ? customChanges() : [];
         return changed.length ? "<b>custom</b> \u2014 "+andList(changed)+" changed"
@@ -4766,6 +5160,7 @@ function sheetTitle(x){
   const city=((x.cfg&&x.cfg.city)||"").trim();
   return city ? esc(city) : '<span class="noname">\u2026</span>';
 }
+
 
 
 const sheetsPanel=()=>activeSheets(sheetsList);
@@ -4936,6 +5331,7 @@ function activeSheets(list){
        '>'+(many?'Delete '+sheetsPicked.length:'Delete')+'</button>'+
      '</div>';
   openBox(h, true, "wide");
+  $("modal").classList.add("tallpage");
 
   $("modal").querySelectorAll("button[data-sheet]").forEach(b=>{
     b.onclick=ev=>{ pickSheet(b.dataset.sheet, ev); activeSheets(sheetsList); };
@@ -5058,7 +5454,11 @@ function briefing(){
      '<button class="btn" id="shr">Share</button>'+
      '</div>';
   backTo=null;                  /* the briefing is the root of the panel stack */
+  /* The same height as the sheets overview, the other page a visit can start on, so
+     moving between the two does not resize the panel. Whatever the rows do not fill is
+     left white. */
   openBox(h, true, "mid");     /* wide enough for the title and a full-length name */
+  $("modal").classList.add("tallpage");
   renderCity();
   renderSeed();
   $("go").onclick=startGame;
@@ -5150,15 +5550,19 @@ function setup(){
      /* Playing with someone is a third way to play, so it belongs here. No data-mode
         while it is switched off: nothing should be able to set a mode the game cannot
         deal for. */
-     '<button class="btn" id="mpmode"'+(MP_ENABLED?' data-mode="multiplayer"'
-       :' disabled title="Multiplayer is switched off for now"')+
+     /* Offered only if the exchange answered. It leads to a panel saying the feature is
+        still to come rather than to a game, so it is not a mode you can set. */
+     '<button class="btn" id="mpmode"'+(exchangeInfo.up?''
+       :' disabled title="'+(exchangeInfo.asked
+           ? "The exchange is not answering just now"
+           : "Still asking whether the exchange is there")+'"')+
        '>'+MODE_NAMES.multiplayer+'</button>'+
      '</div>'+
      '<p class="note">'+
      'The standard turn flips one card per stack and pairs.<br>'+
      'The solo variant draws three cards and uses one for its number and a different one '+
        'for its effect.<br>'+
-     'Multiplayer is not finished yet.</p>'+
+     'Multiplayer is still to come.</p>'+
      '<h4>Advanced variant</h4><div class="toolbar">'+
      '<button class="btn'+(CFG.roundabouts?" on":"")+'" id="rnd2">'+
        tglLabel("Roundabouts",CFG.roundabouts)+'</button>'+
@@ -5168,14 +5572,24 @@ function setup(){
      '</div>'+
      '<p class="note">Roundabouts lets you replace an empty house with a Roundabout.<br>'+
      'Advanced plans adds the nine starred City Plans.</p>'+
-     '<h4>Hints</h4><div class="toolbar">'+
+     /* hints and taking rounds back are the same kind of thing: help available from the
+        bar while you play, decided once for the sheet */
+     '<h4>Advantages</h4>'+
+     '<p class="note">Advantages can be used from the bar at the bottom of the foot '+
+     'of the sheet.</p>'+
+     '<div class="toolbar">'+
      '<button class="btn'+(CFG.hintsAllowed?" on":"")+'" id="hnt">'+
        'Hints: <span class="tgl">'+
        (CFG.hintsAllowed?"available":"not available")+'</span></button>'+
      '</div>'+
-     '<p class="note">The hints panel can be turned on and off from the bar at the '+
-     'foot while you play.<br>'+
-     'Switch this off to keep it out of reach for the whole sheet.</p>';
+     '<p class="note">Switch this off to keep it out of reach for the whole sheet.</p>'+
+     '<div class="toolbar sliderow">'+
+     '<input type="range" class="slider" id="undoslider" min="0" max="'+
+       (undoStops().length-1)+'" step="1" value="'+undoIndex(CFG.undo)+'"'+
+       ' aria-label="How many rounds may be taken back">'+
+     '<span class="slidernow" id="undonow">'+esc(undoSentence(CFG.undo))+'</span>'+
+     '</div>'+
+     '<p class="note">This decides how far back you may go.</p>';
 
   h+='<h4>Appearance</h4><div class="toolbar">'+
      '<button class="btn" id="themebtn">Theme: '+esc(THEMES[CFG.theme].name)+'</button>'+
@@ -5281,8 +5695,9 @@ function setup(){
   });
   syncRestore();      /* so the button and the markup cannot disagree on opening */
   refreshDeckCounts();          /* fills the heading and every label */
+  if($("mpmode")) $("mpmode").onclick=()=>{ backTo=setup; exchangePanel(); };
   $("modal").querySelectorAll("button[data-mode]").forEach(b=>{
-    if(b.dataset.mode==="multiplayer"){ b.onclick=()=>{ backTo=setup; roomPanel(); }; return; }
+    if(b.dataset.mode==="multiplayer"){ b.onclick=()=>{ backTo=setup; exchangePanel(); }; return; }
     b.onclick=()=>{
       if(CFG.mode===b.dataset.mode) return;
       CFG.mode=b.dataset.mode;
@@ -5324,6 +5739,13 @@ function setup(){
     }
     flip();
   };
+  if($("undoslider")) $("undoslider").oninput=()=>{
+    const at=Math.max(0, Math.min(undoStops().length-1, $("undoslider").value|0));
+    CFG.undo=undoStops()[at];
+    if($("undonow")) $("undonow").textContent=undoSentence(CFG.undo);
+    save();
+    syncUndoButtons();
+  };
   $("hnt").onclick=()=>{
     CFG.hintsAllowed=!CFG.hintsAllowed;
     /* leaving it on while unreachable would show the panel again the moment hints
@@ -5362,7 +5784,8 @@ function setup(){
   };
 }
 
-$("btn-undo").onclick=undo;
+$("btn-undo").onclick=undoRound;
+$("btn-redo").onclick=redoRound;
 $("btn-rules").onclick=rulesPanel;
 $("btn-hints").onclick=()=>{
   if(!CFG.hintsAllowed) return;
@@ -5414,6 +5837,7 @@ newGame();
 setInterval(tickClock, 500);
 /* Settings first, then the sheet. A shared link is a deliberate request for those
    settings, so it deals fresh rather than resuming. */
+askExchange().then(()=>{ if(openPanel===setup) setup(); });
 load().then(()=>{
   /* a link arriving is worth storing, but only once their own choices have been
      merged back in by load */

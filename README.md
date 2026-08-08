@@ -144,6 +144,66 @@ preferences.
 - Rejoining a sheet already under way — your board lives in the tab, so a reload
   means dropping out of that game
 
+---
+
+## Repository layout
+
+```
+frontend/   index.html, assets/, CNAME   — published to GitHub Pages
+backend/    worker.js, wrangler.jsonc    — deployed to Cloudflare Workers
+tests/      the test harness             — deployed nowhere
+```
+
+The two halves meet at one line: `EXCHANGE` in `frontend/index.html`, the
+address of the relay. Nothing else crosses.
+
+## Tests
+
+The sheet is one HTML file and the relay is one Worker, and neither is built, so
+the tests run against the files that ship rather than against a bundle. The
+harness loads `frontend/index.html` into jsdom and reaches its internals through
+`window.eval`; the relay's tests run in workerd, against the real Durable
+Object, driven from the production `wrangler.jsonc`. **No test modifies either
+file**, and no test reaches the network.
+
+The toolchain is a [devenv](https://devenv.sh) shell — Node 24, the active LTS —
+pinned by `devenv.lock`:
+
+```sh
+devenv shell -- npm ci       # once, to install
+devenv shell -- npm test     # everything, both halves
+```
+
+With [direnv](https://direnv.net) the shell loads on entering the directory and
+the prefix goes away. An `.envrc` is included; approve it once:
+
+```sh
+direnv allow                 # then just: npm ci && npm test
+```
+
+Node 24 and npm on your `PATH` work just as well, without the pinning:
+
+```sh
+npm ci
+npm test
+```
+
+Either half on its own, or one group at a time:
+
+```sh
+npm run test:frontend             # the sheet
+npm run test:frontend:game-logic  #   the rules: deck, seeding, placement, scoring, plans, solo
+npm run test:frontend:gui         #   what reaches the page, and the state behind it
+npm run test:frontend:multiplayer #   the sheet's half of the relay protocol
+
+npm run test:backend              # the relay
+npm run test:backend:game-logic   #   the room protocol
+npm run test:backend:health       #   the endpoint the sheet asks before offering multiplayer
+npm run test:backend:storage      #   what a room holds, and for how long
+
+npm run test:watch                # re-run on change
+```
+
 ## Credits and legal
 
 *Welcome To Your Perfect Home* is designed by **Benoît Turpin**, illustrated by

@@ -836,7 +836,7 @@ of the six themes">
   /* Both pages a visit can start on stand the same height. 713px is the overview with a
      full frame; below that the panel scrolls as it always has. */
   /* both pages a visit can start on stand at least this tall */
-  .modal.tallpage{min-height:min(600px,88vh)}
+  .modal.tallpage{min-height:min(550px,88vh)}
   .sheets{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;
     align-items:stretch;min-height:min(520px,calc(88vh - 220px));
     height:min(520px,calc(88vh - 220px))}
@@ -4867,8 +4867,10 @@ function exchangePanel(){
   openPanel=exchangePanel;
   const i=exchangeInfo;
   openBox('<h3>Multiplayer</h3>'+
-    '<p class="lede">Playing with somebody else is still to come. The exchange that will '+
-    'carry it is up and answering, which is as far as it goes for now.</p>'+
+    /* broken where the sentence breathes, rather than wherever the box happens to end */
+    '<p class="lede">Playing with somebody else is still to come.<br>'+
+    'The exchange that will carry it is up and answering,<br>'+
+    'which is as far as it goes for now.</p>'+
     '<table class="brief">'+
       '<tr><td>Exchange</td><td><code class="plain">'+esc(EXCHANGE)+'</code></td></tr>'+
       '<tr><td>Answered in</td><td>'+(i.ms===null?"\u2014":i.ms+" ms")+'</td></tr>'+
@@ -5837,7 +5839,11 @@ newGame();
 setInterval(tickClock, 500);
 /* Settings first, then the sheet. A shared link is a deliberate request for those
    settings, so it deals fresh rather than resuming. */
-askExchange().then(()=>{ if(openPanel===setup) setup(); });
+/* Asked a tick after the page is up, not during it: nothing on the sheet waits on the
+   answer. Only where there is a real page to ask from, since the test harness runs this
+   file with a stub document and should not be reaching out to the network at all. */
+if(typeof document==="object" && document.readyState && typeof setTimeout==="function")
+  setTimeout(()=>{ askExchange().then(()=>{ if(openPanel===setup) setup(); }); }, 0);
 load().then(()=>{
   /* a link arriving is worth storing, but only once their own choices have been
      merged back in by load */

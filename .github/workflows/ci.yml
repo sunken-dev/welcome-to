@@ -2,18 +2,20 @@ name: 🏗️ CI
 
 # Tests every change, and deploys the ones that land on main.
 #
-# Two independent chains, one per half of the repository: the changed half is
-# tested, and only then deployed. They share nothing but the change detection,
-# so a red or slow relay cannot hold back a change to the sheet, and the two
-# deployments run side by side.
+# Two independent chains, one per half of the repository, each reading straight
+# down: the changed half is tested, and only then deployed. They share nothing
+# but the change detection, so a red or slow relay cannot hold back a change to
+# the sheet, and the two deployments run side by side.
 #
 #   frontend/**  ->  test-frontend  ->  deploy-frontend   (GitHub Pages)
 #   backend/**   ->  test-backend   ->  deploy-backend    (Cloudflare Workers)
 #
+# A deploy names only its own test job as a dependency. When a half is
+# untouched its test job is skipped, and a skipped job skips everything that
+# needs it, so the deploy never has to ask what changed.
+#
 # On a pull request, or when started by hand on any branch, it tests and stops
-# there. Deploying happens only on a push to main, and only for the half that
-# changed. A change to the harness or the toolchain runs both suites and
-# deploys nothing.
+# there. Deploying happens only on a push to main.
 
 on:
   push:
@@ -62,37 +64,45 @@ jobs:
               - 'devenv.yaml'
               - '.github/**'
 
+  # ---- the sheet ----------------------------------------------------------
+
   test-frontend:
     needs: check-changes
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      needs.check-changes.outputs.frontend == 'true' ||
-      needs.check-changes.outputs.harness == 'true'
+    if: needs.check-changes.outputs.frontend == 'true'
     uses: ./.github/workflows/test.yml
     with:
       script: test:frontend
 
   deploy-frontend:
-    needs: [check-changes, test-frontend]
-    if: github.event_name == 'push' && needs.check-changes.outputs.frontend == 'true'
+    needs: test-frontend
     permissions:
       contents: read
       pages: write
       id-token: write
     uses: ./.github/workflows/deploy-frontend.yml
 
+  # ---- the relay ----------------------------------------------------------
+
   test-backend:
     needs: check-changes
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      needs.check-changes.outputs.backend == 'true' ||
-      needs.check-changes.outputs.harness == 'true'
+    if: needs.check-changes.outputs.backend == 'true'
     uses: ./.github/workflows/test.yml
     with:
       script: test:backend
 
   deploy-backend:
-    needs: [check-changes, test-backend]
-    if: github.event_name == 'push' && needs.check-changes.outputs.backend == 'true'
+    needs: test-backend
     uses: ./.github/workflows/deploy-backend.yml
     secrets: inherit
+
+  # ---- the harness and the toolchain --------------------------------------
+
+  # Changing the tests, the dependencies or the devenv shell can break either
+  # half without touching either half, so it runs the whole suite. Deliberately
+  # in neither chain: it guards, it does not gate a deployment.
+  test-harness:
+    needs: check-changes
+    if: needs.check-changes.outputs.harness == 'true'
+    uses: ./.github/workflows/test.yml
+    with:
+      script: test

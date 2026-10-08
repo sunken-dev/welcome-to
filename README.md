@@ -8,6 +8,10 @@ An unofficial, fan-made browser implementation of *Welcome To Your Perfect Home*
 built for practising alone and for playing the same deck as someone else without
 any network.
 
+<p align="center">
+  <img src="frontend/assets/og-image.png" alt="Six construction cards fanned above a line-drawn street of houses, with the title Welcome To Your Perfect Home" width="720">
+</p>
+
 ## Start playing
 
 Visit https://welcome-to.sunken.dev/ to start playing.
